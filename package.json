@@ -4,6 +4,7 @@
   "description": "Universal E-Commerce Product Scraper & Multi-Platform CSV/JSON Exporter",
   "main": "server/index.js",
   "scripts": {
+    "postinstall": "npm --prefix client install",
     "server": "node server/index.js",
     "client": "npm --prefix client run dev",
     "dev": "concurrently \"node server/index.js\" \"npm --prefix client run dev\"",
