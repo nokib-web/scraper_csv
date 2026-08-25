@@ -139,6 +139,11 @@ async function detectPlatform(url) {
       return { platform: 'zatiq', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Zatiq / ZatiqEasy Platform' };
     }
 
+    // Daraz & Lazada Marketplace
+    if (url.includes('daraz.') || url.includes('lazada.') || html.includes('daraz') || html.includes('lazada')) {
+      return { platform: 'daraz', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Daraz / Lazada Marketplace' };
+    }
+
     // Wix HTML indicators
     const isWix = (
       html.includes('wix.com') ||

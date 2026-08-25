@@ -105,12 +105,14 @@ export default function UrlBar({
                 disabled={isLoading}
                 className="appearance-none bg-slate-950/80 border border-white/10 hover:border-white/20 text-slate-200 text-xs font-medium rounded-xl px-4 py-3.5 pr-8 outline-none focus:border-indigo-500 cursor-pointer"
               >
-                <option value={10}>Max 10 Items</option>
-                <option value={25}>Max 25 Items</option>
-                <option value={50}>Max 50 Items</option>
-                <option value={100}>Max 100 Items</option>
-                <option value={250}>Max 250 Items</option>
+                <option value={5000}>⚡ All Products (No Limit)</option>
+                <option value={1000}>Max 1000 Items</option>
                 <option value={500}>Max 500 Items</option>
+                <option value={250}>Max 250 Items</option>
+                <option value={100}>Max 100 Items</option>
+                <option value={50}>Max 50 Items</option>
+                <option value={25}>Max 25 Items</option>
+                <option value={10}>Max 10 Items</option>
               </select>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
                 ▼
