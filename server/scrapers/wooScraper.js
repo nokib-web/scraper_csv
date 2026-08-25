@@ -1,21 +1,25 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { DEFAULT_HEADERS } = require('./detector');
+const { fetchWithBrowserFallback, DEFAULT_HEADERS } = require('./detector');
 
 /**
  * Normalizes a WooCommerce Store API product into the unified format
  */
 function normalizeWooProduct(item, origin) {
-  const images = (item.images || []).map((img, idx) => ({
-    id: img.id || (idx + 1),
-    src: img.src || img.thumbnail || '',
-    alt: img.alt || item.name || '',
-    position: idx + 1,
-    width: 800,
-    height: 800
-  }));
+  const images = (item.images || []).map((img, idx) => {
+    let src = typeof img === 'string' ? img : (img.src || img.thumbnail || img.url || '');
+    if (src.startsWith('//')) src = `https:${src}`;
+    return {
+      id: img.id || (idx + 1),
+      src: src,
+      alt: img.alt || item.name || '',
+      position: idx + 1,
+      width: 800,
+      height: 800
+    };
+  }).filter(i => Boolean(i.src));
 
-  // Parse prices (WooCommerce Store API returns prices as integer minor units e.g. cents, or string)
+  // Parse prices (WooCommerce Store API returns prices in minor units or string)
   let price = 0;
   let regularPrice = 0;
   if (item.prices) {
@@ -30,7 +34,7 @@ function normalizeWooProduct(item, origin) {
   }
 
   const variations = (item.variations || []).map((v, idx) => ({
-    id: v.id || `${item.id}-${idx}`,
+    id: String(v.id || `${item.id}-${idx}`),
     title: v.attributes?.map(a => `${a.name}: ${a.value}`).join(', ') || 'Variant',
     price: v.price ? parseFloat(v.price) : price,
     compare_at_price: v.regular_price ? parseFloat(v.regular_price) : regularPrice,
@@ -67,20 +71,19 @@ function normalizeWooProduct(item, origin) {
 
   const categories = (item.categories || []).map(c => c.name || c).filter(Boolean);
   const tags = (item.tags || []).map(t => t.name || t).filter(Boolean);
-
   const permalink = item.permalink || (item.slug ? `${origin}/product/${item.slug}` : `${origin}/?p=${item.id}`);
 
   return {
     id: String(item.id || Date.now() + Math.random()),
     title: item.name || item.title || 'WooCommerce Product',
-    handle: item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `woo-${item.id}`),
+    handle: item.slug || (item.name ? item.name.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') : `woo-${item.id}`),
     description: cleanDescription,
     vendor: origin.replace(/^https?:\/\//, ''),
     product_type: categories[0] || 'General',
     tags: [...tags, ...categories],
     status: 'active',
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
+    published_at: item.date_created || new Date().toISOString(),
+    created_at: item.date_created || new Date().toISOString(),
     price: price,
     regular_price: regularPrice,
     currency: item.prices?.currency_code || 'USD',
@@ -93,7 +96,7 @@ function normalizeWooProduct(item, origin) {
 }
 
 /**
- * Scrapes WooCommerce store using Store API or HTML crawling
+ * Scrapes WooCommerce store using Store API or HTML crawling with complete pagination
  */
 async function scrapeWooCommerce(url, options = {}, onLog) {
   const parsedUrl = new URL(url);
@@ -101,22 +104,22 @@ async function scrapeWooCommerce(url, options = {}, onLog) {
   const maxProducts = options.limit || 50;
   const products = [];
 
-  // Try Store API first (most modern WooCommerce sites have this enabled)
   const storeApiUrl = `${origin}/wp-json/wc/store/v1/products`;
   let page = 1;
-  const perPage = Math.min(maxProducts, 100);
+  const maxPages = maxProducts >= 500 ? 50 : Math.ceil(maxProducts / 10) + 2;
 
   if (onLog) onLog(`Probing WooCommerce Store API at ${storeApiUrl}...`);
 
   let apiSuccess = false;
   try {
-    while (products.length < maxProducts) {
-      const fetchUrl = `${storeApiUrl}?per_page=${perPage}&page=${page}`;
+    while (products.length < maxProducts && page <= maxPages) {
+      const fetchUrl = `${storeApiUrl}?page=${page}`;
       if (onLog) onLog(`Fetching Woo API page ${page}...`);
 
       const res = await axios.get(fetchUrl, {
         headers: DEFAULT_HEADERS,
-        timeout: 8000
+        timeout: 10000,
+        validateStatus: (s) => s === 200
       });
 
       if (Array.isArray(res.data) && res.data.length > 0) {
@@ -126,21 +129,33 @@ async function scrapeWooCommerce(url, options = {}, onLog) {
           if (products.length >= maxProducts) break;
         }
 
-        if (res.data.length < perPage) break;
+        if (onLog) onLog(`Extracted ${products.length} WooCommerce products so far...`);
+
+        // Check if there are no more items on next page
+        const totalPages = parseInt(res.headers['x-wp-totalpages'] || res.headers['total-pages'] || '999');
+        if (page >= totalPages || res.data.length === 0) {
+          if (onLog) onLog(`Completed all ${page} pages of WooCommerce catalog.`);
+          break;
+        }
+
         page++;
+        await new Promise(r => setTimeout(r, 200));
       } else {
+        if (onLog) onLog(`Reached end of WooCommerce catalog at page ${page}.`);
         break;
       }
     }
   } catch (err) {
-    if (onLog) onLog(`WooCommerce Store API not directly open (${err.message}). Switching to HTML / Microdata crawler...`);
+    if (products.length === 0) {
+      if (onLog) onLog(`WooCommerce Store API returned: ${err.message}. Switching to HTML / Microdata crawler...`);
+    }
   }
 
   if (apiSuccess && products.length > 0) {
     return products;
   }
 
-  // Fallback: Crawl WooCommerce HTML pages / Shop page
+  // Fallback: Crawl WooCommerce HTML pages / Shop page / Sitemaps
   return scrapeWooFromHtml(url, options, onLog);
 }
 
@@ -153,84 +168,38 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
   const maxProducts = options.limit || 50;
   const products = [];
 
-  if (onLog) onLog(`Parsing WooCommerce HTML from ${url}...`);
+  let shopUrl = url.includes('/product') ? url : `${origin}/shop/`;
+  if (onLog) onLog(`Parsing WooCommerce HTML from ${shopUrl}...`);
 
-  const res = await axios.get(url, { headers: DEFAULT_HEADERS, timeout: 9000 });
-  const $ = cheerio.load(res.data);
+  try {
+    const res = await fetchWithBrowserFallback(shopUrl, 10000);
+    const $ = cheerio.load(res.data);
 
-  // Check if this is a single product page
-  if ($('.single-product').length > 0 || $('.product.type-product').length === 1) {
-    const title = $('h1.product_title').text().trim() || $('h1').first().text().trim();
-    const priceText = $('.summary .price .amount, .price .woocommerce-Price-amount').first().text().replace(/[^0-9.]/g, '') || '0';
-    const regPriceText = $('.summary .price del .amount').first().text().replace(/[^0-9.]/g, '') || priceText;
-    const description = $('.woocommerce-product-details__short-description, #tab-description, .woocommerce-Tabs-panel--description').html() || '';
-    const sku = $('.sku').text().trim() || `SKU-${Date.now()}`;
-    const category = $('.posted_in a').first().text().trim() || 'General';
+    // Single product page
+    if ($('.single-product').length > 0 || $('.product.type-product').length === 1) {
+      const title = $('h1.product_title').text().trim() || $('h1').first().text().trim();
+      const priceText = $('.summary .price .amount, .price .woocommerce-Price-amount').first().text().replace(/[^0-9.]/g, '') || '0';
+      const regPriceText = $('.summary .price del .amount').first().text().replace(/[^0-9.]/g, '') || priceText;
+      const description = $('.woocommerce-product-details__short-description, #tab-description, .woocommerce-Tabs-panel--description').html() || '';
+      const sku = $('.sku').text().trim() || `SKU-${Date.now()}`;
+      const category = $('.posted_in a').first().text().trim() || 'General';
 
-    const images = [];
-    $('.woocommerce-product-gallery__image img, .woocommerce-product-gallery img').each((idx, el) => {
-      const src = $(el).attr('data-large_image') || $(el).attr('data-src') || $(el).attr('src');
-      if (src && !images.some(i => i.src === src)) {
-        images.push({ id: idx + 1, src, alt: title, position: idx + 1 });
-      }
-    });
+      const images = [];
+      $('.woocommerce-product-gallery__image img, .woocommerce-product-gallery img').each((idx, el) => {
+        const src = $(el).attr('data-large_image') || $(el).attr('data-src') || $(el).attr('src');
+        if (src && !images.some(i => i.src === src)) {
+          images.push({ id: idx + 1, src, alt: title, position: idx + 1 });
+        }
+      });
 
-    products.push({
-      id: String(Date.now()),
-      title: title || 'WooCommerce Product',
-      handle: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      description: description.trim(),
-      vendor: origin.replace(/^https?:\/\//, ''),
-      product_type: category,
-      tags: [category],
-      status: 'active',
-      published_at: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      price: parseFloat(priceText) || 0,
-      regular_price: parseFloat(regPriceText) || parseFloat(priceText) || 0,
-      currency: 'USD',
-      variants: [{
-        id: '1',
-        title: 'Default Title',
-        price: parseFloat(priceText) || 0,
-        compare_at_price: parseFloat(regPriceText) > parseFloat(priceText) ? parseFloat(regPriceText) : null,
-        sku: sku,
-        inventory_quantity: 99,
-        available: true,
-        weight: 0,
-        barcode: ''
-      }],
-      images: images,
-      options: [],
-      url: url,
-      source: 'woocommerce'
-    });
-    return products;
-  }
-
-  // Shop / Catalog listing page: Find all product cards
-  const productCards = $('.products .product, ul.products li.product, .wc-block-grid__product');
-  if (onLog) onLog(`Found ${productCards.length} product items on WooCommerce catalog page.`);
-
-  productCards.each((idx, el) => {
-    if (products.length >= maxProducts) return;
-    const $card = $(el);
-    const title = $card.find('.woocommerce-loop-product__title, h2, h3, .wc-block-grid__product-title').text().trim();
-    const link = $card.find('a.woocommerce-LoopProduct-link, a').first().attr('href');
-    const priceText = $card.find('.price ins .amount, .price .amount').last().text().replace(/[^0-9.]/g, '') || '0';
-    const regPriceText = $card.find('.price del .amount').first().text().replace(/[^0-9.]/g, '') || priceText;
-    const imgEl = $card.find('img').first();
-    const imgSrc = imgEl.attr('data-src') || imgEl.attr('src') || '';
-
-    if (title && (priceText || imgSrc)) {
       products.push({
-        id: String(Date.now() + idx),
-        title: title,
-        handle: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        description: `${title} - High quality product available on store.`,
+        id: String(Date.now()),
+        title: title || 'WooCommerce Product',
+        handle: title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
+        description: description.trim(),
         vendor: origin.replace(/^https?:\/\//, ''),
-        product_type: 'General',
-        tags: ['WooCommerce'],
+        product_type: category,
+        tags: [category],
         status: 'active',
         published_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -238,23 +207,73 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
         regular_price: parseFloat(regPriceText) || parseFloat(priceText) || 0,
         currency: 'USD',
         variants: [{
-          id: `${Date.now()}-${idx}`,
+          id: '1',
           title: 'Default Title',
           price: parseFloat(priceText) || 0,
           compare_at_price: parseFloat(regPriceText) > parseFloat(priceText) ? parseFloat(regPriceText) : null,
-          sku: `SKU-${idx + 1}`,
+          sku: sku,
           inventory_quantity: 99,
           available: true,
           weight: 0,
           barcode: ''
         }],
-        images: imgSrc ? [{ id: 1, src: imgSrc, alt: title, position: 1 }] : [],
+        images: images,
         options: [],
-        url: link ? (link.startsWith('http') ? link : `${origin}${link}`) : url,
+        url: url,
         source: 'woocommerce'
       });
+      return products;
     }
-  });
+
+    // Shop / Catalog listing page: Find all product cards
+    const productCards = $('.products .product, ul.products li.product, .wc-block-grid__product');
+    if (onLog) onLog(`Found ${productCards.length} product items on WooCommerce catalog page.`);
+
+    productCards.each((idx, el) => {
+      if (products.length >= maxProducts) return;
+      const $card = $(el);
+      const title = $card.find('.woocommerce-loop-product__title, h2, h3, .wc-block-grid__product-title').text().trim();
+      const link = $card.find('a.woocommerce-LoopProduct-link, a').first().attr('href');
+      const priceText = $card.find('.price ins .amount, .price .amount').last().text().replace(/[^0-9.]/g, '') || '0';
+      const regPriceText = $card.find('.price del .amount').first().text().replace(/[^0-9.]/g, '') || priceText;
+      const imgEl = $card.find('img').first();
+      let imgSrc = imgEl.attr('data-src') || imgEl.attr('src') || '';
+      if (imgSrc.startsWith('//')) imgSrc = `https:${imgSrc}`;
+
+      if (title && (priceText || imgSrc)) {
+        products.push({
+          id: String(Date.now() + idx),
+          title: title,
+          handle: title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
+          description: `${title} - High quality product available on store.`,
+          vendor: origin.replace(/^https?:\/\//, ''),
+          product_type: 'General',
+          tags: ['WooCommerce'],
+          status: 'active',
+          published_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          price: parseFloat(priceText) || 0,
+          regular_price: parseFloat(regPriceText) || parseFloat(priceText) || 0,
+          currency: 'USD',
+          variants: [{
+            id: `${Date.now()}-${idx}`,
+            title: 'Default Title',
+            price: parseFloat(priceText) || 0,
+            compare_at_price: parseFloat(regPriceText) > parseFloat(priceText) ? parseFloat(regPriceText) : null,
+            sku: `SKU-${idx + 1}`,
+            inventory_quantity: 99,
+            available: true,
+            weight: 0,
+            barcode: ''
+          }],
+          images: imgSrc ? [{ id: 1, src: imgSrc, alt: title, position: 1 }] : [],
+          options: [],
+          url: link ? (link.startsWith('http') ? link : `${origin}${link}`) : url,
+          source: 'woocommerce'
+        });
+      }
+    });
+  } catch (e) {}
 
   return products;
 }
