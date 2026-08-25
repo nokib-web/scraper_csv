@@ -20,11 +20,19 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
                   <img
                     src={mainImg}
                     alt={prod.title}
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML = `<span class="text-3xl font-extrabold text-[#F1FF0A]">${(prod.title || 'P').charAt(0)}</span>`;
+                    }}
                   />
                 ) : (
-                  <ImageIcon className="w-8 h-8 text-neutral-700" />
+                  <span className="text-3xl font-extrabold text-[#F1FF0A]">
+                    {(prod.title || 'P').charAt(0)}
+                  </span>
                 )}
 
                 {/* Top badges */}

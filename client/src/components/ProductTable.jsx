@@ -59,16 +59,24 @@ export default function ProductTable({ products, onUpdateProduct, onDeleteProduc
 
                   {/* Image */}
                   <td className="py-3 px-4">
-                    <div className="w-11 h-11 rounded-lg bg-neutral-900 border border-neutral-800 overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <div className="w-11 h-11 rounded-lg bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-300 overflow-hidden flex items-center justify-center flex-shrink-0 text-center font-bold text-xs text-neutral-400">
                       {mainImg ? (
                         <img
                           src={mainImg}
                           alt={prod.title}
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          onError={(e) => { e.target.style.display = 'none'; }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = 'none';
+                            e.target.parentElement.innerHTML = `<span class="text-xs font-bold text-[#F1FF0A]">${(prod.title || 'P').charAt(0)}</span>`;
+                          }}
                         />
                       ) : (
-                        <ImageIcon className="w-4 h-4 text-neutral-600" />
+                        <span className="text-xs font-bold text-[#F1FF0A]">
+                          {(prod.title || 'P').charAt(0)}
+                        </span>
                       )}
                     </div>
                   </td>
