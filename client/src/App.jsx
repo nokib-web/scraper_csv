@@ -9,35 +9,17 @@ import ExportDrawer from './components/ExportDrawer';
 import FormatPreviewModal from './components/FormatPreviewModal';
 import Footer from './components/Footer';
 import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
+import { saveCatalogData, loadCatalogData, clearCatalogData } from './utils/storage';
 
 export default function App() {
-  const [url, setUrl] = useState(() => {
-    return localStorage.getItem('getproducts_last_url') || '';
-  });
+  const [url, setUrl] = useState('');
   const [engine, setEngine] = useState('auto');
   const [limit, setLimit] = useState(5000); // Default to All Products
   const [isLoading, setIsLoading] = useState(false);
-  const [logs, setLogs] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('getproducts_saved_logs') || '[]');
-    } catch { return []; }
-  });
-  const [products, setProducts] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('getproducts_saved_products') || '[]');
-    } catch { return []; }
-  });
-  const [detection, setDetection] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('getproducts_saved_detection') || 'null');
-    } catch { return null; }
-  });
-  const [status, setStatus] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('getproducts_saved_products') || '[]');
-      return saved.length > 0 ? 'done' : 'idle';
-    } catch { return 'idle'; }
-  });
+  const [logs, setLogs] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [detection, setDetection] = useState(null);
+  const [status, setStatus] = useState('idle');
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,26 +28,46 @@ export default function App() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewFormat, setPreviewFormat] = useState('shopify');
 
-  // Sync state to localStorage on update
+  // Load saved catalog from IndexedDB on initial mount
+  useEffect(() => {
+    async function restoreSession() {
+      try {
+        const savedProds = await loadCatalogData('getproducts_saved_products', []);
+        const savedDetection = await loadCatalogData('getproducts_saved_detection', null);
+        const savedUrl = await loadCatalogData('getproducts_last_url', '');
+        const savedLogs = await loadCatalogData('getproducts_saved_logs', []);
+
+        if (savedProds && savedProds.length > 0) {
+          setProducts(savedProds);
+          setDetection(savedDetection);
+          setUrl(savedUrl || '');
+          setLogs(savedLogs || []);
+          setStatus('done');
+        }
+      } catch (e) {
+        console.warn('Session restore error:', e);
+      }
+    }
+    restoreSession();
+  }, []);
+
+  // Sync state to IndexedDB asynchronously on update
   useEffect(() => {
     if (products.length > 0) {
-      localStorage.setItem('getproducts_saved_products', JSON.stringify(products));
-      localStorage.setItem('getproducts_saved_detection', JSON.stringify(detection));
-      localStorage.setItem('getproducts_last_url', url);
-      localStorage.setItem('getproducts_saved_logs', JSON.stringify(logs));
+      saveCatalogData('getproducts_saved_products', products);
+      saveCatalogData('getproducts_saved_detection', detection);
+      saveCatalogData('getproducts_last_url', url);
+      saveCatalogData('getproducts_saved_logs', logs);
     }
   }, [products, detection, url, logs]);
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
     setProducts([]);
     setDetection(null);
     setLogs([]);
     setStatus('idle');
     setUrl('');
-    localStorage.removeItem('getproducts_saved_products');
-    localStorage.removeItem('getproducts_saved_detection');
-    localStorage.removeItem('getproducts_last_url');
-    localStorage.removeItem('getproducts_saved_logs');
+    await clearCatalogData();
   };
 
   // Theme Management (Dark by default, Cream Light option)
