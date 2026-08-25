@@ -8,25 +8,65 @@ import ProductGrid from './components/ProductGrid';
 import ExportDrawer from './components/ExportDrawer';
 import FormatPreviewModal from './components/FormatPreviewModal';
 import Footer from './components/Footer';
-import { Table, LayoutGrid, Eye, Search } from 'lucide-react';
+import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(() => {
+    return localStorage.getItem('getproducts_last_url') || '';
+  });
   const [engine, setEngine] = useState('auto');
   const [limit, setLimit] = useState(5000); // Default to All Products
   const [isLoading, setIsLoading] = useState(false);
-  const [logs, setLogs] = useState([]);
-  const [status, setStatus] = useState('idle'); // 'idle' | 'loading' | 'done' | 'error'
+  const [logs, setLogs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('getproducts_saved_logs') || '[]');
+    } catch { return []; }
+  });
+  const [products, setProducts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('getproducts_saved_products') || '[]');
+    } catch { return []; }
+  });
+  const [detection, setDetection] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('getproducts_saved_detection') || 'null');
+    } catch { return null; }
+  });
+  const [status, setStatus] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('getproducts_saved_products') || '[]');
+      return saved.length > 0 ? 'done' : 'idle';
+    } catch { return 'idle'; }
+  });
   const [isConsoleCollapsed, setIsConsoleCollapsed] = useState(false);
-
-  const [products, setProducts] = useState([]);
-  const [detection, setDetection] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
   const [searchQuery, setSearchQuery] = useState('');
   
   // Preview Modal
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewFormat, setPreviewFormat] = useState('shopify');
+
+  // Sync state to localStorage on update
+  useEffect(() => {
+    if (products.length > 0) {
+      localStorage.setItem('getproducts_saved_products', JSON.stringify(products));
+      localStorage.setItem('getproducts_saved_detection', JSON.stringify(detection));
+      localStorage.setItem('getproducts_last_url', url);
+      localStorage.setItem('getproducts_saved_logs', JSON.stringify(logs));
+    }
+  }, [products, detection, url, logs]);
+
+  const handleClearData = () => {
+    setProducts([]);
+    setDetection(null);
+    setLogs([]);
+    setStatus('idle');
+    setUrl('');
+    localStorage.removeItem('getproducts_saved_products');
+    localStorage.removeItem('getproducts_saved_detection');
+    localStorage.removeItem('getproducts_last_url');
+    localStorage.removeItem('getproducts_saved_logs');
+  };
 
   // Theme Management (Dark by default, Cream Light option)
   const [isDark, setIsDark] = useState(() => {
@@ -280,6 +320,15 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <button
+                    onClick={handleClearData}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-900/50 text-xs font-semibold text-red-300 transition-colors cursor-pointer"
+                    title="Clear extracted data and cache"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Clear Data</span>
+                  </button>
+
                   <button
                     onClick={() => handleOpenPreview('shopify')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 border border-neutral-800 dark:border-neutral-800 light:border-neutral-300 text-xs font-semibold text-neutral-300 dark:text-neutral-300 light:text-neutral-800 transition-colors cursor-pointer"
