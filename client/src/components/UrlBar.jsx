@@ -18,7 +18,9 @@ export default function UrlBar({
     { name: 'Bata BD', url: 'https://www.batabd.com' },
     { name: 'Ryans Computers', url: 'https://www.ryans.com' },
     { name: 'Star Tech', url: 'https://www.startech.com.bd' },
-    { name: 'Toyyub Store', url: 'https://toyyub.com' }
+    { name: 'Wafilife', url: 'https://www.wafilife.com/' },
+    { name: 'Rokomari', url: 'https://www.rokomari.com/book' },
+    { name: 'Ghorer Bazar', url: 'https://ghorerbazar.com/' }
   ]);
 
   const [showAdvanced, setShowAdvanced] = useState(false);

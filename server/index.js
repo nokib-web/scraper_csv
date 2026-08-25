@@ -17,11 +17,13 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Quick Demo Preset Stores
 const PRESET_STORES = [
-  { name: 'Daraz Bangladesh', url: 'https://www.daraz.com.bd', type: 'daraz', badge: 'Marketplace' },
-  { name: 'Bata Bangladesh', url: 'https://www.batabd.com', type: 'shopify', badge: 'Shopify Store' },
+  { name: 'Daraz BD', url: 'https://www.daraz.com.bd', type: 'daraz', badge: 'Marketplace' },
+  { name: 'Bata BD', url: 'https://www.batabd.com', type: 'shopify', badge: 'Shopify Store' },
   { name: 'Ryans Computers', url: 'https://www.ryans.com', type: 'generic', badge: 'Electronics' },
   { name: 'Star Tech', url: 'https://www.startech.com.bd', type: 'generic', badge: 'Tech Store' },
-  { name: 'Toyyub Store', url: 'https://toyyub.com', type: 'zatiq', badge: 'Zatiq Platform' }
+  { name: 'Wafilife', url: 'https://www.wafilife.com/', type: 'generic', badge: 'Online Bookstore' },
+  { name: 'Rokomari', url: 'https://www.rokomari.com/book', type: 'generic', badge: 'Mega Bookstore' },
+  { name: 'Ghorer Bazar', url: 'https://ghorerbazar.com/', type: 'generic', badge: 'Organic Grocery' }
 ];
 
 // Presets API

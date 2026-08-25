@@ -95,7 +95,6 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
       const code = res.data;
       if (typeof code !== 'string') continue;
 
-      // Extract backend API base URLs
       const backendUrls = [...code.matchAll(/https?:\/\/[a-zA-Z0-9_.-]+(?:\.onrender\.com|\.vercel\.app|\.railway\.app|\.cyclic\.app|\.herokuapp\.com|[a-zA-Z0-9_.-]+:\d+)/g)].map(m => m[0]);
       const uniqueBackends = [...new Set(backendUrls)].filter(u => !u.includes('firebase') && !u.includes('google') && !u.includes('facebook'));
 
@@ -182,23 +181,26 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
 }
 
 /**
- * Extracts products from raw Cheerio DOM (supports Star Tech, Ryans, custom e-commerce)
+ * Extracts products from raw Cheerio DOM (supports Star Tech, Ryans, Rokomari, Wafilife, Ghorer Bazar)
  */
 function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
   const products = [];
 
   const cardSelectors = [
-    '.p-item', '.card', '.cus-col-2', '.product-card', '.product-item', '.product-box',
+    '.p-item', '.book-list-wrapper', '.bookCard', '.home-carousel-item',
+    '.product', 'li.product', '.product-card', '.product-item', '.product-box',
     '.grid-product', 'article.product', '.shop-item', '.catalog-item',
     '[itemtype*="Product"]', '.c-product', '.product-thumb',
-    '.box-product', '.product-layout', '.product-wrap', '.product',
-    '[data-mesh-id*="products"]'
+    '.box-product', '.product-layout', '.product-wrap',
+    '[data-mesh-id*="products"]', '[title]'
   ];
 
   const brandBlacklist = new Set([
     'apple', 'acer', 'asus', 'dell', 'hp', 'lenovo', 'microsoft',
     'msi', 'gigabyte', 'samsung', 'huawei', 'walton', 'sony', 'canon',
-    'cart', 'menu', 'search', 'login', 'register', 'home', 'shop', 'inquiry'
+    'cart', 'menu', 'search', 'login', 'register', 'home', 'shop', 'inquiry',
+    'categories', 'filter', 'sort', 'view all', 'read more', 'search toggle',
+    'wafilife', 'rokomari', 'ghorer bazar'
   ]);
 
   for (const sel of cardSelectors) {
@@ -214,7 +216,6 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         if (imgSrc.startsWith('//')) imgSrc = `https:${imgSrc}`;
         else if (imgSrc.startsWith('/')) imgSrc = `${origin}${imgSrc}`;
 
-        // Up-scale image if it has /small/ or _small
         if (imgSrc.includes('/storage/products/small/')) {
           imgSrc = imgSrc.replace('/storage/products/small/', '/storage/products/large/');
         } else if (imgSrc.includes('/small/')) {
@@ -222,7 +223,8 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         }
 
         // Find Title
-        let title = $card.find('.p-item-name a, .card-title, .product-title, h2, h3, h4, .title, [class*="title"], [class*="name"], p.card-text a, a.card-link').first().text().trim() ||
+        let title = $card.find('.p-item-name a, .book-title, .woocommerce-loop-product__title, .card-title, .product-title, h2, h3, h4, .title, [class*="title"], [class*="name"], p.card-text a, a.card-link').first().text().trim() ||
+          $card.attr('title')?.trim() ||
           imgEl.attr('alt') || '';
         
         if (!title && $card.is('a')) {
@@ -240,7 +242,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         // Find Price
         let priceStr = '0';
         let regularPriceStr = '0';
-        const priceElement = $card.find('.price-new, .sp-text, .special-price, .p-item-price, .pr-text, .price, .product-price, .amount, .text-primary, [class*="price"]').first();
+        const priceElement = $card.find('.price-new, .sp-text, .special-price, .p-item-price, .book-price, .pr-text, .price, .product-price, .amount, .text-primary, [class*="price"]').first();
         let priceText = priceElement.text() || $card.text();
 
         if ($card.find('.price-old').length > 0) {
@@ -248,20 +250,23 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
           priceText = $card.find('.price-new').text() || priceText.replace($card.find('.price-old').text(), '');
         }
 
-        const match = priceText.match(/(?:Tk|৳|\$|£|€|₹)?\s*([0-9,]+(?:\.[0-9]{2})?)/);
+        const match = priceText.match(/(?:Tk|৳|TK\.|\$|£|€|₹)?\s*([0-9,]+(?:\.[0-9]{2})?)/i) ||
+                      priceText.match(/([0-9,]+)\s*(?:Tk|৳|TK)/i);
         if (match && match[1]) {
           priceStr = match[1].replace(/,/g, '');
         }
 
         // Find Link
-        const linkEl = $card.find('.p-item-name a, a').first();
+        const linkEl = $card.find('.p-item-name a, a[href*="/book/"], a[href*="/product/"], a[href*="/shop/"], a').first();
         let link = linkEl.attr('href') || ($card.is('a') ? $card.attr('href') : currentUrl);
         if (link && link.startsWith('/')) link = `${origin}${link}`;
 
-        // Find Category
-        const category = $card.find('.sp-text-link, .category, .badge, [class*="category"]').first().text().trim() || 'General';
+        // Find Author / Vendor / Category
+        const author = $card.find('.book-author, .author, [class*="author"]').first().text().trim();
+        const category = $card.find('.sp-text-link, .category, .badge, [class*="category"]').first().text().trim() || (author ? 'Books' : 'General');
+        const vendor = author || origin.replace(/^https?:\/\//, '');
 
-        if (title && (parseFloat(priceStr) > 0 || (imgSrc && (imgSrc.includes('product') || imgSrc.includes('storage') || imgSrc.includes('upload') || imgSrc.includes('image/cache'))))) {
+        if (title && (parseFloat(priceStr) > 0 || (imgSrc && (imgSrc.includes('product') || imgSrc.includes('storage') || imgSrc.includes('upload') || imgSrc.includes('image/cache') || imgSrc.includes('rokomari') || imgSrc.includes('wafilife'))))) {
           const handle = title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}-${idx}`;
 
           if (!products.some(p => p.title === title)) {
@@ -272,16 +277,16 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
               id: String(Date.now() + idx),
               title: title,
               handle: handle,
-              description: `${title} - High quality product available on store.`,
-              vendor: origin.replace(/^https?:\/\//, ''),
+              description: `${title} - Available on ${origin.replace(/^https?:\/\//, '')}.`,
+              vendor: vendor,
               product_type: category,
-              tags: [category].filter(Boolean),
+              tags: [category, author].filter(Boolean),
               status: 'active',
               published_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               price: parsedPrice,
               regular_price: parsedRegular >= parsedPrice ? parsedRegular : parsedPrice,
-              currency: priceText.includes('Tk') || priceText.includes('৳') || currentUrl.includes('.bd') ? 'BDT' : 'USD',
+              currency: priceText.includes('Tk') || priceText.includes('৳') || priceText.includes('TK') || currentUrl.includes('.bd') || origin.includes('.bd') ? 'BDT' : 'USD',
               variants: [{
                 id: `${Date.now()}-${idx}`,
                 title: 'Default Title',
@@ -312,7 +317,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
 }
 
 /**
- * Scrapes products from any generic e-commerce, Wix, Ryans, Star Tech, or custom React/Vercel SPA website
+ * Scrapes products from any generic e-commerce, Wix, Ryans, Star Tech, Rokomari, Wafilife, Ghorer Bazar, or custom React/Vercel SPA website
  */
 async function scrapeGenericSite(url, options = {}, onLog) {
   const parsedUrl = new URL(url);
@@ -360,7 +365,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
     } catch (e) {}
   });
 
-  // 3. Extract initial DOM cards
+  // 3. Extract initial DOM cards (Star Tech, Rokomari, Wafilife, Ghorer Bazar, Ryans)
   const initialDom = extractProductsFromDom($, origin, url, maxProducts, onLog);
   for (const p of initialDom) {
     if (!products.some(x => x.title === p.title)) products.push(p);
@@ -377,7 +382,8 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       
       const isCat = (
         href.includes('/category') || href.includes('/collection') || href.includes('/shop') ||
-        href.includes('/product') || href.includes('/laptop') || href.includes('/component') ||
+        href.includes('/product') || href.includes('/book') || href.includes('/grocery') ||
+        href.includes('/laptop') || href.includes('/component') ||
         href.includes('/desktop') || href.includes('/monitor') || href.includes('/accessories') ||
         href.includes('/gadget') || href.includes('/tv') || href.includes('/camera') ||
         href.includes('/shoes') || href.includes('/men') || href.includes('/women')
