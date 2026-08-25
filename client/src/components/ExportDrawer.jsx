@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Download, FileSpreadsheet, Code, Check, FileText } from 'lucide-react';
+import { Download, Eye, Check } from 'lucide-react';
+import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
+import { FaFileCsv } from 'react-icons/fa';
+import { VscJson } from 'react-icons/vsc';
 
-export default function ExportDrawer({ products, onExport, stats }) {
+export default function ExportDrawer({ products, onExport, onOpenPreview, stats }) {
   const [downloadingFormat, setDownloadingFormat] = useState(null);
 
   const handleDownload = async (format) => {
@@ -13,104 +16,101 @@ export default function ExportDrawer({ products, onExport, stats }) {
   const platforms = [
     {
       id: 'shopify',
-      title: 'Shopify Product CSV',
-      badge: 'Official Template',
-      desc: 'Handles, multi-row images, variants & tags for Shopify Import',
-      icon: (
-        <svg className="w-5 h-5 text-[#95BF47]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19.34 7.24c-.04-.26-.23-.46-.48-.5-.26-.03-2.6-.2-2.6-.2s-1.72-1.72-1.9-1.9c-.18-.18-.54-.12-.68.02l-.96 8.52 4.14 1.25 2.48-7.19zm-5.7-2.3c-.02 0-.05.02-.07.03L9.75 6.8c-.37.13-.64.44-.71.82L7.26 17.5l6.38 1.9 2.04-14.46zm-5.02 2.37L3.8 8.64c-.45.16-.76.6-.76 1.08v.17l4.38 1.34 1.2-3.92zm6.66 11.2l-6.42-1.92-2.4 2.8c-.28.32-.2.82.16 1.04.14.08.3.13.46.13.19 0 .37-.06.53-.19l7.67-1.86zm4.84-2.12l-2.61-7.58-1.57 9.87 3.73-1.07c.36-.1.6-.44.55-.82-.02-.14-.05-.28-.1-.4z"/>
-        </svg>
-      )
+      title: 'Shopify CSV',
+      badge: 'Official',
+      icon: <SiShopify className="w-4 h-4 text-[#95BF47]" />
     },
     {
       id: 'woocommerce',
-      title: 'WooCommerce / WP CSV',
-      badge: 'WordPress Ready',
-      desc: 'Standard schema with SKU, stock, regular & sale price columns',
-      icon: (
-        <svg className="w-5 h-5 text-[#7F54B3]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M2.5 6C1.12 6 0 7.12 0 8.5v7C0 16.88 1.12 18 2.5 18h19c1.38 0 2.5-1.12 2.5-2.5v-7C24 7.12 22.88 6 21.5 6h-19zm2.8 3.5h2.1l1.5 4.5 1.5-4.5h2.1l-2.6 6.5h-2l-2.6-6.5zm8.4 0h2.1l1.5 4.5 1.5-4.5h2.1l-2.6 6.5h-2l-2.6-6.5z"/>
-        </svg>
-      )
+      title: 'WooCommerce',
+      badge: 'WP Ready',
+      icon: <SiWoocommerce className="w-4 h-4 text-[#96588A]" />
     },
     {
       id: 'wix',
-      title: 'Wix eCommerce CSV',
-      badge: 'Wix Store Ready',
-      desc: 'Official Wix multi-row variant structure & image gallery layout',
-      icon: (
-        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.2 6.5l-2.7 11h-2.9l-1.9-7.7-1.9 7.7H7.9L5.2 6.5h2.8l1.4 7.7 1.9-7.7h2.8l1.9 7.7 1.4-7.7h2.8z"/>
-        </svg>
-      )
+      title: 'Wix Store',
+      badge: 'Wix CSV',
+      icon: <SiWix className="w-4 h-4 text-white dark:text-white light:text-black" />
     },
     {
       id: 'universal',
-      title: 'Universal Clean CSV',
-      badge: 'Excel & Sheets',
-      desc: 'Clean, flat spreadsheet format for Google Sheets, Excel & ERP',
-      icon: <FileSpreadsheet className="w-5 h-5 text-[#107C41]" />
+      title: 'Clean CSV',
+      badge: 'Excel / Sheets',
+      icon: <FaFileCsv className="w-4 h-4 text-emerald-400" />
     },
     {
       id: 'json',
-      title: 'Structured JSON Dataset',
-      badge: 'API & Devs',
-      desc: 'Complete hierarchical product JSON object for custom pipelines',
-      icon: <Code className="w-5 h-5 text-[#F1FF0A]" />
+      title: 'Structured JSON',
+      badge: 'API / Raw',
+      icon: <VscJson className="w-4 h-4 text-[#F1FF0A]" />
     }
   ];
 
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800 shadow-xl space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-800/80 pb-3.5">
-        <div>
-          <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-            <Download className="w-4 h-4 text-[#F1FF0A]" />
-            <span>1-Click Platform Export</span>
-          </h3>
-          <p className="text-xs text-neutral-400">
-            Export {products.length} products formatted specifically for your target e-commerce platform.
-          </p>
-        </div>
-        <div className="text-xs font-semibold text-[#F1FF0A] bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 px-3 py-1 rounded-full self-start sm:self-auto">
-          {products.length} Products Ready
+    <div className="p-3 rounded-xl bg-neutral-950/90 dark:bg-neutral-950/90 light:bg-white border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 shadow-lg space-y-2.5">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-white dark:text-white light:text-neutral-900 tracking-wide uppercase">
+            Export Platform Format
+          </span>
+          <span className="text-[10px] font-extrabold text-[#F1FF0A] bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 px-2 py-0.5 rounded-full">
+            {products.length} Ready
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Compact Grid of Streamlined Export Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         {platforms.map((p) => {
           const isDownloading = downloadingFormat === p.id;
           return (
-            <button
+            <div
               key={p.id}
-              onClick={() => handleDownload(p.id)}
-              disabled={Boolean(downloadingFormat)}
-              className="p-4 rounded-xl bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-[#F1FF0A]/40 text-left transition-all group active:scale-[0.99] cursor-pointer"
+              className="p-2.5 rounded-xl bg-neutral-900/80 dark:bg-neutral-900/80 light:bg-neutral-50 border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 hover:border-[#F1FF0A]/50 transition-all flex flex-col justify-between gap-2 group"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-black border border-neutral-800 group-hover:border-[#F1FF0A]/30 transition-colors">
-                  {p.icon}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-black dark:bg-black light:bg-white border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 flex-shrink-0">
+                    {p.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-white dark:text-white light:text-neutral-900 truncate">
+                      {p.title}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 group-hover:text-white transition-colors">
-                  {p.badge}
-                </span>
               </div>
 
-              <div className="text-xs font-extrabold text-white group-hover:text-[#F1FF0A] transition-colors flex items-center justify-between">
-                <span>{p.title}</span>
-                {isDownloading ? (
-                  <Check className="w-3.5 h-3.5 text-[#F1FF0A] animate-bounce" />
-                ) : (
-                  <Download className="w-3.5 h-3.5 text-neutral-500 group-hover:text-[#F1FF0A] transition-colors" />
-                )}
-              </div>
+              {/* Action Buttons: Preview & Download */}
+              <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-800/60 dark:border-neutral-800/60 light:border-neutral-200">
+                <button
+                  type="button"
+                  onClick={() => onOpenPreview(p.id)}
+                  className="flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-neutral-800 dark:bg-neutral-800 light:bg-neutral-200 hover:bg-neutral-700 text-[11px] font-semibold text-neutral-300 dark:text-neutral-300 light:text-neutral-800 transition-colors cursor-pointer"
+                  title={`Preview ${p.title}`}
+                >
+                  <Eye className="w-3 h-3" />
+                  <span>Preview</span>
+                </button>
 
-              <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed line-clamp-2">
-                {p.desc}
-              </p>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownload(p.id)}
+                  disabled={Boolean(downloadingFormat)}
+                  className="flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-[#F1FF0A] hover:bg-[#D4FF00] text-black text-[11px] font-extrabold transition-all active:scale-[0.98] cursor-pointer"
+                  title={`Download ${p.title}`}
+                >
+                  {isDownloading ? (
+                    <Check className="w-3 h-3 stroke-[3]" />
+                  ) : (
+                    <Download className="w-3 h-3 stroke-[2.5]" />
+                  )}
+                  <span>Export</span>
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>

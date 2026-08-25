@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Header from './components/Header';
 import UrlBar from './components/UrlBar';
 import StatsBar from './components/StatsBar';
@@ -6,9 +6,9 @@ import ProgressConsole from './components/ProgressConsole';
 import ProductTable from './components/ProductTable';
 import ProductGrid from './components/ProductGrid';
 import ExportDrawer from './components/ExportDrawer';
-import RawPreviewModal from './components/RawPreviewModal';
+import FormatPreviewModal from './components/FormatPreviewModal';
 import Footer from './components/Footer';
-import { Table, LayoutGrid, Code, Search, Sparkles, AlertCircle } from 'lucide-react';
+import { Table, LayoutGrid, Eye, Search } from 'lucide-react';
 
 export default function App() {
   const [url, setUrl] = useState('');
@@ -23,7 +23,31 @@ export default function App() {
   const [detection, setDetection] = useState(null);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
   const [searchQuery, setSearchQuery] = useState('');
-  const [showRawModal, setShowRawModal] = useState(false);
+  
+  // Preview Modal
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewFormat, setPreviewFormat] = useState('shopify');
+
+  // Theme Management (Dark by default, Cream Light option)
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved ? saved === 'dark' : true;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+      root.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(prev => !prev);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -167,6 +191,11 @@ export default function App() {
     }
   };
 
+  const handleOpenPreview = (format) => {
+    setPreviewFormat(format || 'shopify');
+    setPreviewModalOpen(true);
+  };
+
   const handleUpdateProduct = (id, updatedFields) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updatedFields } : p));
   };
@@ -184,14 +213,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-neutral-100 flex flex-col justify-between selection:bg-[#F1FF0A] selection:text-black">
+    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden bg-[#09090b] dark:bg-[#09090b] light:bg-[#FDFBF7] text-neutral-100 dark:text-neutral-100 light:text-neutral-900 selection:bg-[#F1FF0A] selection:text-black">
       
       {/* Top Header */}
-      <div>
-        <Header productsCount={products.length} isLoading={isLoading} />
+      <Header
+        productsCount={products.length}
+        isLoading={isLoading}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+      />
 
-        {/* Main Content Area */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Middle Scrollable Main View Area */}
+      <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-7xl mx-auto space-y-4 pb-8">
           
           {/* Main Scraper Input Bar & Presets */}
           <UrlBar
@@ -218,21 +252,22 @@ export default function App() {
           {/* Stats Bar */}
           <StatsBar stats={stats} detection={detection} />
 
-          {/* 1-Click Platform Exporter */}
+          {/* Compact 1-Click Platform Exporter with Preview Buttons */}
           {products.length > 0 && (
             <ExportDrawer
               products={products}
               onExport={handleExport}
+              onOpenPreview={handleOpenPreview}
               stats={stats}
             />
           )}
 
           {/* Extracted Catalog Toolbar & Table / Grid View */}
           {products.length > 0 && (
-            <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
               
               {/* Filter & View Switcher */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-neutral-950 border border-neutral-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-xl bg-neutral-950/80 dark:bg-neutral-950/80 light:bg-white border border-neutral-800 dark:border-neutral-800 light:border-neutral-200">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -240,24 +275,24 @@ export default function App() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search extracted products..."
-                    className="w-full pl-9 pr-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-white placeholder-neutral-500 outline-none focus:border-[#F1FF0A]"
+                    className="w-full pl-9 pr-3 py-1.5 bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 rounded-lg text-xs text-white dark:text-white light:text-neutral-900 placeholder-neutral-500 outline-none focus:border-[#F1FF0A]"
                   />
                 </div>
 
                 <div className="flex items-center gap-2 self-end sm:self-auto">
                   <button
-                    onClick={() => setShowRawModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                    onClick={() => handleOpenPreview('shopify')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 border border-neutral-800 dark:border-neutral-800 light:border-neutral-300 text-xs font-semibold text-neutral-300 dark:text-neutral-300 light:text-neutral-800 transition-colors cursor-pointer"
                   >
-                    <Code className="w-3.5 h-3.5" />
-                    <span>Raw JSON</span>
+                    <Eye className="w-3.5 h-3.5 text-[#F1FF0A]" />
+                    <span>Live Preview CSV</span>
                   </button>
 
-                  <div className="flex items-center p-0.5 rounded-lg bg-neutral-900 border border-neutral-800">
+                  <div className="flex items-center p-0.5 rounded-lg bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-300">
                     <button
                       onClick={() => setViewMode('table')}
                       className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'table' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-400 hover:text-white'
+                        viewMode === 'table' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black'
                       }`}
                       title="Spreadsheet Table View"
                     >
@@ -266,7 +301,7 @@ export default function App() {
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'grid' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-400 hover:text-white'
+                        viewMode === 'grid' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black'
                       }`}
                       title="Product Cards Grid View"
                     >
@@ -294,17 +329,20 @@ export default function App() {
             </div>
           )}
 
-        </main>
-      </div>
+        </div>
+      </main>
 
-      {/* Raw JSON Code Inspector Modal */}
-      <RawPreviewModal
-        isOpen={showRawModal}
-        onClose={() => setShowRawModal(false)}
+      {/* Live Format Preview Modal */}
+      <FormatPreviewModal
+        isOpen={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
         products={products}
+        defaultFormat={previewFormat}
+        onExport={handleExport}
+        storeName={url.replace(/^https?:\/\//, '').split('/')[0] || 'store'}
       />
 
-      {/* Footer with Developer Info */}
+      {/* Fixed Bottom Docked Footer */}
       <Footer />
 
     </div>
