@@ -210,6 +210,7 @@ export default function App() {
         body: JSON.stringify({
           products,
           format,
+          proxyBase: window.location.origin,
           storeName: url.replace(/^https?:\/\//, '').split('/')[0] || 'store'
         })
       });

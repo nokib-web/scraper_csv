@@ -21,7 +21,7 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
     fetch('/api/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ products, format: activeTab, storeName })
+      body: JSON.stringify({ products, format: activeTab, storeName, proxyBase: window.location.origin })
     })
       .then(res => res.text())
       .then(text => {

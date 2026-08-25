@@ -138,7 +138,7 @@ app.get('/api/img', async (req, res) => {
 
 // Multi-Format Export API
 app.post('/api/export', (req, res) => {
-  const { products, format = 'shopify_csv', filename = 'products' } = req.body;
+  const { products, format = 'shopify_csv', filename = 'products', proxyBase: clientProxyBase } = req.body;
 
   if (!products || !Array.isArray(products) || products.length === 0) {
     return res.status(400).json({ error: 'No products provided for export' });
@@ -149,10 +149,10 @@ app.post('/api/export', (req, res) => {
   let contentType = 'text/csv';
   let fileExt = 'csv';
 
-  // Determine proxy base for image rewriting (use request host)
+  // Use client-provided origin (most reliable), fallback to header detection
   const reqProto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
   const reqHost = req.headers['x-forwarded-host'] || req.get('host') || `localhost:${PORT}`;
-  const proxyBase = `${reqProto}://${reqHost}`;
+  const proxyBase = clientProxyBase || `${reqProto}://${reqHost}`;
 
   switch (format) {
     case 'shopify_csv':
