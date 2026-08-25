@@ -74,123 +74,6 @@ function parseJsonLdProduct(item, origin, fallbackUrl) {
 }
 
 /**
- * Extracts Daraz / Lazada marketplace products
- */
-function extractDarazProducts(html, origin) {
-  const $ = cheerio.load(html);
-  const products = [];
-
-  // 1. window.pageData
-  $('script').each((_, el) => {
-    const text = $(el).html() || '';
-    if (text.includes('window.pageData') || text.includes('listItems')) {
-      const match = text.match(/window\.pageData\s*=\s*(\{.*?\});/s) || text.match(/\{.*"listItems":\[.*\]\}/s);
-      if (match) {
-        try {
-          const data = JSON.parse(match[1] || match[0]);
-          const items = data.mods?.listItems || [];
-          for (const it of items) {
-            const title = it.name || it.title;
-            const price = parseFloat(it.price || it.priceShow || 0) || 0;
-            const regularPrice = parseFloat(it.originalPrice || it.price || price) || price;
-            let img = it.image ? (it.image.startsWith('//') ? `https:${it.image}` : it.image) : '';
-            img = img.replace(/_\d+x\d+[^.]*\.jpg/i, '');
-            const link = it.itemUrl ? (it.itemUrl.startsWith('//') ? `https:${it.itemUrl}` : it.itemUrl) : origin;
-
-            if (title && !products.some(p => p.title === title)) {
-              products.push({
-                id: String(it.itemId || Date.now() + Math.random()),
-                title,
-                handle: title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
-                description: title,
-                vendor: it.sellerName || 'Daraz Seller',
-                product_type: it.category || 'General',
-                tags: [it.category].filter(Boolean),
-                status: 'active',
-                published_at: new Date().toISOString(),
-                created_at: new Date().toISOString(),
-                price,
-                regular_price: regularPrice,
-                currency: 'BDT',
-                variants: [{
-                  id: '1',
-                  title: 'Default Title',
-                  price,
-                  compare_at_price: regularPrice > price ? regularPrice : null,
-                  sku: it.skuId || `SKU-${it.itemId || Date.now()}`,
-                  inventory_quantity: 99,
-                  available: true
-                }],
-                images: img ? [{ id: 1, src: img, alt: title, position: 1 }] : [],
-                url: link,
-                source: 'daraz_json'
-              });
-            }
-          }
-        } catch (e) {}
-      }
-    }
-  });
-
-  // 2. Extract from product anchors
-  $('a[href*="/products/"]').each((idx, el) => {
-    const $a = $(el);
-    const href = $a.attr('href') || '';
-    const imgEl = $a.find('img').first();
-    let imgSrc = imgEl.attr('src') || imgEl.attr('data-src') || '';
-    if (imgSrc.startsWith('//')) imgSrc = `https:${imgSrc}`;
-    imgSrc = imgSrc.replace(/_\d+x\d+[^.]*\.jpg/i, '');
-
-    let title = imgEl.attr('alt') || '';
-    if (!title) {
-      const match = href.match(/\/products\/([a-zA-Z0-9_-]+)-i\d+/);
-      if (match) title = match[1].replace(/-/g, ' ');
-    }
-    if (!title) {
-      title = $a.text().split('৳')[0].trim();
-    }
-    title = title.replace(/\s+/g, ' ').trim();
-
-    let price = 0;
-    const priceMatch = href.match(/price%3A(\d+)/i) || $a.text().match(/৳\s*([0-9,]+)/i);
-    if (priceMatch) {
-      price = parseFloat(priceMatch[1].replace(/,/g, ''));
-    }
-
-    if (title && title.length > 5 && !products.some(p => p.title === title)) {
-      products.push({
-        id: String(Date.now() + idx),
-        title,
-        handle: title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
-        description: title,
-        vendor: 'Daraz',
-        product_type: 'General',
-        tags: ['Daraz'],
-        status: 'active',
-        published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        price: price,
-        regular_price: price,
-        currency: 'BDT',
-        variants: [{
-          id: '1',
-          title: 'Default Title',
-          price: price,
-          sku: `SKU-${idx + 1}`,
-          inventory_quantity: 99,
-          available: true
-        }],
-        images: imgSrc ? [{ id: 1, src: imgSrc, alt: title, position: 1 }] : [],
-        url: href.startsWith('//') ? `https:${href}` : href,
-        source: 'daraz_html'
-      });
-    }
-  });
-
-  return products;
-}
-
-/**
  * Universal SPA Bundle Scanner for React / Vite / Vercel applications with full pagination
  */
 async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
@@ -236,7 +119,6 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
             const apiRes = await axios.get(`${backend}${tp}`, { timeout: 8000 });
             let list = Array.isArray(apiRes.data) ? apiRes.data : (apiRes.data?.data || apiRes.data?.services || apiRes.data?.products || []);
 
-            // If response has total and pagination, fetch all pages if needed
             const totalInBackend = apiRes.data?.total || list.length;
             if (totalInBackend > list.length) {
               const fetchLimit = Math.min(totalInBackend, maxProducts);
@@ -300,17 +182,17 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
 }
 
 /**
- * Extracts products from raw Cheerio DOM
+ * Extracts products from raw Cheerio DOM (supports Star Tech, Ryans, custom e-commerce)
  */
 function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
   const products = [];
 
   const cardSelectors = [
-    '.card', '.cus-col-2', '.product-card', '.product-item', '.product-box',
+    '.p-item', '.card', '.cus-col-2', '.product-card', '.product-item', '.product-box',
     '.grid-product', 'article.product', '.shop-item', '.catalog-item',
-    '[itemtype*="Product"]', '.c-product', '.product-thumb', '.p-item',
+    '[itemtype*="Product"]', '.c-product', '.product-thumb',
     '.box-product', '.product-layout', '.product-wrap', '.product',
-    '[data-mesh-id*="products"]', '.wixui-button'
+    '[data-mesh-id*="products"]'
   ];
 
   const brandBlacklist = new Set([
@@ -340,8 +222,8 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         }
 
         // Find Title
-        let title = imgEl.attr('alt') ||
-          $card.find('.card-title, .product-title, h2, h3, h4, .title, [class*="title"], [class*="name"], p.card-text a, a.card-link').first().text().trim();
+        let title = $card.find('.p-item-name a, .card-title, .product-title, h2, h3, h4, .title, [class*="title"], [class*="name"], p.card-text a, a.card-link').first().text().trim() ||
+          imgEl.attr('alt') || '';
         
         if (!title && $card.is('a')) {
           title = $card.text().trim();
@@ -351,16 +233,18 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
           title = title.replace(/\s+/g, ' ').trim();
         }
 
-        // Clean out invalid / short / blacklisted logo names
         if (!title || title.length < 3 || brandBlacklist.has(title.toLowerCase())) {
           return;
         }
 
         // Find Price
         let priceStr = '0';
+        let regularPriceStr = '0';
         const priceElement = $card.find('.price-new, .sp-text, .special-price, .p-item-price, .pr-text, .price, .product-price, .amount, .text-primary, [class*="price"]').first();
         let priceText = priceElement.text() || $card.text();
+
         if ($card.find('.price-old').length > 0) {
+          regularPriceStr = $card.find('.price-old').text().replace(/[^0-9.]/g, '');
           priceText = $card.find('.price-new').text() || priceText.replace($card.find('.price-old').text(), '');
         }
 
@@ -370,17 +254,20 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         }
 
         // Find Link
-        const linkEl = $card.find('a').first();
+        const linkEl = $card.find('.p-item-name a, a').first();
         let link = linkEl.attr('href') || ($card.is('a') ? $card.attr('href') : currentUrl);
         if (link && link.startsWith('/')) link = `${origin}${link}`;
 
-        // Find Brand / Category
+        // Find Category
         const category = $card.find('.sp-text-link, .category, .badge, [class*="category"]').first().text().trim() || 'General';
 
-        if (title && (parseFloat(priceStr) > 0 || (imgSrc && (imgSrc.includes('product') || imgSrc.includes('storage') || imgSrc.includes('upload') || imgSrc.includes('wixstatic'))))) {
+        if (title && (parseFloat(priceStr) > 0 || (imgSrc && (imgSrc.includes('product') || imgSrc.includes('storage') || imgSrc.includes('upload') || imgSrc.includes('image/cache'))))) {
           const handle = title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}-${idx}`;
 
           if (!products.some(p => p.title === title)) {
+            const parsedPrice = parseFloat(priceStr) || 0;
+            const parsedRegular = parseFloat(regularPriceStr) || parsedPrice;
+
             products.push({
               id: String(Date.now() + idx),
               title: title,
@@ -392,14 +279,14 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
               status: 'active',
               published_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
-              price: parseFloat(priceStr) || 0,
-              regular_price: parseFloat(priceStr) || 0,
+              price: parsedPrice,
+              regular_price: parsedRegular >= parsedPrice ? parsedRegular : parsedPrice,
               currency: priceText.includes('Tk') || priceText.includes('৳') || currentUrl.includes('.bd') ? 'BDT' : 'USD',
               variants: [{
                 id: `${Date.now()}-${idx}`,
                 title: 'Default Title',
-                price: parseFloat(priceStr) || 0,
-                compare_at_price: null,
+                price: parsedPrice,
+                compare_at_price: parsedRegular > parsedPrice ? parsedRegular : null,
                 sku: `SKU-${idx + 1}`,
                 inventory_quantity: 99,
                 available: true,
@@ -415,7 +302,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         }
       });
 
-      if (products.length >= 5 || (products.length > 0 && products.some(p => p.price > 0))) {
+      if (products.length >= 10 || (products.length > 0 && products.some(p => p.price > 0))) {
         break;
       }
     }
@@ -425,7 +312,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
 }
 
 /**
- * Scrapes products from any generic e-commerce, Wix, Ryans, Daraz, or custom React/Vercel SPA website
+ * Scrapes products from any generic e-commerce, Wix, Ryans, Star Tech, or custom React/Vercel SPA website
  */
 async function scrapeGenericSite(url, options = {}, onLog) {
   const parsedUrl = new URL(url);
@@ -433,23 +320,13 @@ async function scrapeGenericSite(url, options = {}, onLog) {
   const maxProducts = options.limit || 50;
   let products = [];
 
-  if (onLog) onLog(`Fetching page HTML from ${url} with anti-bot protection...`);
+  if (onLog) onLog(`Fetching initial page from ${url} with anti-bot protection...`);
 
   const response = await fetchWithBrowserFallback(url, 12000);
   const html = response.data;
   const $ = cheerio.load(html);
 
-  // 1. Check if Daraz / Lazada
-  if (url.includes('daraz') || url.includes('lazada') || html.includes('daraz') || html.includes('lazada')) {
-    if (onLog) onLog('Executing Daraz Marketplace Extractor...');
-    const darazProducts = extractDarazProducts(html, origin);
-    if (darazProducts.length > 0) {
-      if (onLog) onLog(`Extracted ${darazProducts.length} products from Daraz!`);
-      return darazProducts.slice(0, maxProducts);
-    }
-  }
-
-  // 2. Scan Client-Side SPA Bundles (React / Vite / Vercel apps like style-decor)
+  // 1. Scan Client-Side SPA Bundles (React / Vite / Vercel apps like style-decor)
   if (html.length < 3000 || $('script[src*="assets/"], script[src*="static/"]').length > 0) {
     if (onLog) onLog('Inspecting SPA JavaScript bundles for connected REST API backend...');
     const spaProducts = await scanSpaBundles(html, origin, maxProducts, onLog);
@@ -459,8 +336,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
     }
   }
 
-  // 3. Check for JSON-LD scripts
-  if (onLog) onLog('Searching for structured JSON-LD Schema.org product data...');
+  // 2. Check for JSON-LD scripts
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
       const jsonText = $(el).html();
@@ -468,13 +344,9 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       const parsed = JSON.parse(jsonText);
 
       const candidates = [];
-      if (Array.isArray(parsed)) {
-        candidates.push(...parsed);
-      } else if (parsed['@graph'] && Array.isArray(parsed['@graph'])) {
-        candidates.push(...parsed['@graph']);
-      } else {
-        candidates.push(parsed);
-      }
+      if (Array.isArray(parsed)) candidates.push(...parsed);
+      else if (parsed['@graph'] && Array.isArray(parsed['@graph'])) candidates.push(...parsed['@graph']);
+      else candidates.push(parsed);
 
       for (const item of candidates) {
         if (products.length >= maxProducts) break;
@@ -483,72 +355,82 @@ async function scrapeGenericSite(url, options = {}, onLog) {
           if (prod && !products.some(p => p.title === prod.title)) {
             products.push(prod);
           }
-        } else if (item['@type'] === 'ItemList' && Array.isArray(item.itemListElement)) {
-          for (const elem of item.itemListElement) {
-            if (products.length >= maxProducts) break;
-            const subItem = elem.item || elem;
-            if (subItem['@type'] === 'Product' || subItem.name) {
-              const prod = parseJsonLdProduct(subItem, origin, url);
-              if (prod && !products.some(p => p.title === prod.title)) {
-                products.push(prod);
-              }
-            }
-          }
         }
       }
     } catch (e) {}
   });
 
-  const validJsonLd = products.filter(p => p.title && (p.price > 0 || (p.images && p.images.length > 0)));
-  if (validJsonLd.length >= 3) {
-    if (onLog) onLog(`Successfully extracted ${validJsonLd.length} products via JSON-LD!`);
-    return validJsonLd;
+  // 3. Extract initial DOM cards
+  const initialDom = extractProductsFromDom($, origin, url, maxProducts, onLog);
+  for (const p of initialDom) {
+    if (!products.some(x => x.title === p.title)) products.push(p);
   }
 
-  // 4. Extract from DOM cards
-  if (onLog) onLog('Parsing HTML product cards & semantic grid elements...');
-  const domProducts = extractProductsFromDom($, origin, url, maxProducts, onLog);
-  if (domProducts.length > 0) {
-    if (onLog) onLog(`Successfully extracted ${domProducts.length} products from HTML elements!`);
-    return domProducts;
-  }
+  if (onLog) onLog(`Extracted ${products.length} products from initial page.`);
 
-  // 5. Deep Discovery: Look for collection or catalog links (e.g. /the-collection, /shop, /products, /catalog)
-  const categoryLinks = [];
-  $('a[href*="collection"], a[href*="category"], a[href*="products"], a[href*="shop"], a[href*="catalog"], a[href*="services"]').each((_, el) => {
-    let href = $(el).attr('href') || '';
-    if (href.startsWith('/')) href = `${origin}${href}`;
-    if (href.startsWith('http') && !categoryLinks.includes(href) && href !== url && href !== `${origin}/` && !href.includes('apple') && !href.includes('google')) {
-      categoryLinks.push(href);
+  // 4. Multi-Category & Deep Crawl if user requested more products or on homepage
+  if (products.length < maxProducts) {
+    const categoryLinks = [];
+    $('a[href]').each((_, el) => {
+      let href = $(el).attr('href') || '';
+      if (href.startsWith('/')) href = `${origin}${href}`;
+      
+      const isCat = (
+        href.includes('/category') || href.includes('/collection') || href.includes('/shop') ||
+        href.includes('/product') || href.includes('/laptop') || href.includes('/component') ||
+        href.includes('/desktop') || href.includes('/monitor') || href.includes('/accessories') ||
+        href.includes('/gadget') || href.includes('/tv') || href.includes('/camera') ||
+        href.includes('/shoes') || href.includes('/men') || href.includes('/women')
+      );
+
+      if (
+        isCat &&
+        href.startsWith('http') &&
+        href.includes(parsedUrl.hostname) &&
+        !categoryLinks.includes(href) &&
+        href !== url &&
+        href !== `${origin}/` &&
+        !href.includes('#') &&
+        !href.includes('cart') &&
+        !href.includes('login') &&
+        !href.includes('checkout')
+      ) {
+        categoryLinks.push(href);
+      }
+    });
+
+    if (categoryLinks.length > 0) {
+      if (onLog) onLog(`Discovered ${categoryLinks.length} category catalog paths. Deep-crawling store catalog...`);
+      for (const catUrl of categoryLinks.slice(0, 15)) {
+        if (products.length >= maxProducts) break;
+        try {
+          if (onLog) onLog(`Crawling category: ${catUrl}...`);
+          const catRes = await fetchWithBrowserFallback(catUrl, 9000);
+          const $cat = cheerio.load(catRes.data);
+          const catProducts = extractProductsFromDom($cat, origin, catUrl, maxProducts, onLog);
+          
+          for (const cp of catProducts) {
+            if (products.length >= maxProducts) break;
+            if (!products.some(p => p.title === cp.title)) {
+              products.push(cp);
+            }
+          }
+          if (onLog) onLog(`Total catalog size now: ${products.length} products...`);
+        } catch (e) {}
+      }
     }
-  });
-
-  if (categoryLinks.length > 0) {
-    for (const catUrl of categoryLinks.slice(0, 3)) {
-      if (onLog) onLog(`Crawling store collection page: ${catUrl}...`);
-      try {
-        const catRes = await fetchWithBrowserFallback(catUrl, 10000);
-        const $cat = cheerio.load(catRes.data);
-        const catProducts = extractProductsFromDom($cat, origin, catUrl, maxProducts, onLog);
-        if (catProducts.length > 0) {
-          if (onLog) onLog(`Extracted ${catProducts.length} products from collection page!`);
-          return catProducts;
-        }
-
-        // Try scanning SPA bundle on subpage as well
-        const subSpa = await scanSpaBundles(catRes.data, origin, maxProducts, onLog);
-        if (subSpa.length > 0) {
-          return subSpa.slice(0, maxProducts);
-        }
-      } catch (e) {}
-    }
   }
 
-  // 6. Single Product Fallback
+  if (products.length > 0) {
+    if (onLog) onLog(`Completed catalog extraction with ${products.length} total products!`);
+    return products.slice(0, maxProducts);
+  }
+
+  // 5. Single Product Fallback
   const ogTitle = $('meta[property="og:title"]').attr('content') || $('h1').first().text().trim();
   const ogImage = $('meta[property="og:image"]').attr('content');
   const ogDesc = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || '';
-  const priceSelectors = ['.sp-text', '.price', '.product-price', '.offer-price', '[itemprop="price"]', '.current-price', '.amount', '[data-price]'];
+  const priceSelectors = ['.price-new', '.sp-text', '.price', '.product-price', '.offer-price', '[itemprop="price"]', '.current-price', '.amount', '[data-price]'];
   let detectedPrice = '0';
   for (const sel of priceSelectors) {
     const txt = $(sel).first().text().replace(/[^0-9.]/g, '');
@@ -559,7 +441,6 @@ async function scrapeGenericSite(url, options = {}, onLog) {
   }
 
   if (ogTitle && ogTitle.length > 3) {
-    if (onLog) onLog(`Extracted product "${ogTitle}" from page metadata.`);
     const images = [];
     if (ogImage) {
       let src = ogImage.startsWith('//') ? `https:${ogImage}` : (ogImage.startsWith('/') ? `${origin}${ogImage}` : ogImage);
@@ -579,7 +460,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       created_at: new Date().toISOString(),
       price: parseFloat(detectedPrice) || 0,
       regular_price: parseFloat(detectedPrice) || 0,
-      currency: 'USD',
+      currency: 'BDT',
       variants: [{
         id: '1',
         title: 'Default Title',
@@ -604,6 +485,5 @@ async function scrapeGenericSite(url, options = {}, onLog) {
 module.exports = {
   scrapeGenericSite,
   parseJsonLdProduct,
-  extractDarazProducts,
   scanSpaBundles
 };

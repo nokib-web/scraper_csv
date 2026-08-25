@@ -58,8 +58,8 @@ app.get('/api/scrape-stream', async (req, res) => {
     'Access-Control-Allow-Origin': '*'
   });
 
-  const sendEvent = (event, data) => {
-    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  const sendEvent = (type, payload) => {
+    res.write(`data: ${JSON.stringify({ type, ...payload })}\n\n`);
   };
 
   const onLog = (msg) => {
@@ -74,9 +74,13 @@ app.get('/api/scrape-stream', async (req, res) => {
       onLog
     });
 
-    sendEvent('complete', result);
+    sendEvent('complete', {
+      products: result.products || [],
+      detection: result.detection,
+      total: result.total
+    });
   } catch (error) {
-    sendEvent('error', { message: error.message || 'Scraping failed.' });
+    sendEvent('error', { error: error.message || 'Scraping failed.' });
   } finally {
     res.end();
   }
