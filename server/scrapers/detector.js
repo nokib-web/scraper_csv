@@ -139,7 +139,17 @@ async function detectPlatform(url) {
       return { platform: 'zatiq', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Zatiq / ZatiqEasy Platform' };
     }
 
-    // Daraz & Lazada Marketplace
+    // 0. Amazon Detection
+    if (url.includes('amazon.com') || url.includes('amazon.in') || url.includes('amazon.co.uk') || url.includes('amzn.to')) {
+      return {
+        platform: 'amazon',
+        confidence: 1.0,
+        name: 'Amazon Marketplace',
+        apiUrl: null
+      };
+    }
+
+    // 1. Daraz & Lazada Marketplace
     if (url.includes('daraz.') || url.includes('lazada.') || html.includes('daraz') || html.includes('lazada')) {
       return { platform: 'daraz', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Daraz / Lazada Marketplace' };
     }
