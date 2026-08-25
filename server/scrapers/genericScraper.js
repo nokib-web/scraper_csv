@@ -358,8 +358,11 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
 
         // Find Price
         let priceStr = '0';
-        const priceElement = $card.find('.sp-text, .special-price, .pr-text, .price, .product-price, .amount, .text-primary, [class*="price"]').first();
-        const priceText = priceElement.text() || $card.text();
+        const priceElement = $card.find('.price-new, .sp-text, .special-price, .p-item-price, .pr-text, .price, .product-price, .amount, .text-primary, [class*="price"]').first();
+        let priceText = priceElement.text() || $card.text();
+        if ($card.find('.price-old').length > 0) {
+          priceText = $card.find('.price-new').text() || priceText.replace($card.find('.price-old').text(), '');
+        }
 
         const match = priceText.match(/(?:Tk|৳|\$|£|€|₹)?\s*([0-9,]+(?:\.[0-9]{2})?)/);
         if (match && match[1]) {

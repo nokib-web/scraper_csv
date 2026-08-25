@@ -1,46 +1,60 @@
 import React from 'react';
-import { Sparkles, Layers, Download, Database, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { Package, ExternalLink, Globe } from 'lucide-react';
 
-export default function Header() {
+export default function Header({ productsCount, isLoading }) {
   return (
-    <header className="w-full flex flex-col md:flex-row items-center justify-between gap-4 py-4 px-6 border-b border-white/10 glass-panel mb-6">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-          <Zap className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-indigo-300">
-              OmniScrape <span className="text-indigo-400">Pro</span>
-            </h1>
-            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full">
-              v1.0 Ready
-            </span>
+    <header className="border-b border-neutral-800/80 bg-black/60 backdrop-blur-xl sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        {/* Brand */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#F1FF0A] flex items-center justify-center shadow-lg shadow-[#F1FF0A]/10">
+            <Package className="w-5 h-5 text-black stroke-[2.5]" />
           </div>
-          <p className="text-xs text-slate-400">
-            Universal E-Commerce Product Extractor & Direct Platform Exporter
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-extrabold tracking-tight text-white">
+                get<span className="text-[#F1FF0A]">Products</span>
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-300">
+                Universal Exporter
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Supported Platform Badges */}
-      <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Shopify Ready</span>
+        {/* Right Info & Actions */}
+        <div className="flex items-center gap-3">
+          {productsCount > 0 && (
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
+              <span className="w-2 h-2 rounded-full bg-[#F1FF0A] animate-pulse"></span>
+              <span className="font-semibold text-white">{productsCount}</span> Products Extracted
+            </div>
+          )}
+
+          <a
+            href="https://github.com/nokib-web/scraper_csv"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-xs font-medium text-neutral-200 transition-all"
+          >
+            <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <span className="hidden sm:inline">GitHub</span>
+          </a>
+
+          <a
+            href="https://nokib.vercel.app/developer"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F1FF0A]/10 hover:bg-[#F1FF0A]/20 border border-[#F1FF0A]/30 text-xs font-semibold text-[#F1FF0A] transition-all"
+          >
+            <span>Nokib</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-950/40 border border-purple-500/30 text-purple-300">
-          <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-          <span>WooCommerce</span>
-        </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-300">
-          <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-          <span>Wix Store</span>
-        </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300">
-          <Database className="w-3.5 h-3.5 text-cyan-400" />
-          <span>JSON / Clean CSV</span>
-        </div>
+
       </div>
     </header>
   );

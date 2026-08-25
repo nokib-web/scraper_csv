@@ -17,34 +17,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Quick Demo Preset Stores
 const PRESET_STORES = [
-  {
-    name: 'Helm Boots (Shopify Store)',
-    url: 'https://helmboots.com',
-    type: 'shopify',
-    badge: 'Shopify Footwear',
-    description: 'High quality footwear with rich sizes, variants & high-res images'
-  },
-  {
-    name: 'SpaceX Official Store',
-    url: 'https://shop.spacex.com',
-    type: 'shopify',
-    badge: 'Shopify Apparel',
-    description: 'Official merch store with diverse apparel, accessories & gear'
-  },
-  {
-    name: 'Allbirds (Shopify Store)',
-    url: 'https://www.allbirds.com',
-    type: 'shopify',
-    badge: 'Shopify Footwear',
-    description: 'Eco-friendly shoes with color & size variants'
-  },
-  {
-    name: 'Single Product (SpaceX Jacket)',
-    url: 'https://shop.spacex.com/products/unisex-spacex-starship-flight-jacket',
-    type: 'shopify',
-    badge: 'Single Product Link',
-    description: 'Single item URL extraction demo'
-  }
+  { name: 'Daraz Bangladesh', url: 'https://www.daraz.com.bd', type: 'daraz', badge: 'Marketplace' },
+  { name: 'Bata Bangladesh', url: 'https://www.batabd.com', type: 'shopify', badge: 'Shopify Store' },
+  { name: 'Ryans Computers', url: 'https://www.ryans.com', type: 'generic', badge: 'Electronics' },
+  { name: 'Star Tech', url: 'https://www.startech.com.bd', type: 'generic', badge: 'Tech Store' },
+  { name: 'Toyyub Store', url: 'https://toyyub.com', type: 'zatiq', badge: 'Zatiq Platform' }
 ];
 
 // Presets API

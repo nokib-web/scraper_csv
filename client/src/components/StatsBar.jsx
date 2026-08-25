@@ -1,96 +1,77 @@
 import React from 'react';
-import { Package, Layers, DollarSign, Image as ImageIcon, Cpu, CheckCircle } from 'lucide-react';
+import { Package, Layers, DollarSign, Image, Cpu } from 'lucide-react';
 
-export default function StatsBar({ products = [], platform = 'auto' }) {
-  if (!products || products.length === 0) return null;
-
-  const totalProducts = products.length;
-  const totalVariants = products.reduce((acc, p) => acc + (p.variants?.length || 1), 0);
-  const totalImages = products.reduce((acc, p) => acc + (p.images?.length || 0), 0);
-
-  const prices = products.map(p => p.price).filter(p => typeof p === 'number' && !isNaN(p) && p > 0);
-  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-  const avgPrice = prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
-  const currency = products[0]?.currency || 'USD';
+export default function StatsBar({ stats, detection }) {
+  if (!stats || stats.totalProducts === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+      
       {/* Total Products */}
-      <div className="glass-panel p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
-          <Package className="w-5 h-5 text-indigo-400" />
+      <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center gap-3.5">
+        <div className="p-2.5 rounded-lg bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 text-[#F1FF0A]">
+          <Package className="w-5 h-5" />
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Products
-          </span>
-          <span className="text-xl font-extrabold text-white">
-            {totalProducts}
-          </span>
+          <div className="text-xl font-extrabold text-white tracking-tight">
+            {stats.totalProducts}
+          </div>
+          <div className="text-[11px] font-medium text-neutral-400">Total Products</div>
         </div>
       </div>
 
       {/* Total Variants */}
-      <div className="glass-panel p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
-          <Layers className="w-5 h-5 text-purple-400" />
+      <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center gap-3.5">
+        <div className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+          <Layers className="w-5 h-5" />
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Variants
-          </span>
-          <span className="text-xl font-extrabold text-white">
-            {totalVariants}
-          </span>
+          <div className="text-xl font-extrabold text-white tracking-tight">
+            {stats.totalVariants}
+          </div>
+          <div className="text-[11px] font-medium text-neutral-400">Total Variants</div>
         </div>
       </div>
 
       {/* Price Range */}
-      <div className="glass-panel p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
-          <DollarSign className="w-5 h-5 text-emerald-400" />
+      <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center gap-3.5">
+        <div className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+          <DollarSign className="w-5 h-5" />
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Avg / Range
-          </span>
-          <span className="text-sm font-bold text-emerald-400">
-            ${minPrice.toFixed(0)} - ${maxPrice.toFixed(0)}
-          </span>
-          <span className="text-[10px] text-slate-400 block">Avg: ${avgPrice.toFixed(2)}</span>
+          <div className="text-sm font-bold text-white tracking-tight truncate max-w-[130px]">
+            {stats.currencySymbol || '$'}{stats.minPrice} - {stats.currencySymbol || '$'}{stats.maxPrice}
+          </div>
+          <div className="text-[11px] font-medium text-neutral-400">Price Range</div>
         </div>
       </div>
 
-      {/* Total Images */}
-      <div className="glass-panel p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shrink-0">
-          <ImageIcon className="w-5 h-5 text-cyan-400" />
+      {/* Images Found */}
+      <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center gap-3.5">
+        <div className="p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300">
+          <Image className="w-5 h-5" />
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Product Images
-          </span>
-          <span className="text-xl font-extrabold text-white">
-            {totalImages}
-          </span>
+          <div className="text-xl font-extrabold text-white tracking-tight">
+            {stats.totalImages}
+          </div>
+          <div className="text-[11px] font-medium text-neutral-400">Photos Extracted</div>
         </div>
       </div>
 
-      {/* Engine Platform */}
-      <div className="glass-panel p-4 flex items-center gap-3 col-span-2 sm:col-span-3 lg:col-span-1">
-        <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
-          <Cpu className="w-5 h-5 text-amber-400" />
+      {/* Detected Platform */}
+      <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 col-span-2 sm:col-span-1 flex items-center gap-3.5">
+        <div className="p-2.5 rounded-lg bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 text-[#F1FF0A]">
+          <Cpu className="w-5 h-5" />
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
-            Engine Source
-          </span>
-          <span className="text-sm font-extrabold text-amber-300 capitalize">
-            {platform || 'Detected'}
-          </span>
+          <div className="text-sm font-bold text-[#F1FF0A] uppercase tracking-wide truncate">
+            {detection?.platform || stats.engineSource || 'Auto'}
+          </div>
+          <div className="text-[11px] font-medium text-neutral-400">Engine Source</div>
         </div>
       </div>
+
     </div>
   );
 }

@@ -1,86 +1,83 @@
 import React, { useRef, useEffect } from 'react';
-import { Terminal, CheckCircle, AlertTriangle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Terminal, ChevronUp, ChevronDown, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
-export default function ProgressConsole({
-  logs = [],
-  isLoading = false,
-  error = null,
-  isOpen = true,
-  setIsOpen
-}) {
-  const logEndRef = useRef(null);
+export default function ProgressConsole({ logs, status, isCollapsed, onToggleCollapse }) {
+  const logsEndRef = useRef(null);
 
   useEffect(() => {
-    if (logEndRef.current && isOpen) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (!isCollapsed && logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs, isOpen]);
+  }, [logs, isCollapsed]);
 
-  if (logs.length === 0 && !isLoading && !error) return null;
+  if (logs.length === 0) return null;
 
   return (
-    <div className="w-full glass-panel border-indigo-500/20 overflow-hidden mb-6">
-      {/* Console Header */}
+    <div className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 overflow-hidden shadow-2xl animate-in fade-in duration-300">
+      
+      {/* Header bar */}
       <div
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between px-5 py-3 bg-slate-950/80 border-b border-white/10 cursor-pointer hover:bg-slate-900/80 transition"
+        onClick={onToggleCollapse}
+        className="flex items-center justify-between px-4 py-3 bg-neutral-900/90 border-b border-neutral-800/80 cursor-pointer select-none"
       >
         <div className="flex items-center gap-2.5">
-          <Terminal className="w-4 h-4 text-indigo-400" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+          <Terminal className="w-4 h-4 text-[#F1FF0A]" />
+          <span className="text-xs font-bold text-white tracking-wide uppercase">
             Live Scraping Console
           </span>
-          {isLoading && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
-              Streaming Data
+
+          {status === 'loading' && (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#F1FF0A]/10 border border-[#F1FF0A]/30 text-[10px] font-bold text-[#F1FF0A] animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Streaming Live
             </span>
           )}
-          {!isLoading && logs.length > 0 && !error && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              <CheckCircle className="w-3 h-3" />
-              Extraction Done
+          {status === 'done' && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
+              <CheckCircle2 className="w-3 h-3" />
+              Completed
             </span>
           )}
-          {error && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              <AlertTriangle className="w-3 h-3" />
-              Error Occurred
+          {status === 'error' && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-[10px] font-bold text-red-400">
+              <AlertCircle className="w-3 h-3" />
+              Error
             </span>
           )}
         </div>
 
-        <button className="text-slate-400 hover:text-white p-1">
-          {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <button className="text-neutral-400 hover:text-white p-1 transition-colors">
+          {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Console Body */}
-      {isOpen && (
-        <div className="p-4 bg-slate-950/90 font-mono text-xs max-h-48 overflow-y-auto space-y-1.5">
-          {logs.map((log, index) => (
-            <div key={index} className="flex items-start gap-2 text-slate-300 leading-relaxed">
-              <span className="text-slate-500 select-none">
-                [{typeof log === 'object' ? log.timestamp || 'LOG' : 'LOG'}]
-              </span>
-              <span className="text-indigo-400 select-none">❯</span>
-              <span className={index === logs.length - 1 && isLoading ? 'text-cyan-300 font-semibold' : 'text-slate-200'}>
-                {typeof log === 'object' ? log.message : log}
-              </span>
-            </div>
-          ))}
+      {/* Logs View */}
+      {!isCollapsed && (
+        <div className="p-4 bg-black/90 font-mono text-[11px] text-neutral-300 max-h-52 overflow-y-auto space-y-1.5 leading-relaxed">
+          {logs.map((log, index) => {
+            const isError = log.includes('error') || log.includes('Failed') || log.includes('Error');
+            const isSuccess = log.includes('Success') || log.includes('Completed') || log.includes('Extracted');
+            const isDiscover = log.includes('Discovered') || log.includes('Detected');
 
-          {error && (
-            <div className="flex items-start gap-2 text-rose-400 bg-rose-950/40 p-2.5 rounded-lg border border-rose-500/30 mt-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block font-semibold">Extraction Failed</strong>
-                <span>{error}</span>
+            return (
+              <div
+                key={index}
+                className={`flex items-start gap-2 ${
+                  isError
+                    ? 'text-red-400'
+                    : isSuccess
+                    ? 'text-[#F1FF0A]'
+                    : isDiscover
+                    ? 'text-yellow-300'
+                    : 'text-neutral-400'
+                }`}
+              >
+                <span className="text-neutral-600 select-none">›</span>
+                <span className="break-all">{log}</span>
               </div>
-            </div>
-          )}
-
-          <div ref={logEndRef} />
+            );
+          })}
+          <div ref={logsEndRef} />
         </div>
       )}
     </div>

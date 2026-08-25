@@ -1,188 +1,116 @@
 import React, { useState } from 'react';
-import { Download, Eye, Check, Copy, ShoppingBag, Globe, Sparkles, FileSpreadsheet, Code2 } from 'lucide-react';
+import { Download, FileSpreadsheet, Code, Check, FileText } from 'lucide-react';
 
-export default function ExportDrawer({
-  products = [],
-  onExport,
-  onInspectRaw,
-  isExporting
-}) {
-  const [copiedFormat, setCopiedFormat] = useState(null);
+export default function ExportDrawer({ products, onExport, stats }) {
+  const [downloadingFormat, setDownloadingFormat] = useState(null);
 
-  if (!products || products.length === 0) return null;
-
-  const handleQuickCopy = async (format) => {
-    try {
-      const res = await fetch('/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ products, format })
-      });
-      const text = await res.text();
-      await navigator.clipboard.writeText(text);
-      setCopiedFormat(format);
-      setTimeout(() => setCopiedFormat(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy', err);
-    }
+  const handleDownload = async (format) => {
+    setDownloadingFormat(format);
+    await onExport(format);
+    setTimeout(() => setDownloadingFormat(null), 1200);
   };
 
-  const exportCards = [
+  const platforms = [
     {
-      id: 'shopify_csv',
+      id: 'shopify',
       title: 'Shopify Product CSV',
-      subtitle: 'Official Shopify Import Template with Handles, Variants & Images',
-      badge: 'Shopify 100% Ready',
-      badgeColor: 'bg-lime-950/60 border-lime-500/40 text-lime-300',
-      icon: ShoppingBag,
-      iconColor: 'text-lime-400',
-      borderHover: 'hover:border-lime-500/50',
-      gradient: 'from-lime-500/10 to-transparent',
-      btnColor: 'bg-lime-600 hover:bg-lime-500 text-white shadow-lime-600/30'
+      badge: 'Official Template',
+      desc: 'Handles, multi-row images, variants & tags for Shopify Import',
+      icon: (
+        <svg className="w-5 h-5 text-[#95BF47]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.34 7.24c-.04-.26-.23-.46-.48-.5-.26-.03-2.6-.2-2.6-.2s-1.72-1.72-1.9-1.9c-.18-.18-.54-.12-.68.02l-.96 8.52 4.14 1.25 2.48-7.19zm-5.7-2.3c-.02 0-.05.02-.07.03L9.75 6.8c-.37.13-.64.44-.71.82L7.26 17.5l6.38 1.9 2.04-14.46zm-5.02 2.37L3.8 8.64c-.45.16-.76.6-.76 1.08v.17l4.38 1.34 1.2-3.92zm6.66 11.2l-6.42-1.92-2.4 2.8c-.28.32-.2.82.16 1.04.14.08.3.13.46.13.19 0 .37-.06.53-.19l7.67-1.86zm4.84-2.12l-2.61-7.58-1.57 9.87 3.73-1.07c.36-.1.6-.44.55-.82-.02-.14-.05-.28-.1-.4z"/>
+        </svg>
+      )
     },
     {
-      id: 'woo_csv',
+      id: 'woocommerce',
       title: 'WooCommerce / WP CSV',
-      subtitle: 'WordPress Standard Import Schema for WooCommerce Stores',
-      badge: 'WordPress Compatible',
-      badgeColor: 'bg-purple-950/60 border-purple-500/40 text-purple-300',
-      icon: Globe,
-      iconColor: 'text-purple-400',
-      borderHover: 'hover:border-purple-500/50',
-      gradient: 'from-purple-500/10 to-transparent',
-      btnColor: 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30'
+      badge: 'WordPress Ready',
+      desc: 'Standard schema with SKU, stock, regular & sale price columns',
+      icon: (
+        <svg className="w-5 h-5 text-[#7F54B3]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2.5 6C1.12 6 0 7.12 0 8.5v7C0 16.88 1.12 18 2.5 18h19c1.38 0 2.5-1.12 2.5-2.5v-7C24 7.12 22.88 6 21.5 6h-19zm2.8 3.5h2.1l1.5 4.5 1.5-4.5h2.1l-2.6 6.5h-2l-2.6-6.5zm8.4 0h2.1l1.5 4.5 1.5-4.5h2.1l-2.6 6.5h-2l-2.6-6.5z"/>
+        </svg>
+      )
     },
     {
-      id: 'wix_csv',
+      id: 'wix',
       title: 'Wix eCommerce CSV',
-      subtitle: 'Official Wix Store Product Import Multi-Row Layout',
       badge: 'Wix Store Ready',
-      badgeColor: 'bg-blue-950/60 border-blue-500/40 text-blue-300',
-      icon: Sparkles,
-      iconColor: 'text-blue-400',
-      borderHover: 'hover:border-blue-500/50',
-      gradient: 'from-blue-500/10 to-transparent',
-      btnColor: 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30'
+      desc: 'Official Wix multi-row variant structure & image gallery layout',
+      icon: (
+        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.2 6.5l-2.7 11h-2.9l-1.9-7.7-1.9 7.7H7.9L5.2 6.5h2.8l1.4 7.7 1.9-7.7h2.8l1.9 7.7 1.4-7.7h2.8z"/>
+        </svg>
+      )
     },
     {
-      id: 'universal_csv',
+      id: 'universal',
       title: 'Universal Clean CSV',
-      subtitle: 'Clean Spreadsheet for Excel, Google Sheets, & Custom CMS',
       badge: 'Excel & Sheets',
-      badgeColor: 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300',
-      icon: FileSpreadsheet,
-      iconColor: 'text-emerald-400',
-      borderHover: 'hover:border-emerald-500/50',
-      gradient: 'from-emerald-500/10 to-transparent',
-      btnColor: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+      desc: 'Clean, flat spreadsheet format for Google Sheets, Excel & ERP',
+      icon: <FileSpreadsheet className="w-5 h-5 text-[#107C41]" />
     },
     {
       id: 'json',
       title: 'Structured JSON Dataset',
-      subtitle: 'Complete Nested JSON Object for Developers, APIs & Automations',
-      badge: 'API & Dev Ready',
-      badgeColor: 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300',
-      icon: Code2,
-      iconColor: 'text-cyan-400',
-      borderHover: 'hover:border-cyan-500/50',
-      gradient: 'from-cyan-500/10 to-transparent',
-      btnColor: 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/30'
+      badge: 'API & Devs',
+      desc: 'Complete hierarchical product JSON object for custom pipelines',
+      icon: <Code className="w-5 h-5 text-[#F1FF0A]" />
     }
   ];
 
+  if (!products || products.length === 0) return null;
+
   return (
-    <div className="w-full glass-panel p-6 mb-8 border-indigo-500/20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-white/10">
+    <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800 shadow-xl space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-800/80 pb-3.5">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Download className="w-5 h-5 text-indigo-400" />
-            <span>1-Click Multi-Platform Export Center</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Download formatted product catalogs ready to import directly into your target store.
+          <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+            <Download className="w-4 h-4 text-[#F1FF0A]" />
+            <span>1-Click Platform Export</span>
+          </h3>
+          <p className="text-xs text-neutral-400">
+            Export {products.length} products formatted specifically for your target e-commerce platform.
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-indigo-300 bg-indigo-950/60 px-3 py-1.5 rounded-lg border border-indigo-500/30 font-medium">
-            {products.length} Products Ready
-          </span>
+        <div className="text-xs font-semibold text-[#F1FF0A] bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 px-3 py-1 rounded-full self-start sm:self-auto">
+          {products.length} Products Ready
         </div>
       </div>
 
-      {/* Grid of Platform Exporters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {exportCards.map((card) => {
-          const Icon = card.icon;
-          const isCopied = copiedFormat === card.id;
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {platforms.map((p) => {
+          const isDownloading = downloadingFormat === p.id;
           return (
-            <div
-              key={card.id}
-              className={`glass-panel p-4 flex flex-col justify-between gap-4 border-white/10 ${card.borderHover} transition-all duration-300 bg-gradient-to-b ${card.gradient}`}
+            <button
+              key={p.id}
+              onClick={() => handleDownload(p.id)}
+              disabled={Boolean(downloadingFormat)}
+              className="p-4 rounded-xl bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-[#F1FF0A]/40 text-left transition-all group active:scale-[0.99] cursor-pointer"
             >
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="w-9 h-9 rounded-xl bg-slate-950 border border-white/10 flex items-center justify-center">
-                    <Icon className={`w-5 h-5 ${card.iconColor}`} />
-                  </div>
-                  <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-md border ${card.badgeColor}`}>
-                    {card.badge}
-                  </span>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-black border border-neutral-800 group-hover:border-[#F1FF0A]/30 transition-colors">
+                  {p.icon}
                 </div>
-
-                <h3 className="text-sm font-bold text-white mb-1">
-                  {card.title}
-                </h3>
-                <p className="text-[11px] text-slate-400 leading-snug">
-                  {card.subtitle}
-                </p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 group-hover:text-white transition-colors">
+                  {p.badge}
+                </span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => onExport(card.id)}
-                  disabled={isExporting}
-                  className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 ${card.btnColor}`}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
-                </button>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickCopy(card.id)}
-                    className="flex-1 py-1.5 px-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/5 hover:border-white/15 text-[11px] text-slate-300 flex items-center justify-center gap-1 transition"
-                    title="Copy payload to clipboard"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-400" />
-                        <span className="text-emerald-400">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3 text-slate-400" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => onInspectRaw(card.id, card.title)}
-                    className="flex-1 py-1.5 px-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/5 hover:border-white/15 text-[11px] text-slate-300 flex items-center justify-center gap-1 transition"
-                    title="Preview formatted code"
-                  >
-                    <Eye className="w-3 h-3 text-slate-400" />
-                    <span>Preview</span>
-                  </button>
-                </div>
+              <div className="text-xs font-extrabold text-white group-hover:text-[#F1FF0A] transition-colors flex items-center justify-between">
+                <span>{p.title}</span>
+                {isDownloading ? (
+                  <Check className="w-3.5 h-3.5 text-[#F1FF0A] animate-bounce" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-neutral-500 group-hover:text-[#F1FF0A] transition-colors" />
+                )}
               </div>
-            </div>
+
+              <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed line-clamp-2">
+                {p.desc}
+              </p>
+            </button>
           );
         })}
       </div>
