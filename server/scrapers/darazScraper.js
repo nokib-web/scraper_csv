@@ -55,87 +55,63 @@ async function scrapeDarazCatalog(url, options = {}, onLog) {
   const products = [];
 
   let targetUrl = url;
-  // If user passed root domain (https://www.daraz.com.bd or https://www.daraz.com.bd/), target flash sales or popular category
   const isHome = parsedUrl.pathname === '/' || parsedUrl.pathname === '';
 
   let page = 1;
-  const maxPages = maxProducts >= 500 ? 25 : Math.ceil(maxProducts / 40) + 1;
+  const maxPages = maxProducts >= 500 ? 50 : Math.ceil(maxProducts / 40) + 1;
 
   if (isHome) {
-    if (onLog) onLog(`Scraping Daraz Marketplace catalog & Flash Deals...`);
-    // First fetch homepage HTML for flash deals
-    const res = await fetchWithBrowserFallback(url, 10000);
-    const $ = cheerio.load(res.data);
+    if (onLog) onLog(`Deep Scraping Daraz Marketplace Categories & Flash Deals...`);
 
-    // Extract flash sales
-    $('a[href*="/products/"]').each((idx, el) => {
-      if (products.length >= maxProducts) return;
-      const $a = $(el);
-      const href = $a.attr('href') || '';
-      const imgEl = $a.find('img').first();
-      let imgSrc = imgEl.attr('src') || imgEl.attr('data-src') || '';
-      if (imgSrc.startsWith('//')) imgSrc = `https:${imgSrc}`;
-      imgSrc = imgSrc.replace(/_\d+x\d+[^.]*\.jpg/i, '');
+    // Popular categories to pull huge catalog from Daraz
+    const exploreCategories = [
+      'routers', 'smartphones', 'smart-watches', 'audio', 'laptops',
+      'mens-fashion', 'womens-fashion', 'groceries', 'health-beauty',
+      'home-appliances', 'electronic-accessories', 'motors'
+    ];
 
-      let title = imgEl.attr('alt') || '';
-      if (!title) {
-        const match = href.match(/\/products\/([a-zA-Z0-9_-]+)-i\d+/);
-        if (match) title = match[1].replace(/-/g, ' ');
-      }
-      if (!title) title = $a.text().split('৳')[0].trim();
-      title = title.replace(/\s+/g, ' ').trim();
-
-      let price = 0;
-      const priceMatch = href.match(/price%3A(\d+)/i) || $a.text().match(/৳\s*([0-9,]+)/i);
-      if (priceMatch) {
-        price = parseFloat(priceMatch[1].replace(/,/g, ''));
-      }
-
-      if (title && title.length > 5 && !products.some(p => p.title === title)) {
-        products.push(normalizeDarazItem({
-          itemId: String(Date.now() + idx),
-          name: title,
-          price: price,
-          image: imgSrc,
-          itemUrl: href
-        }, origin));
-      }
-    });
-
-    if (onLog) onLog(`Extracted ${products.length} featured flash sale products from homepage.`);
-
-    // If user requested more products, fetch from popular categories
-    const exploreCategories = ['smartphones', 'routers', 'smart-watches', 'laptops', 'mens-fashion', 'womens-fashion'];
     for (const cat of exploreCategories) {
       if (products.length >= maxProducts) break;
-      if (onLog) onLog(`Expanding Daraz catalog: Fetching /${cat}/ category...`);
-      try {
-        const catRes = await fetchWithBrowserFallback(`${origin}/${cat}/?ajax=true&page=1`, 8000);
-        if (catRes.data?.mods?.listItems) {
-          for (const it of catRes.data.mods.listItems) {
-            if (products.length >= maxProducts) break;
-            const norm = normalizeDarazItem(it, origin);
-            if (!products.some(p => p.title === norm.title)) {
-              products.push(norm);
+      if (onLog) onLog(`Fetching Daraz /${cat}/ category items...`);
+      
+      let catPage = 1;
+      while (products.length < maxProducts && catPage <= 3) {
+        try {
+          const catRes = await fetchWithBrowserFallback(`${origin}/${cat}/?ajax=true&page=${catPage}`, 9000);
+          const items = catRes.data?.mods?.listItems;
+          if (Array.isArray(items) && items.length > 0) {
+            for (const it of items) {
+              if (products.length >= maxProducts) break;
+              const norm = normalizeDarazItem(it, origin);
+              if (!products.some(p => p.title === norm.title)) {
+                products.push(norm);
+              }
             }
+            if (onLog) onLog(`Extracted ${products.length} products so far from Daraz...`);
+            catPage++;
+          } else {
+            break;
           }
-          if (onLog) onLog(`Catalog count now: ${products.length} products...`);
+        } catch (e) {
+          break;
         }
-      } catch (e) {}
+      }
     }
 
-    return products;
+    if (products.length > 0) {
+      if (onLog) onLog(`Completed Daraz deep extraction with ${products.length} total products!`);
+      return products;
+    }
   }
 
   // Category, Search, or Shop URL
   if (onLog) onLog(`Connecting to Daraz Catalog Stream for ${url}...`);
 
   while (products.length < maxProducts && page <= maxPages) {
-    const separator = targetUrl.includes('?') ? '&' : '?';
     const cleanUrl = targetUrl.replace(/([?&])page=\d+/g, '').replace(/([?&])ajax=true/g, '');
     const pageUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}ajax=true&page=${page}`;
 
-    if (onLog) onLog(`Fetching Daraz page ${page} from ${pageUrl}...`);
+    if (onLog) onLog(`Fetching Daraz page ${page}...`);
 
     try {
       const res = await fetchWithBrowserFallback(pageUrl, 10000);
@@ -168,9 +144,9 @@ async function scrapeDarazCatalog(url, options = {}, onLog) {
 
       if (onLog) onLog(`Extracted ${products.length} total products so far...`);
 
-      if (items.length < 20) break; // Last page
+      if (items.length < 20) break;
       page++;
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 200));
     } catch (e) {
       if (onLog) onLog(`Page ${page} failed: ${e.message}`);
       break;
