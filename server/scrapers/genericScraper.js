@@ -191,9 +191,9 @@ function extractDarazProducts(html, origin) {
 }
 
 /**
- * Universal SPA Bundle Scanner for React / Vite / Vercel applications
+ * Universal SPA Bundle Scanner for React / Vite / Vercel applications with full pagination
  */
-async function scanSpaBundles(html, origin, onLog) {
+async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
   const $ = cheerio.load(html);
   const scriptUrls = [];
   $('script[src]').each((_, el) => {
@@ -216,17 +216,41 @@ async function scanSpaBundles(html, origin, onLog) {
       const backendUrls = [...code.matchAll(/https?:\/\/[a-zA-Z0-9_.-]+(?:\.onrender\.com|\.vercel\.app|\.railway\.app|\.cyclic\.app|\.herokuapp\.com|[a-zA-Z0-9_.-]+:\d+)/g)].map(m => m[0]);
       const uniqueBackends = [...new Set(backendUrls)].filter(u => !u.includes('firebase') && !u.includes('google') && !u.includes('facebook'));
 
-      const testPaths = ['/services', '/products', '/items', '/api/products', '/api/services', '/api/items', '/packages'];
+      const testPaths = [
+        '/services?limit=5000',
+        '/products?limit=5000',
+        '/items?limit=5000',
+        '/api/products?limit=5000',
+        '/api/services?limit=5000',
+        '/api/items?limit=5000',
+        '/packages?limit=5000',
+        '/services',
+        '/products',
+        '/items'
+      ];
 
       for (const backend of uniqueBackends) {
         for (const tp of testPaths) {
           try {
             if (onLog) onLog(`Probing SPA backend API endpoint: ${backend}${tp}...`);
-            const apiRes = await axios.get(`${backend}${tp}`, { timeout: 6000 });
-            const list = Array.isArray(apiRes.data) ? apiRes.data : (apiRes.data?.data || apiRes.data?.services || apiRes.data?.products || []);
+            const apiRes = await axios.get(`${backend}${tp}`, { timeout: 8000 });
+            let list = Array.isArray(apiRes.data) ? apiRes.data : (apiRes.data?.data || apiRes.data?.services || apiRes.data?.products || []);
+
+            // If response has total and pagination, fetch all pages if needed
+            const totalInBackend = apiRes.data?.total || list.length;
+            if (totalInBackend > list.length) {
+              const fetchLimit = Math.min(totalInBackend, maxProducts);
+              try {
+                const fullRes = await axios.get(`${backend}${tp.split('?')[0]}?limit=${fetchLimit}&page=1`, { timeout: 8000 });
+                const fullList = Array.isArray(fullRes.data) ? fullRes.data : (fullRes.data?.data || fullRes.data?.services || fullRes.data?.products || []);
+                if (fullList.length > list.length) list = fullList;
+              } catch (e) {}
+            }
+
             if (Array.isArray(list) && list.length > 0 && (list[0].title || list[0].name)) {
-              if (onLog) onLog(`Discovered live backend API! Extracted ${list.length} items from ${backend}${tp}`);
+              if (onLog) onLog(`Discovered live backend API! Extracted ${list.length} total items from ${backend}`);
               for (const item of list) {
+                if (products.length >= maxProducts) break;
                 const title = item.title || item.name;
                 const price = parseFloat(item.price || item.cost || item.amount || 0) || 0;
                 const img = item.image || item.imageUrl || item.img || (Array.isArray(item.images) ? item.images[0] : '');
@@ -306,7 +330,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
         const imgEl = $card.find('img').first();
         let imgSrc = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-lazy') || imgEl.attr('srcset')?.split(' ')[0] || '';
         if (imgSrc.startsWith('//')) imgSrc = `https:${imgSrc}`;
-        else if (imgSrc.startsWith('/') && origin) imgSrc = `${origin}${imgSrc}`;
+        else if (imgSrc.startsWith('/')) imgSrc = `${origin}${imgSrc}`;
 
         // Up-scale image if it has /small/ or _small
         if (imgSrc.includes('/storage/products/small/')) {
@@ -422,7 +446,17 @@ async function scrapeGenericSite(url, options = {}, onLog) {
     }
   }
 
-  // 2. Check for JSON-LD scripts
+  // 2. Scan Client-Side SPA Bundles (React / Vite / Vercel apps like style-decor)
+  if (html.length < 3000 || $('script[src*="assets/"], script[src*="static/"]').length > 0) {
+    if (onLog) onLog('Inspecting SPA JavaScript bundles for connected REST API backend...');
+    const spaProducts = await scanSpaBundles(html, origin, maxProducts, onLog);
+    if (spaProducts.length > 0) {
+      if (onLog) onLog(`Successfully extracted ${spaProducts.length} total products from SPA backend!`);
+      return spaProducts.slice(0, maxProducts);
+    }
+  }
+
+  // 3. Check for JSON-LD scripts
   if (onLog) onLog('Searching for structured JSON-LD Schema.org product data...');
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
@@ -468,22 +502,12 @@ async function scrapeGenericSite(url, options = {}, onLog) {
     return validJsonLd;
   }
 
-  // 3. Extract from DOM cards
+  // 4. Extract from DOM cards
   if (onLog) onLog('Parsing HTML product cards & semantic grid elements...');
   const domProducts = extractProductsFromDom($, origin, url, maxProducts, onLog);
   if (domProducts.length > 0) {
     if (onLog) onLog(`Successfully extracted ${domProducts.length} products from HTML elements!`);
     return domProducts;
-  }
-
-  // 4. Scan Client-Side SPA Bundles (React / Vite / Vercel apps like style-decor)
-  if (html.length < 3000 || $('script[src*="assets/"], script[src*="static/"]').length > 0) {
-    if (onLog) onLog('Inspecting SPA JavaScript bundles for connected REST API backend...');
-    const spaProducts = await scanSpaBundles(html, origin, onLog);
-    if (spaProducts.length > 0) {
-      if (onLog) onLog(`Successfully extracted ${spaProducts.length} products from SPA backend!`);
-      return spaProducts.slice(0, maxProducts);
-    }
   }
 
   // 5. Deep Discovery: Look for collection or catalog links (e.g. /the-collection, /shop, /products, /catalog)
@@ -509,7 +533,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
         }
 
         // Try scanning SPA bundle on subpage as well
-        const subSpa = await scanSpaBundles(catRes.data, origin, onLog);
+        const subSpa = await scanSpaBundles(catRes.data, origin, maxProducts, onLog);
         if (subSpa.length > 0) {
           return subSpa.slice(0, maxProducts);
         }
