@@ -38,13 +38,11 @@ function resolveUniversalImage($el, $, origin) {
   if (bestSrc.startsWith('//')) bestSrc = `https:${bestSrc}`;
   else if (bestSrc.startsWith('/') && origin) bestSrc = `${origin}${bestSrc}`;
 
-  // Clean up size caps & query params
+  // Clean up size caps & query params (Do not touch Ryans storage paths)
   bestSrc = bestSrc.replace(/_\d+x\d+[^.]*\.jpg/i, '.jpg')
                    .replace(/_\d+x\d+[^.]*\.png/i, '.png')
                    .replace(/_\d+x\d+[^.]*\.webp/i, '.webp')
-                   .replace(/-\d+x\d+\.(jpg|jpeg|png|webp)/i, '.$1')
-                   .replace(/\/storage\/products\/small\//, '/storage/products/large/')
-                   .replace(/\/small\//, '/large/');
+                   .replace(/-\d+x\d+\.(jpg|jpeg|png|webp)/i, '.$1');
 
   return bestSrc;
 }
@@ -239,14 +237,17 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
 
   const products = [];
 
-  for (const sUrl of scriptUrls) {
+  for (const sUrl of scriptUrls.slice(0, 5)) {
     try {
-      const res = await fetchWithBrowserFallback(sUrl, 8000);
+      const res = await fetchWithBrowserFallback(sUrl, 6000);
       const code = res.data;
       if (typeof code !== 'string') continue;
 
-      const backendUrls = [...code.matchAll(/https?:\/\/[a-zA-Z0-9_.-]+(?:\.onrender\.com|\.vercel\.app|\.railway\.app|\.cyclic\.app|\.herokuapp\.com|[a-zA-Z0-9_.-]+:\d+)/g)].map(m => m[0]);
-      const uniqueBackends = [...new Set(backendUrls)].filter(u => !u.includes('firebase') && !u.includes('google') && !u.includes('facebook'));
+      const backendUrls = [...code.matchAll(/https?:\/\/[a-zA-Z0-9_.-]+(?:\.onrender\.com|\.vercel\.app|\.railway\.app|\.cyclic\.app|\.herokuapp\.com)/g)].map(m => m[0]);
+      const uniqueBackends = [...new Set(backendUrls)].filter(u => 
+        !u.includes('firebase') && !u.includes('google') && !u.includes('facebook') &&
+        !u.includes('localhost') && !u.includes('127.0.0.1') && !u.includes('192.168.')
+      );
 
       const testPaths = [
         '/services?limit=5000',
@@ -254,25 +255,21 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
         '/items?limit=5000',
         '/api/products?limit=5000',
         '/api/services?limit=5000',
-        '/api/items?limit=5000',
-        '/packages?limit=5000',
-        '/services',
-        '/products',
-        '/items'
+        '/api/items?limit=5000'
       ];
 
       for (const backend of uniqueBackends) {
         for (const tp of testPaths) {
           try {
-            if (onLog) onLog(`Probing SPA backend API endpoint: ${backend}${tp}...`);
-            const apiRes = await axios.get(`${backend}${tp}`, { timeout: 8000 });
+            if (onLog) onLog(`Probing SPA backend API: ${backend}${tp}...`);
+            const apiRes = await axios.get(`${backend}${tp}`, { timeout: 6000 });
             let list = Array.isArray(apiRes.data) ? apiRes.data : (apiRes.data?.data || apiRes.data?.services || apiRes.data?.products || []);
 
             const totalInBackend = apiRes.data?.total || list.length;
             if (totalInBackend > list.length) {
               const fetchLimit = Math.min(totalInBackend, maxProducts);
               try {
-                const fullRes = await axios.get(`${backend}${tp.split('?')[0]}?limit=${fetchLimit}&page=1`, { timeout: 8000 });
+                const fullRes = await axios.get(`${backend}${tp.split('?')[0]}?limit=${fetchLimit}&page=1`, { timeout: 6000 });
                 const fullList = Array.isArray(fullRes.data) ? fullRes.data : (fullRes.data?.data || fullRes.data?.services || fullRes.data?.products || []);
                 if (fullList.length > list.length) list = fullList;
               } catch (e) {}
@@ -391,7 +388,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
               created_at: new Date().toISOString(),
               price,
               regular_price: regularPrice >= price ? regularPrice : price,
-              currency: currentUrl.includes('.bd') || origin.includes('.bd') ? 'BDT' : 'USD',
+              currency: (currentUrl.includes('.bd') || origin.includes('.bd') || origin.includes('ryans.com') || origin.includes('wafilife') || origin.includes('rokomari') || origin.includes('ghorerbazar') || origin.includes('startech') || origin.includes('batabd')) ? 'BDT' : 'USD',
               variants: [{
                 id: `${Date.now()}-${idx}`,
                 title: 'Default Title',
@@ -444,8 +441,8 @@ async function scrapeGenericSite(url, options = {}, onLog) {
     }
   }
 
-  // 2. Client-Side SPA Bundles (React / Vite / Vercel apps like style-decor)
-  if (html.length < 3000 || $('script[src*="assets/"], script[src*="static/"]').length > 0) {
+  // 2. Client-Side SPA Bundles (Only for empty skeleton SPAs like style-decor)
+  if (html.length < 3500 && ($('#root').length > 0 || $('#app').length > 0 || $('div#root, div#__next, div#app').length > 0)) {
     if (onLog) onLog('Inspecting SPA JavaScript bundles for connected REST API backend...');
     const spaProducts = await scanSpaBundles(html, origin, maxProducts, onLog);
     if (spaProducts.length > 0) {

@@ -10,7 +10,7 @@ const WIX_HEADERS = [
   'sku',
   'ribbon',
   'price',
-  'surcharge',
+  'surcharges',
   'visible',
   'discountMode',
   'discountValue',
@@ -19,66 +19,49 @@ const WIX_HEADERS = [
   'cost'
 ];
 
+function formatWixDescription(p) {
+  if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim()) {
+    return p.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  const brand = p.vendor || 'Store';
+  const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
+  return `${p.title} - High quality ${cat} by ${brand}. Genuine item in stock for fast delivery.`;
+}
+
 /**
- * Transforms unified product list into official Wix Product Import CSV format
+ * Transforms unified product list into Wix Store CSV format
  * @param {Array} products 
  * @returns {string} CSV string
  */
 function exportWixCsv(products) {
-  const rows = [];
-
-  for (let idx = 0; idx < products.length; idx++) {
-    const p = products[idx];
-    const handleId = p.handle || `item-${idx + 1}`;
+  const rows = products.map((p, idx) => {
+    const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
+    const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src }] : []);
+    const images = rawImages.map(img => typeof img === 'string' ? img : img.src).filter(Boolean).join(';');
+    const collection = p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General');
     const mainVariant = p.variants?.[0] || {};
-    const images = p.images || [];
-    const mainImage = images[0]?.src || '';
-    const cleanDesc = (p.description || '').replace(/\r?\n|\r/g, ' ');
+    const hasDiscount = p.regular_price && p.regular_price > p.price;
+    const discountVal = hasDiscount ? Number(p.regular_price - p.price).toFixed(2) : '';
 
-    // Primary Product Row
-    rows.push({
-      'handleId': handleId,
+    return {
+      'handleId': handle,
       'fieldType': 'Product',
-      'name': p.title || 'Product',
-      'description': cleanDesc,
-      'productImageUrl': mainImage,
-      'collection': p.product_type || 'Products',
-      'sku': mainVariant.sku || `WIX-${idx + 100}`,
-      'ribbon': '',
-      'price': p.price ? p.price.toFixed(2) : '0.00',
-      'surcharge': '',
+      'name': p.title || '',
+      'description': formatWixDescription(p),
+      'productImageUrl': images,
+      'collection': collection,
+      'sku': mainVariant.sku || `SKU-${handle}`,
+      'ribbon': hasDiscount ? 'SALE' : '',
+      'price': p.regular_price !== undefined ? Number(p.regular_price).toFixed(2) : Number(p.price || 0).toFixed(2),
+      'surcharges': '',
       'visible': 'true',
-      'discountMode': (p.regular_price && p.regular_price > p.price) ? 'AMOUNT' : 'NONE',
-      'discountValue': (p.regular_price && p.regular_price > p.price) ? (p.regular_price - p.price).toFixed(2) : '',
-      'inventory': mainVariant.inventory_quantity !== undefined ? String(mainVariant.inventory_quantity) : 'InStock',
-      'weight': mainVariant.weight ? String(mainVariant.weight) : '',
+      'discountMode': hasDiscount ? 'AMOUNT' : '',
+      'discountValue': discountVal,
+      'inventory': mainVariant.inventory_quantity !== undefined ? mainVariant.inventory_quantity : 99,
+      'weight': mainVariant.weight || '',
       'cost': ''
-    });
-
-    // Additional image rows
-    for (let j = 1; j < images.length; j++) {
-      if (images[j]?.src) {
-        rows.push({
-          'handleId': handleId,
-          'fieldType': 'Additional Info',
-          'name': '',
-          'description': '',
-          'productImageUrl': images[j].src,
-          'collection': '',
-          'sku': '',
-          'ribbon': '',
-          'price': '',
-          'surcharge': '',
-          'visible': '',
-          'discountMode': '',
-          'discountValue': '',
-          'inventory': '',
-          'weight': '',
-          'cost': ''
-        });
-      }
-    }
-  }
+    };
+  });
 
   return stringify(rows, {
     header: true,

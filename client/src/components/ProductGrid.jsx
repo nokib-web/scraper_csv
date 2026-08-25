@@ -1,5 +1,6 @@
 import React from 'react';
-import { ExternalLink, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
+import ProductImage from './ProductImage';
 
 export default function ProductGrid({ products, onDeleteProduct, currencySymbol = '$' }) {
   if (!products || products.length === 0) return null;
@@ -16,24 +17,12 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
             <div>
               {/* Product Image */}
               <div className="relative w-full aspect-square bg-neutral-900 overflow-hidden flex items-center justify-center">
-                {mainImg ? (
-                  <img
-                    src={mainImg}
-                    alt={prod.title}
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = `<span class="text-3xl font-extrabold text-[#F1FF0A]">${(prod.title || 'P').charAt(0)}</span>`;
-                    }}
-                  />
-                ) : (
-                  <span className="text-3xl font-extrabold text-[#F1FF0A]">
-                    {(prod.title || 'P').charAt(0)}
-                  </span>
-                )}
+                <ProductImage
+                  src={mainImg}
+                  alt={prod.title}
+                  size="lg"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
 
                 {/* Top badges */}
                 <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">

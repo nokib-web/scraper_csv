@@ -1,9 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const axios = require('axios');
 const { scrapeProducts, detectPlatform } = require('./scrapers');
 const { exportShopifyCsv } = require('./exporters/shopifyFormatter');
-const { exportWooCsv } = require('./exporters/wooFormatter');
+const { exportWooCommerceCsv } = require('./exporters/wooFormatter');
 const { exportWixCsv } = require('./exporters/wixFormatter');
 const { exportUniversalCsv } = require('./exporters/universalFormatter');
 const { exportJson } = require('./exporters/jsonFormatter');
@@ -108,6 +109,33 @@ app.post('/api/scrape', async (req, res) => {
   }
 });
 
+// ====== IMAGE PROXY ENDPOINT ======
+// Bypasses CDN hotlink protection so Shopify/WooCommerce can fetch images from any source
+app.get('/api/img', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('Missing url param');
+
+  try {
+    const decoded = decodeURIComponent(url);
+    const response = await axios.get(decoded, {
+      responseType: 'stream',
+      timeout: 12000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': new URL(decoded).origin + '/',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
+      }
+    });
+
+    res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    response.data.pipe(res);
+  } catch (err) {
+    res.status(502).send(`Image proxy error: ${err.message}`);
+  }
+});
+
 // Multi-Format Export API
 app.post('/api/export', (req, res) => {
   const { products, format = 'shopify_csv', filename = 'products' } = req.body;
@@ -121,15 +149,20 @@ app.post('/api/export', (req, res) => {
   let contentType = 'text/csv';
   let fileExt = 'csv';
 
+  // Determine proxy base for image rewriting (use request host)
+  const reqProto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const reqHost = req.headers['x-forwarded-host'] || req.get('host') || `localhost:${PORT}`;
+  const proxyBase = `${reqProto}://${reqHost}`;
+
   switch (format) {
     case 'shopify_csv':
-      output = exportShopifyCsv(products);
+      output = exportShopifyCsv(products, proxyBase);
       fileExt = 'shopify.csv';
       break;
 
     case 'woo_csv':
     case 'woocommerce_csv':
-      output = exportWooCsv(products);
+      output = exportWooCommerceCsv(products);
       fileExt = 'woocommerce.csv';
       break;
 
