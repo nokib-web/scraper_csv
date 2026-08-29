@@ -21,12 +21,16 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Scratch / Temp Files
+# Scratch / Temp / Debug Files
 scratch_*.js
+validate_*.js
+clean_csv_*.js
+process_clean_*.js
+raw_user_input.*
+*.csv
 *.tmp
 *.log
-toyyub_*.html
-toyyub_*.txt
+toyyub_*.*
 all_next_f.txt
 inventories_response.json
 ryans_home.html

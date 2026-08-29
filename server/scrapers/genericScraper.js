@@ -3,46 +3,130 @@ const axios = require('axios');
 const { fetchWithBrowserFallback } = require('./detector');
 
 /**
- * Universal Image URL Extractor with Hotlink & Lazy-load resolution
+ * Universal Image URL Extractor with Hotlink, Lazy-load, Picture tag & CSS Background resolution
  */
 function resolveUniversalImage($el, $, origin) {
-  let imgEl = $el.find('img').first();
-  if (imgEl.length === 0 && $el.is('img')) imgEl = $el;
+  if (!$el || $el.length === 0) return '';
 
   const attributes = [
-    'data-src', 'data-original', 'data-lazy-src', 'data-lazy',
-    'data-hi-res-src', 'data-large_image', 'data-zoom-image',
-    'data-img', 'data-url', 'data-srcset', 'srcset', 'src'
+    'data-src', 'data-original', 'data-lazy-src', 'data-lazy', 'data-lazyload',
+    'data-hi-res-src', 'data-large_image', 'data-zoom-image', 'data-full-src',
+    'data-origin-src', 'data-desktop-src', 'data-zoom', 'data-img', 'data-url',
+    'data-image', 'data-src-retina', 'data-echo', 'data-fallback', 'data-thumb',
+    'data-srcset', 'srcset', 'src'
   ];
 
   let bestSrc = '';
-  for (const attr of attributes) {
-    const val = imgEl.attr(attr);
-    if (val && !val.includes('data:image') && !val.includes('placeholder') && !val.includes('blank.gif') && !val.includes('loading') && !val.includes('logo') && !val.includes('icon')) {
-      bestSrc = val.split(',')[0].trim().split(' ')[0].trim();
-      break;
+
+  // 1. Check <picture> <source srcset="...">
+  const sourceEl = $el.find('picture source').first();
+  if (sourceEl.length > 0) {
+    const srcset = sourceEl.attr('srcset') || sourceEl.attr('data-srcset');
+    if (srcset) {
+      // Pick highest resolution or last candidate in srcset
+      const candidates = srcset.split(',').map(s => s.trim().split(' ')[0].trim()).filter(Boolean);
+      if (candidates.length > 0) {
+        bestSrc = candidates[candidates.length - 1];
+      }
     }
   }
 
-  // Fallback: check noscript
+  // 2. Check all <img> elements inside the card
+  if (!bestSrc) {
+    const imgEls = $el.is('img') ? $el : $el.find('img');
+    imgEls.each((_, el) => {
+      if (bestSrc) return;
+      const $img = $(el);
+
+      for (const attr of attributes) {
+        let val = $img.attr(attr);
+        if (val) {
+          val = val.trim();
+          if (val.includes(',')) {
+            const parts = val.split(',').map(s => s.trim().split(' ')[0].trim()).filter(Boolean);
+            val = parts[parts.length - 1] || parts[0];
+          }
+          if (
+            val &&
+            !val.startsWith('data:image') &&
+            !val.includes('placeholder') &&
+            !val.includes('no_image') &&
+            !val.includes('no-image') &&
+            !val.includes('blank.gif') &&
+            !val.includes('1x1.png') &&
+            !val.includes('loading') &&
+            !val.includes('spinner') &&
+            !val.includes('logo') &&
+            !val.includes('icon')
+          ) {
+            bestSrc = val;
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  // 3. Fallback: check CSS background-image in inline style or data-bg
+  if (!bestSrc) {
+    const bgEls = $el.find('[style*="background"], [data-bg], [data-background], [data-bg-src]').addBack('[style*="background"], [data-bg], [data-background], [data-bg-src]');
+    bgEls.each((_, el) => {
+      if (bestSrc) return;
+      const $b = $(el);
+      const bgAttr = $b.attr('data-bg') || $b.attr('data-background') || $b.attr('data-bg-src');
+      if (bgAttr && !bgAttr.includes('placeholder') && !bgAttr.includes('no_image') && !bgAttr.includes('logo')) {
+        bestSrc = bgAttr.trim();
+        return;
+      }
+      const style = $b.attr('style') || '';
+      const bgMatch = style.match(/url\(['"]?([^'")]+)['"]?\)/i);
+      if (bgMatch && bgMatch[1] && !bgMatch[1].startsWith('data:image') && !bgMatch[1].includes('placeholder') && !bgMatch[1].includes('no_image') && !bgMatch[1].includes('logo')) {
+        bestSrc = bgMatch[1].trim();
+      }
+    });
+  }
+
+  // 4. Fallback: check <a> link href pointing directly to an image
+  if (!bestSrc) {
+    $el.find('a[href*=".jpg"], a[href*=".jpeg"], a[href*=".png"], a[href*=".webp"]').each((_, el) => {
+      if (bestSrc) return;
+      const href = $(el).attr('href');
+      if (href && !href.includes('logo') && !href.includes('icon') && !href.includes('no_image')) {
+        bestSrc = href.trim();
+      }
+    });
+  }
+
+  // 5. Fallback: check noscript
   if (!bestSrc) {
     const noscript = $el.find('noscript').html() || '';
     if (noscript.includes('<img')) {
       const match = noscript.match(/src=["'](https?:[^"']+)["']/i) || noscript.match(/src=["']([^"']+)["']/i);
-      if (match && !match[1].includes('logo') && !match[1].includes('icon')) bestSrc = match[1];
+      if (match && !match[1].includes('logo') && !match[1].includes('icon') && !match[1].includes('placeholder') && !match[1].includes('no_image')) {
+        bestSrc = match[1].trim();
+      }
     }
   }
 
   if (!bestSrc) return '';
 
-  if (bestSrc.startsWith('//')) bestSrc = `https:${bestSrc}`;
-  else if (bestSrc.startsWith('/') && origin) bestSrc = `${origin}${bestSrc}`;
+  // Normalize absolute URL
+  if (bestSrc.startsWith('//')) {
+    bestSrc = `https:${bestSrc}`;
+  } else if (bestSrc.startsWith('/') && origin) {
+    bestSrc = `${origin}${bestSrc}`;
+  } else if (!bestSrc.startsWith('http://') && !bestSrc.startsWith('https://') && origin) {
+    bestSrc = `${origin}/${bestSrc.replace(/^\.\//, '')}`;
+  }
 
-  // Clean up size caps & query params (Do not touch Ryans storage paths)
-  bestSrc = bestSrc.replace(/_\d+x\d+[^.]*\.jpg/i, '.jpg')
-                   .replace(/_\d+x\d+[^.]*\.png/i, '.png')
-                   .replace(/_\d+x\d+[^.]*\.webp/i, '.webp')
-                   .replace(/-\d+x\d+\.(jpg|jpeg|png|webp)/i, '.$1');
+  // Clean up size caps & query params to upscale to Ultra HD / Original resolution
+  if (bestSrc.includes('/image/cache/')) {
+    bestSrc = bestSrc.replace(/\/image\/cache\/(catalog|data)\/(.+)-\d+x\d+\.(jpg|jpeg|png|webp)/i, '/image/$1/$2.$3');
+  } else {
+    bestSrc = bestSrc.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp)/i, '.$1')
+                     .replace(/_(small|medium|large|grande|compact)\.(jpg|jpeg|png|webp)/i, '.$2')
+                     .replace(/-\d+x\d+\.(jpg|jpeg|png|webp)/i, '.$1');
+  }
 
   return bestSrc;
 }

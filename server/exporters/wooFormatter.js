@@ -52,6 +52,18 @@ function formatWooDescription(p) {
   return `<p><strong>${p.title}</strong> is a high-grade ${cat} provided by <strong>${brand}</strong>.</p><ul><li><strong>Category:</strong> ${cat}</li><li><strong>Brand:</strong> ${brand}</li>${price ? `<li><strong>Price:</strong> ${price}</li>` : ''}<li><strong>Condition:</strong> 100% Genuine & Brand New</li><li><strong>In Stock:</strong> Yes</li></ul>`;
 }
 
+function sanitizeImageUrl(src) {
+  if (!src || typeof src !== 'string') return '';
+  let s = src.trim();
+  if (s.startsWith('//')) s = `https:${s}`;
+  if (!s.startsWith('http://') && !s.startsWith('https://')) return '';
+  try {
+    return encodeURI(decodeURI(s));
+  } catch (e) {
+    return encodeURI(s);
+  }
+}
+
 /**
  * Transforms unified product list into WooCommerce CSV format
  * @param {Array} products 
@@ -61,7 +73,7 @@ function exportWooCommerceCsv(products) {
   const rows = products.map((p, idx) => {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src }] : []);
-    const images = rawImages.map(img => typeof img === 'string' ? img : img.src).filter(Boolean).join(', ');
+    const images = rawImages.map(img => sanitizeImageUrl(typeof img === 'string' ? img : img.src)).filter(Boolean).join(', ');
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
     const categories = p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General');
     const mainVariant = p.variants?.[0] || {};

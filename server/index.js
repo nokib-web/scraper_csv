@@ -155,23 +155,30 @@ app.post('/api/export', (req, res) => {
   const proxyBase = clientProxyBase || `${reqProto}://${reqHost}`;
 
   switch (format) {
+    case 'shopify':
     case 'shopify_csv':
-      output = exportShopifyCsv(products, proxyBase);
+      output = exportShopifyCsv(products);
       fileExt = 'shopify.csv';
       break;
 
+    case 'woo':
+    case 'woocommerce':
     case 'woo_csv':
     case 'woocommerce_csv':
       output = exportWooCommerceCsv(products);
       fileExt = 'woocommerce.csv';
       break;
 
+    case 'wix':
     case 'wix_csv':
       output = exportWixCsv(products);
       fileExt = 'wix.csv';
       break;
 
+    case 'universal':
     case 'universal_csv':
+    case 'clean':
+    case 'clean_csv':
       output = exportUniversalCsv(products);
       fileExt = 'clean.csv';
       break;

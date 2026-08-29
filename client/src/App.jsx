@@ -204,12 +204,21 @@ export default function App() {
   const handleExport = async (format) => {
     if (products.length === 0) return;
     try {
+      const formatMap = {
+        shopify: 'shopify_csv',
+        woocommerce: 'woocommerce_csv',
+        wix: 'wix_csv',
+        universal: 'universal_csv',
+        json: 'json'
+      };
+      const normalizedFormat = formatMap[format] || format;
+
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           products,
-          format,
+          format: normalizedFormat,
           proxyBase: window.location.origin,
           storeName: url.replace(/^https?:\/\//, '').split('/')[0] || 'store'
         })

@@ -53,21 +53,26 @@ function formatHtmlDescription(p) {
   return `<p><strong>${p.title}</strong> is a premium quality ${cat} item from <strong>${brand}</strong>.</p><ul><li><strong>Category:</strong> ${cat}</li><li><strong>Brand:</strong> ${brand}</li>${price ? `<li><strong>Price:</strong> ${price}</li>` : ''}<li><strong>Condition:</strong> 100% Authentic & Original</li><li><strong>Availability:</strong> In Stock & Ready for Shipping</li></ul><p>Buy online with confidence for fast doorstep delivery and top-tier support.</p>`;
 }
 
-/**
- * Rewrites an image URL to go through the local proxy (bypasses CDN hotlink protection)
- */
-function proxyImageUrl(src, proxyBase) {
-  if (!src || !proxyBase) return src;
-  return `${proxyBase}/api/img?url=${encodeURIComponent(src)}`;
+function sanitizeImageUrl(src) {
+  if (!src || typeof src !== 'string') return '';
+  let s = src.trim();
+  if (s.startsWith('//')) s = `https:${s}`;
+  if (!s.startsWith('http://') && !s.startsWith('https://')) return '';
+  
+  try {
+    // Encode Unicode/Bangla characters so Shopify image downloader can fetch them properly
+    return encodeURI(decodeURI(s));
+  } catch (e) {
+    return encodeURI(s);
+  }
 }
 
 /**
  * Transforms unified product list into official Shopify Product CSV format
  * @param {Array} products 
- * @param {string} proxyBase - Optional base URL for image proxy (e.g. 'http://localhost:4000')
  * @returns {string} CSV string
  */
-function exportShopifyCsv(products, proxyBase = null) {
+function exportShopifyCsv(products) {
   const rows = [];
 
   for (const p of products) {
@@ -84,11 +89,14 @@ function exportShopifyCsv(products, proxyBase = null) {
     }];
     
     const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src, alt: p.title }] : []);
-    const images = rawImages.map((img, idx) => ({
-      src: proxyImageUrl(typeof img === 'string' ? img : img.src, proxyBase),
-      alt: (typeof img === 'object' && img.alt) || p.title,
-      position: idx + 1
-    })).filter(i => Boolean(i.src));
+    const images = rawImages.map((img, idx) => {
+      const srcUrl = sanitizeImageUrl(typeof img === 'string' ? img : img.src);
+      return {
+        src: srcUrl,
+        alt: (typeof img === 'object' && img.alt) || p.title,
+        position: idx + 1
+      };
+    }).filter(i => Boolean(i.src));
 
     const maxRows = Math.max(variants.length, images.length, 1);
     const bodyHtml = formatHtmlDescription(p);
@@ -103,8 +111,8 @@ function exportShopifyCsv(products, proxyBase = null) {
         'Title': isFirstRow ? p.title : '',
         'Body (HTML)': isFirstRow ? bodyHtml : '',
         'Vendor': isFirstRow ? (p.vendor || '') : '',
-        'Product Category': isFirstRow ? (p.product_type || '') : '',
-        'Type': isFirstRow ? (p.product_type || 'General') : '',
+        'Product Category': '',
+        'Type': isFirstRow ? (p.product_type || '') : '',
         'Tags': isFirstRow ? tags : '',
         'Published': isFirstRow ? 'TRUE' : '',
         'Option1 Name': isFirstRow ? (v && v.option1 ? 'Size / Title' : 'Title') : '',
@@ -130,7 +138,7 @@ function exportShopifyCsv(products, proxyBase = null) {
         'Gift Card': isFirstRow ? 'FALSE' : '',
         'SEO Title': isFirstRow ? p.title : '',
         'SEO Description': isFirstRow ? bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 160) : '',
-        'Variant Image': img ? img.src : '',
+        'Variant Image': v && isFirstRow && img ? img.src : '',
         'Variant Weight Unit': v ? 'kg' : '',
         'Cost per item': '',
         'Status': isFirstRow ? 'active' : ''

@@ -26,6 +26,18 @@ function formatPlainDescription(p) {
   return `${p.title} - High quality authentic ${cat} provided by ${brand}. ${price ? `Price: ${price}. ` : ''}100% original product available in stock for immediate order and fast delivery.`;
 }
 
+function sanitizeImageUrl(src) {
+  if (!src || typeof src !== 'string') return '';
+  let s = src.trim();
+  if (s.startsWith('//')) s = `https:${s}`;
+  if (!s.startsWith('http://') && !s.startsWith('https://')) return '';
+  try {
+    return encodeURI(decodeURI(s));
+  } catch (e) {
+    return encodeURI(s);
+  }
+}
+
 /**
  * Transforms unified product list into clean Universal CSV format
  * @param {Array} products 
@@ -33,11 +45,13 @@ function formatPlainDescription(p) {
  */
 function exportUniversalCsv(products) {
   const rows = products.map((p, idx) => {
-    const images = (p.images || []).map(img => typeof img === 'string' ? img : img.src).filter(Boolean);
+    const rawImages = (p.images || []).map(img => typeof img === 'string' ? img : img.src).filter(Boolean);
+    const images = rawImages.map(img => sanitizeImageUrl(img)).filter(Boolean);
     const mainVariant = p.variants?.[0] || {};
     
     // Ensure image fallback
-    const mainImg = images[0] || (p.image ? (typeof p.image === 'string' ? p.image : p.image.src) : '');
+    const fallbackRaw = p.image ? (typeof p.image === 'string' ? p.image : p.image.src) : '';
+    const mainImg = images[0] || sanitizeImageUrl(fallbackRaw);
     const allImagesStr = images.length > 0 ? images.join(' | ') : mainImg;
 
     return {
