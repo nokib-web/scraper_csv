@@ -53,7 +53,7 @@ export default function ProgressConsole({ logs, status, isCollapsed, onToggleCol
 
       {/* Logs View */}
       {!isCollapsed && (
-        <div className="p-4 bg-black/90 font-mono text-[11px] text-neutral-300 max-h-52 overflow-y-auto space-y-1.5 leading-relaxed">
+        <div className="p-4 bg-[#F8F9FB] dark:bg-black/90 font-mono text-[11px] text-neutral-800 dark:text-neutral-300 max-h-52 overflow-y-auto space-y-1.5 leading-relaxed border-t border-neutral-200 dark:border-neutral-800/80">
           {logs.map((log, index) => {
             const isError = log.includes('error') || log.includes('Failed') || log.includes('Error');
             const isSuccess = log.includes('Success') || log.includes('Completed') || log.includes('Extracted');
@@ -64,15 +64,15 @@ export default function ProgressConsole({ logs, status, isCollapsed, onToggleCol
                 key={index}
                 className={`flex items-start gap-2 ${
                   isError
-                    ? 'text-red-400'
+                    ? 'text-red-600 dark:text-red-400 font-semibold'
                     : isSuccess
-                    ? 'text-[#F1FF0A]'
+                    ? 'text-emerald-700 dark:text-[#F1FF0A] font-semibold'
                     : isDiscover
-                    ? 'text-yellow-300'
-                    : 'text-neutral-400'
+                    ? 'text-blue-700 dark:text-yellow-300 font-semibold'
+                    : 'text-neutral-700 dark:text-neutral-400 font-normal'
                 }`}
               >
-                <span className="text-neutral-600 select-none">›</span>
+                <span className="text-neutral-400 dark:text-neutral-600 font-bold select-none">›</span>
                 <span className="break-all">{log}</span>
               </div>
             );

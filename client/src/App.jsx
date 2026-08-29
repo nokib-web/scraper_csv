@@ -10,6 +10,8 @@ import FormatPreviewModal from './components/FormatPreviewModal';
 import PricingPage from './components/PricingPage';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
+import AdSlot from './components/AdSlot';
+import BrandSlider from './components/BrandSlider';
 import Footer from './components/Footer';
 import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
 import { saveCatalogData, loadCatalogData, clearCatalogData } from './utils/storage';
@@ -311,6 +313,14 @@ export default function App() {
               detection={detection}
               onClear={handleClear}
             />
+
+            {/* Empty State / Monetization Ad Slot & Brand Marquee Slider */}
+            {products.length === 0 && !isLoading && logs.length === 0 && (
+              <div className="space-y-5 pt-1 animate-in fade-in duration-300">
+                <AdSlot slotType="affiliate" />
+                <BrandSlider />
+              </div>
+            )}
 
             {/* Real-time Streaming Logs Console */}
             <ProgressConsole

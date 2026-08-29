@@ -113,7 +113,7 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
         </div>
 
         {/* Preview Code Box */}
-        <div className="flex-1 p-4 bg-neutral-950 overflow-auto font-mono text-xs text-neutral-300 select-text leading-relaxed">
+        <div className="flex-1 p-4 bg-[#F8F9FB] dark:bg-neutral-950 overflow-auto font-mono text-xs text-neutral-800 dark:text-neutral-300 select-text leading-relaxed border-t border-neutral-200 dark:border-neutral-800">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-neutral-500 gap-2">
               <span className="w-2 h-2 rounded-full bg-[#F1FF0A] animate-ping"></span>

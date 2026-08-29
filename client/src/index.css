@@ -65,3 +65,27 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #18181B;
 }
+
+/* 100% Foolproof Dual-Track Infinite Marquee Animation */
+@keyframes infinite-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-infinite-scroll {
+  display: flex;
+  flex-shrink: 0;
+  animation: infinite-scroll 35s linear infinite;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

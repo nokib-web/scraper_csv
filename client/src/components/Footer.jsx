@@ -7,15 +7,19 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-700 dark:text-neutral-400 font-medium">
         
         {/* Left: Brand */}
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-[#F1FF0A] flex items-center justify-center shadow-sm">
-            <Package className="w-2.5 h-2.5 text-black stroke-[3]" />
+        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2 text-center sm:text-left">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-4 rounded bg-[#F1FF0A] flex items-center justify-center shadow-sm">
+              <Package className="w-2.5 h-2.5 text-black stroke-[3]" />
+            </div>
+            <span className="font-black text-neutral-950 dark:text-white">
+              get<span className="text-[#687500] dark:text-[#F1FF0A]">Products</span>
+            </span>
           </div>
-          <span className="font-black text-neutral-950 dark:text-white">
-            get<span className="text-[#687500] dark:text-[#F1FF0A]">Products</span>
+          <span className="hidden sm:inline text-neutral-400 dark:text-neutral-600">•</span>
+          <span className="text-neutral-700 dark:text-neutral-400 font-semibold text-[11px] sm:text-xs">
+            Universal E-Commerce Catalog Exporter
           </span>
-          <span className="text-neutral-400 dark:text-neutral-600">•</span>
-          <span className="text-neutral-800 dark:text-neutral-300 font-semibold">Universal E-Commerce Catalog Exporter</span>
         </div>
 
         {/* Right: Developed By Nokib */}
