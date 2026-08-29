@@ -101,6 +101,17 @@ function exportShopifyCsv(products) {
     const maxRows = Math.max(variants.length, images.length, 1);
     const bodyHtml = formatHtmlDescription(p);
 
+    const cleanOptName = (name, fallback) => {
+      if (!name) return fallback;
+      const clean = String(name).replace(/[\/\\|]+/g, ' ').replace(/\s+/g, ' ').trim();
+      return clean || fallback;
+    };
+
+    const hasOptions = p.options && Array.isArray(p.options) && p.options.length > 0;
+    const opt1Name = hasOptions ? cleanOptName(p.options[0]?.name || p.options[0], 'Title') : 'Title';
+    const opt2Name = hasOptions && p.options[1] ? cleanOptName(p.options[1]?.name || p.options[1], 'Color') : (variants.some(v => v && v.option2) ? 'Color' : '');
+    const opt3Name = hasOptions && p.options[2] ? cleanOptName(p.options[2]?.name || p.options[2], 'Style') : (variants.some(v => v && v.option3) ? 'Style' : '');
+
     for (let i = 0; i < maxRows; i++) {
       const isFirstRow = i === 0;
       const v = variants[i] || null;
@@ -115,11 +126,11 @@ function exportShopifyCsv(products) {
         'Type': isFirstRow ? (p.product_type || '') : '',
         'Tags': isFirstRow ? tags : '',
         'Published': isFirstRow ? 'TRUE' : '',
-        'Option1 Name': isFirstRow ? (v && v.option1 ? 'Size / Title' : 'Title') : '',
+        'Option1 Name': isFirstRow ? opt1Name : '',
         'Option1 Value': v ? (v.option1 || v.title || 'Default Title') : '',
-        'Option2 Name': isFirstRow && v && v.option2 ? 'Color' : '',
+        'Option2 Name': isFirstRow && (opt2Name || (v && v.option2)) ? (opt2Name || 'Color') : '',
         'Option2 Value': v ? (v.option2 || '') : '',
-        'Option3 Name': isFirstRow && v && v.option3 ? 'Style' : '',
+        'Option3 Name': isFirstRow && (opt3Name || (v && v.option3)) ? (opt3Name || 'Style') : '',
         'Option3 Value': v ? (v.option3 || '') : '',
         'Variant SKU': v ? (v.sku || `SKU-${handle}`) : '',
         'Variant Grams': v ? (Math.round((v.weight || 0) * 1000) || 0) : '',
