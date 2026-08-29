@@ -56,7 +56,7 @@ export default function ContactPage() {
 
             <div className="space-y-4 text-xs">
               <a
-                href="mailto:nokibweb@gmail.com"
+                href="mailto:nokib.dev@gmail.com"
                 className="flex items-start gap-3 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60 transition-colors group"
               >
                 <div className="p-2 rounded-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-[#F1FF0A] flex-shrink-0">
@@ -67,7 +67,7 @@ export default function ContactPage() {
                     Email Support
                   </div>
                   <div className="text-neutral-500 dark:text-neutral-400 text-[11px] truncate">
-                    nokibweb@gmail.com
+                    nokib.dev@gmail.com
                   </div>
                 </div>
               </a>
