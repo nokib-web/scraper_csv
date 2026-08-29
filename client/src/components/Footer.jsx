@@ -3,8 +3,8 @@ import { Globe, ExternalLink, Package } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-neutral-200 dark:border-neutral-800/80 bg-white/95 dark:bg-black/90 backdrop-blur-xl py-3 px-4 sm:px-6 lg:px-8 flex-shrink-0 z-30">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-700 dark:text-neutral-400 font-medium">
+    <footer className="border-t border-neutral-200 dark:border-neutral-800/80 bg-white/95 dark:bg-black/90 backdrop-blur-xl py-3 flex-shrink-0 z-30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-700 dark:text-neutral-400 font-medium">
         
         {/* Left: Brand */}
         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2 text-center sm:text-left">

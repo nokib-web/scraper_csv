@@ -11,7 +11,7 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
 
   return (
     <header className="border-b border-neutral-200 dark:border-neutral-800/80 bg-white/95 dark:bg-black/80 backdrop-blur-xl sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Main Header Row */}
         <div className="h-14 flex items-center justify-between gap-2 sm:gap-4">
