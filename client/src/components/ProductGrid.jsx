@@ -12,11 +12,11 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
         return (
           <div
             key={prod.id || idx}
-            className="rounded-2xl bg-neutral-950 border border-neutral-800 hover:border-[#F1FF0A]/40 overflow-hidden transition-all group flex flex-col justify-between shadow-lg"
+            className="rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60 overflow-hidden transition-all group flex flex-col justify-between shadow-md dark:shadow-lg"
           >
             <div>
               {/* Product Image */}
-              <div className="relative w-full aspect-square bg-neutral-900 overflow-hidden flex items-center justify-center">
+              <div className="relative w-full aspect-square bg-neutral-100 dark:bg-neutral-900 overflow-hidden flex items-center justify-center">
                 <ProductImage
                   src={mainImg}
                   alt={prod.title}
@@ -48,27 +48,27 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
 
               {/* Product Info */}
               <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
                   <span className="truncate max-w-[120px] font-medium">{prod.vendor || 'General'}</span>
-                  <span className="px-2 py-0.5 rounded bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-300">
+                  <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] text-neutral-700 dark:text-neutral-300">
                     {prod.product_type || 'Item'}
                   </span>
                 </div>
 
-                <h4 className="text-xs font-bold text-white group-hover:text-[#F1FF0A] transition-colors line-clamp-2 leading-relaxed">
+                <h4 className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-[#8b9900] dark:group-hover:text-[#F1FF0A] transition-colors line-clamp-2 leading-relaxed">
                   {prod.title}
                 </h4>
               </div>
             </div>
 
             {/* Bottom Price & Link */}
-            <div className="p-4 pt-0 flex items-center justify-between border-t border-neutral-900 mt-2">
+            <div className="p-4 pt-0 flex items-center justify-between border-t border-neutral-200 dark:border-neutral-900 mt-2">
               <div className="pt-3">
-                <div className="text-sm font-extrabold text-[#F1FF0A]">
+                <div className="text-sm font-extrabold text-neutral-900 dark:text-[#F1FF0A]">
                   {currencySymbol}{Number(prod.price || 0).toLocaleString()}
                 </div>
                 {prod.regular_price > prod.price && (
-                  <div className="text-[10px] text-neutral-500 line-through">
+                  <div className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through">
                     {currencySymbol}{Number(prod.regular_price).toLocaleString()}
                   </div>
                 )}
@@ -79,7 +79,7 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
                   href={prod.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer mt-3"
+                  className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer mt-3"
                   title="View original"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />

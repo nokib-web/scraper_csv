@@ -7,11 +7,15 @@ import ProductTable from './components/ProductTable';
 import ProductGrid from './components/ProductGrid';
 import ExportDrawer from './components/ExportDrawer';
 import FormatPreviewModal from './components/FormatPreviewModal';
+import PricingPage from './components/PricingPage';
+import AboutPage from './components/AboutPage';
+import ContactPage from './components/ContactPage';
 import Footer from './components/Footer';
 import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
 import { saveCatalogData, loadCatalogData, clearCatalogData } from './utils/storage';
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('app'); // 'app' | 'about' | 'pricing' | 'contact'
   const [url, setUrl] = useState('');
   const [engine, setEngine] = useState('auto');
   const [limit, setLimit] = useState(5000); // Default to All Products
@@ -265,132 +269,148 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden bg-[#09090b] dark:bg-[#09090b] light:bg-[#FDFBF7] text-neutral-100 dark:text-neutral-100 light:text-neutral-900 selection:bg-[#F1FF0A] selection:text-black">
+    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden bg-[#F5F5F7] dark:bg-[#09090b] text-neutral-950 dark:text-neutral-100 selection:bg-[#F1FF0A] selection:text-black">
       
-      {/* Top Header */}
+      {/* Top Header with Navigation Tabs */}
       <Header
         productsCount={products.length}
         isLoading={isLoading}
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
       />
 
       {/* Middle Scrollable Main View Area */}
       <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-5">
-        <div className="max-w-7xl mx-auto space-y-4 pb-8">
-          
-          {/* Main Scraper Input Bar & Presets */}
-          <UrlBar
-            url={url}
-            setUrl={setUrl}
-            engine={engine}
-            setEngine={setEngine}
-            limit={limit}
-            setLimit={setLimit}
-            onSubmit={handleScrape}
-            isLoading={isLoading}
-            detection={detection}
-            onClear={handleClear}
-          />
+        {activeTab === 'pricing' && (
+          <PricingPage onGoToApp={() => setActiveTab('app')} />
+        )}
 
-          {/* Real-time Streaming Logs Console */}
-          <ProgressConsole
-            logs={logs}
-            status={status}
-            isCollapsed={isConsoleCollapsed}
-            onToggleCollapse={() => setIsConsoleCollapsed(!isConsoleCollapsed)}
-          />
+        {activeTab === 'about' && (
+          <AboutPage onGoToApp={() => setActiveTab('app')} />
+        )}
 
-          {/* Stats Bar */}
-          <StatsBar stats={stats} detection={detection} />
+        {activeTab === 'contact' && (
+          <ContactPage />
+        )}
 
-          {/* Compact 1-Click Platform Exporter with Preview Buttons */}
-          {products.length > 0 && (
-            <ExportDrawer
-              products={products}
-              onExport={handleExport}
-              onOpenPreview={handleOpenPreview}
-              stats={stats}
+        {activeTab === 'app' && (
+          <div className="max-w-7xl mx-auto space-y-4 pb-8">
+            
+            {/* Main Scraper Input Bar */}
+            <UrlBar
+              url={url}
+              setUrl={setUrl}
+              engine={engine}
+              setEngine={setEngine}
+              limit={limit}
+              setLimit={setLimit}
+              onSubmit={handleScrape}
+              isLoading={isLoading}
+              detection={detection}
+              onClear={handleClear}
             />
-          )}
 
-          {/* Extracted Catalog Toolbar & Table / Grid View */}
-          {products.length > 0 && (
-            <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              
-              {/* Filter & View Switcher */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-xl bg-neutral-950/80 dark:bg-neutral-950/80 light:bg-white border border-neutral-800 dark:border-neutral-800 light:border-neutral-200">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search extracted products..."
-                    className="w-full pl-9 pr-3 py-1.5 bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-200 rounded-lg text-xs text-white dark:text-white light:text-neutral-900 placeholder-neutral-500 outline-none focus:border-[#F1FF0A]"
-                  />
-                </div>
+            {/* Real-time Streaming Logs Console */}
+            <ProgressConsole
+              logs={logs}
+              status={status}
+              isCollapsed={isConsoleCollapsed}
+              onToggleCollapse={() => setIsConsoleCollapsed(!isConsoleCollapsed)}
+            />
 
-                <div className="flex items-center gap-2 self-end sm:self-auto">
-                  <button
-                    onClick={handleClearData}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-900/50 text-xs font-semibold text-red-300 transition-colors cursor-pointer"
-                    title="Clear extracted data and cache"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Clear Data</span>
-                  </button>
+            {/* Stats Bar */}
+            <StatsBar stats={stats} detection={detection} />
 
-                  <button
-                    onClick={() => handleOpenPreview('shopify')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 hover:bg-neutral-800 dark:hover:bg-neutral-800 light:hover:bg-neutral-200 border border-neutral-800 dark:border-neutral-800 light:border-neutral-300 text-xs font-semibold text-neutral-300 dark:text-neutral-300 light:text-neutral-800 transition-colors cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5 text-[#F1FF0A]" />
-                    <span>Live Preview CSV</span>
-                  </button>
+            {/* Compact 1-Click Platform Exporter with Preview Buttons */}
+            {products.length > 0 && (
+              <ExportDrawer
+                products={products}
+                onExport={handleExport}
+                onOpenPreview={handleOpenPreview}
+                stats={stats}
+              />
+            )}
 
-                  <div className="flex items-center p-0.5 rounded-lg bg-neutral-900 dark:bg-neutral-900 light:bg-neutral-100 border border-neutral-800 dark:border-neutral-800 light:border-neutral-300">
+            {/* Extracted Catalog Toolbar & Table / Grid View */}
+            {products.length > 0 && (
+              <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                
+                {/* Filter & View Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-xl bg-white dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 shadow-sm">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search extracted products..."
+                      className="w-full pl-9 pr-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none focus:border-[#F1FF0A]"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
-                      onClick={() => setViewMode('table')}
-                      className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'table' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black'
-                      }`}
-                      title="Spreadsheet Table View"
+                      onClick={handleClearData}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-950/40 hover:bg-red-200 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/50 text-xs font-semibold text-red-700 dark:text-red-300 transition-colors cursor-pointer"
+                      title="Clear extracted data and cache"
                     >
-                      <Table className="w-4 h-4" />
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Clear Data</span>
                     </button>
+
                     <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-1.5 rounded-md transition-colors ${
-                        viewMode === 'grid' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-400 hover:text-white dark:hover:text-white light:hover:text-black'
-                      }`}
-                      title="Product Cards Grid View"
+                      onClick={() => handleOpenPreview('shopify')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-300 transition-colors cursor-pointer"
                     >
-                      <LayoutGrid className="w-4 h-4" />
+                      <Eye className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" />
+                      <span>Live Preview CSV</span>
                     </button>
+
+                    <div className="flex items-center p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800">
+                      <button
+                        onClick={() => setViewMode('table')}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          viewMode === 'table' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                        }`}
+                        title="Spreadsheet Table View"
+                      >
+                        <Table className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          viewMode === 'grid' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                        }`}
+                        title="Product Cards Grid View"
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Data View */}
+                {viewMode === 'table' ? (
+                  <ProductTable
+                    products={filteredProducts}
+                    onUpdateProduct={handleUpdateProduct}
+                    onDeleteProduct={handleDeleteProduct}
+                    currencySymbol={stats?.currencySymbol || '$'}
+                  />
+                ) : (
+                  <ProductGrid
+                    products={filteredProducts}
+                    onDeleteProduct={handleDeleteProduct}
+                    currencySymbol={stats?.currencySymbol || '$'}
+                  />
+                )}
               </div>
+            )}
 
-              {/* Data View */}
-              {viewMode === 'table' ? (
-                <ProductTable
-                  products={filteredProducts}
-                  onUpdateProduct={handleUpdateProduct}
-                  onDeleteProduct={handleDeleteProduct}
-                  currencySymbol={stats?.currencySymbol || '$'}
-                />
-              ) : (
-                <ProductGrid
-                  products={filteredProducts}
-                  onDeleteProduct={handleDeleteProduct}
-                  currencySymbol={stats?.currencySymbol || '$'}
-                />
-              )}
-            </div>
-          )}
-
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Live Format Preview Modal */}

@@ -13,40 +13,40 @@ export default function ProgressConsole({ logs, status, isCollapsed, onToggleCol
   if (logs.length === 0) return null;
 
   return (
-    <div className="w-full rounded-2xl bg-neutral-950 border border-neutral-800 overflow-hidden shadow-2xl animate-in fade-in duration-300">
+    <div className="w-full rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xl dark:shadow-2xl animate-in fade-in duration-300">
       
       {/* Header bar */}
       <div
         onClick={onToggleCollapse}
-        className="flex items-center justify-between px-4 py-3 bg-neutral-900/90 border-b border-neutral-800/80 cursor-pointer select-none"
+        className="flex items-center justify-between px-4 py-3 bg-neutral-100 dark:bg-neutral-900/90 border-b border-neutral-200 dark:border-neutral-800/80 cursor-pointer select-none"
       >
         <div className="flex items-center gap-2.5">
-          <Terminal className="w-4 h-4 text-[#F1FF0A]" />
-          <span className="text-xs font-bold text-white tracking-wide uppercase">
+          <Terminal className="w-4 h-4 text-[#8b9900] dark:text-[#F1FF0A]" />
+          <span className="text-xs font-bold text-neutral-900 dark:text-white tracking-wide uppercase">
             Live Scraping Console
           </span>
 
           {status === 'loading' && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#F1FF0A]/10 border border-[#F1FF0A]/30 text-[10px] font-bold text-[#F1FF0A] animate-pulse">
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-[10px] font-bold text-neutral-900 dark:text-[#F1FF0A] animate-pulse">
               <Loader2 className="w-3 h-3 animate-spin" />
               Streaming Live
             </span>
           )}
           {status === 'done' && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-3 h-3" />
               Completed
             </span>
           )}
           {status === 'error' && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-[10px] font-bold text-red-400">
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/30 text-[10px] font-bold text-red-600 dark:text-red-400">
               <AlertCircle className="w-3 h-3" />
               Error
             </span>
           )}
         </div>
 
-        <button className="text-neutral-400 hover:text-white p-1 transition-colors">
+        <button className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 transition-colors">
           {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
       </div>

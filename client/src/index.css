@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
-    --bg-main: #FDFBF7;
+    --bg-main: #F5F5F7;
     --bg-surface: #FFFFFF;
-    --bg-card: #F4F1EA;
-    --border-subtle: #E6E2D8;
-    --text-main: #18181B;
-    --text-muted: #71717A;
-    --neon-yellow: #E2F800;
+    --bg-card: #FFFFFF;
+    --border-subtle: #E5E7EB;
+    --text-main: #0F172A;
+    --text-muted: #334155;
+    --neon-yellow: #D4FF00;
   }
 
   .dark {

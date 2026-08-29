@@ -13,28 +13,7 @@ export default function UrlBar({
   detection,
   onClear
 }) {
-  const [presets, setPresets] = useState([
-    { name: 'Daraz BD', url: 'https://www.daraz.com.bd' },
-    { name: 'Bata BD', url: 'https://www.batabd.com' },
-    { name: 'Ryans Computers', url: 'https://www.ryans.com' },
-    { name: 'Star Tech', url: 'https://www.startech.com.bd' },
-    { name: 'Wafilife', url: 'https://www.wafilife.com/' },
-    { name: 'Rokomari', url: 'https://www.rokomari.com/book' },
-    { name: 'Ghorer Bazar', url: 'https://ghorerbazar.com/' }
-  ]);
-
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/presets')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setPresets(data);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const handlePaste = async () => {
     try {
@@ -52,25 +31,25 @@ export default function UrlBar({
     <div className="w-full space-y-4">
       {/* Search Input Box */}
       <form onSubmit={handleFormSubmit} className="relative">
-        <div className="flex flex-col md:flex-row items-stretch gap-2.5 p-2 rounded-2xl bg-neutral-950 border border-neutral-800 focus-within:border-[#F1FF0A]/60 shadow-2xl transition-all">
+        <div className="flex flex-col md:flex-row items-stretch gap-2.5 p-2 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 focus-within:border-[#F1FF0A]/60 shadow-xl dark:shadow-2xl transition-all">
           
           {/* Main URL Input */}
           <div className="flex-1 flex items-center gap-3 px-3 min-h-[48px]">
-            <Globe className="w-5 h-5 text-neutral-500 flex-shrink-0" />
+            <Globe className="w-5 h-5 text-neutral-400 dark:text-neutral-500 flex-shrink-0" />
             <input
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="Paste any store URL (e.g. https://www.daraz.com.bd, https://batabd.com, https://ryans.com)..."
               disabled={isLoading}
-              className="w-full bg-transparent text-sm font-medium text-white placeholder-neutral-500 outline-none"
+              className="w-full bg-transparent text-sm font-medium text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none"
             />
             {url && (
               <button
                 type="button"
                 onClick={onClear}
                 disabled={isLoading}
-                className="p-1 rounded-md text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors"
+                className="p-1 rounded-md text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 title="Clear input"
               >
                 <X className="w-4 h-4" />
@@ -80,7 +59,7 @@ export default function UrlBar({
               <button
                 type="button"
                 onClick={handlePaste}
-                className="hidden sm:inline-flex text-[11px] font-semibold text-neutral-400 hover:text-white px-2 py-1 rounded bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors"
+                className="hidden sm:inline-flex text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white px-2 py-1 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-700 transition-colors"
               >
                 Paste
               </button>
@@ -96,7 +75,7 @@ export default function UrlBar({
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
                 disabled={isLoading}
-                className="appearance-none bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-200 text-xs font-semibold rounded-xl px-3.5 py-3 pr-8 outline-none focus:border-[#F1FF0A] cursor-pointer"
+                className="appearance-none bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-700 text-neutral-900 dark:text-neutral-200 text-xs font-semibold rounded-xl px-3.5 py-3 pr-8 outline-none focus:border-[#F1FF0A] cursor-pointer"
               >
                 <option value={5000}>All Products (No Limit)</option>
                 <option value={1000}>Max 1,000</option>
@@ -106,7 +85,7 @@ export default function UrlBar({
                 <option value={50}>Max 50</option>
                 <option value={20}>Max 20</option>
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 text-[10px]">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[10px]">
                 ▼
               </div>
             </div>
@@ -117,8 +96,8 @@ export default function UrlBar({
               onClick={() => setShowAdvanced(!showAdvanced)}
               className={`p-3 rounded-xl border text-xs font-medium transition-colors ${
                 showAdvanced || engine !== 'auto'
-                  ? 'bg-[#F1FF0A]/10 border-[#F1FF0A]/40 text-[#F1FF0A]'
-                  : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
+                  ? 'bg-[#F1FF0A]/20 border-[#F1FF0A]/60 text-black dark:text-[#F1FF0A]'
+                  : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
               }`}
               title="Advanced engine options"
             >
@@ -149,8 +128,8 @@ export default function UrlBar({
 
       {/* Advanced Engine Selector (Collapsible) */}
       {showAdvanced && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800 text-xs animate-in fade-in slide-in-from-top-1">
-          <span className="text-neutral-400 font-medium">Scraper Engine:</span>
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 text-xs animate-in fade-in slide-in-from-top-1 shadow-sm">
+          <span className="text-neutral-600 dark:text-neutral-400 font-medium">Scraper Engine:</span>
           <div className="flex flex-wrap gap-1.5">
             {[
               { id: 'auto', label: 'Auto Detect' },
@@ -167,7 +146,7 @@ export default function UrlBar({
                 className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all ${
                   engine === item.id
                     ? 'bg-[#F1FF0A] text-black border-[#F1FF0A]'
-                    : 'bg-neutral-900 text-neutral-300 border-neutral-800 hover:border-neutral-700'
+                    : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-700'
                 }`}
               >
                 {item.label}
@@ -177,24 +156,6 @@ export default function UrlBar({
         </div>
       )}
 
-      {/* Test Presets Pills */}
-      <div className="flex items-center flex-wrap gap-2 pt-1">
-        <span className="text-xs font-medium text-neutral-500 mr-1">Popular Test Stores:</span>
-        {presets.map((preset, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => {
-              setUrl(preset.url);
-              setEngine('auto');
-            }}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-neutral-950 hover:bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-xs font-medium text-neutral-300 hover:text-white transition-all cursor-pointer"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#F1FF0A]"></span>
-            <span>{preset.name}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

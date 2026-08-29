@@ -53,17 +53,17 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-5xl h-[85vh] flex flex-col rounded-2xl bg-[#121216] dark:bg-[#121216] light:bg-white border border-neutral-800 dark:border-neutral-800 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-5xl h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-[#121216] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 bg-neutral-950/80">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/80">
           <div className="flex items-center gap-2.5">
-            <Eye className="w-4 h-4 text-[#F1FF0A]" />
-            <span className="text-sm font-extrabold text-white">
+            <Eye className="w-4 h-4 text-[#8b9900] dark:text-[#F1FF0A]" />
+            <span className="text-sm font-extrabold text-neutral-900 dark:text-white">
               Export Format Live Preview
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-400">
               {products?.length || 0} Products
             </span>
           </div>
@@ -71,9 +71,9 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-semibold text-neutral-200 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#F1FF0A]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied!' : 'Copy'}</span>
             </button>
 
@@ -87,7 +87,7 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer ml-1"
+              className="p-1.5 rounded-lg text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors cursor-pointer ml-1"
             >
               <X className="w-4 h-4" />
             </button>
@@ -95,15 +95,15 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
         </div>
 
         {/* Tab Selection */}
-        <div className="flex items-center gap-1 px-4 py-2 bg-neutral-900/90 border-b border-neutral-800 overflow-x-auto">
+        <div className="flex items-center gap-1 px-4 py-2 bg-neutral-100 dark:bg-neutral-900/90 border-b border-neutral-200 dark:border-neutral-800 overflow-x-auto">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === tab.id
-                  ? 'bg-neutral-800 text-white border border-[#F1FF0A]/40 shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'
+                  ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-300 dark:border-[#F1FF0A]/40 shadow-sm'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-800/50'
               }`}
             >
               {tab.icon}
@@ -113,7 +113,7 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
         </div>
 
         {/* Preview Code Box */}
-        <div className="flex-1 p-4 bg-black overflow-auto font-mono text-xs text-neutral-300 select-text leading-relaxed">
+        <div className="flex-1 p-4 bg-neutral-950 overflow-auto font-mono text-xs text-neutral-300 select-text leading-relaxed">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-neutral-500 gap-2">
               <span className="w-2 h-2 rounded-full bg-[#F1FF0A] animate-ping"></span>
@@ -125,8 +125,8 @@ export default function FormatPreviewModal({ isOpen, onClose, products, defaultF
         </div>
 
         {/* Footer info */}
-        <div className="px-5 py-2.5 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
-          <span>Format: <strong className="text-neutral-300 uppercase">{activeTab}</strong></span>
+        <div className="px-5 py-2.5 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
+          <span>Format: <strong className="text-neutral-800 dark:text-neutral-300 uppercase">{activeTab}</strong></span>
           <span>Line count: {previewContent.split('\n').length} lines</span>
         </div>
 
