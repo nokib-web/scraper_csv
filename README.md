@@ -7,16 +7,16 @@
 [![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **getProducts** is a high-performance, full-stack e-commerce catalog extraction and transformation platform. It allows users to paste any online store URL (Shopify, WooCommerce, Wix, Daraz, Zatiq, Amazon, or custom HTML5 stores) and instantly scrape, clean, enrich, and export products into ready-to-import CSV formats for **Shopify**, **WooCommerce**, **Wix**, **Universal Clean CSV**, or **Structured JSON**.
+> **getProducts** is a high-performance, full-stack e-commerce catalog extraction, transformation, and multi-platform CSV export platform. Paste any online store URL (Shopify, WooCommerce, Wix, Daraz, Zatiq, Amazon, or custom HTML5 web stores) to instantly extract products, variants, high-res images, pricing, and tags. Enrich, transform, and export ready-to-import catalogs for **Shopify**, **WooCommerce**, **Wix**, **Universal Clean CSV**, or **Structured JSON**.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features & Capabilities
 
-* **⚡ Universal Auto-Detection Engine:** Automatically identifies whether a target URL is Shopify, WooCommerce, Wix, Daraz, Zatiq, Amazon, or generic HTML/Schema.org microdata.
+* **⚡ Universal Auto-Detection:** Automatically identifies whether a target URL is Shopify, WooCommerce, Wix, Daraz, Zatiq, Amazon, or generic HTML/Schema.org microdata.
 * **📡 Real-Time SSE Streaming Logs:** Server-Sent Events (SSE) stream terminal logs live to the browser with zero polling lag.
-* **📈 Price Markup & Profit Margin Calculator:** Apply instant profit margins (+10%, +20%, or fixed +$5, +$10) across the entire catalog or selected products.
-* **🖼️ Max Image Slicer:** Cap the number of exported high-res gallery images per product (e.g., 1, 3, 5, or all photos).
+* **📈 Price Markup & Margin Calculator:** Apply instant profit margins (+10%, +20%, or fixed +$5, +$10) across the entire catalog or selected products.
+* **🖼️ Max Image Slicer:** Cap the number of exported high-res gallery images per product (e.g., 1, 3, 5, 10, or all photos).
 * **🏷️ Bulk Tag Manager & Inline Editing:** Non-destructively add new tags or selectively remove existing tags across chosen items.
 * **🔍 Find & Replace Tool:** Batch replace brand names, supplier titles, and links across titles, descriptions, and vendors with regex support.
 * **📦 Multi-Platform Native CSV Exporters:**
@@ -24,19 +24,20 @@
   * **WooCommerce CSV:** Attribute variation formatting, stock statuses, categories, and pipe-delimited image galleries.
   * **Wix Store CSV:** Wix product field mappings and ribbon/tag metadata.
   * **Universal Clean CSV & JSON:** Normalized flat catalog suitable for Excel, Google Sheets, or custom database ingestion.
-* **💾 Persistent IndexedDB Storage:** Automatically saves extracted catalogs in the browser so data is never lost on refresh.
+* **💾 Persistent IndexedDB Storage:** Automatically saves extracted catalogs in the browser via `idb-keyval` so data is never lost on refresh.
 * **☀️ Dark & Cream Light Mode:** High-contrast, accessibility-compliant theme switcher with instant preference saving.
+* **⚡ 100% PageSpeed & SEO Ready:** Non-blocking Google Fonts, valid `robots.txt`, `llms.txt` for AI agent discovery, canonical tags, and full ARIA accessibility.
 
 ---
 
-## 🛠️ Technology Stack & Architectural Decisions
+## 🛠️ Technology Stack & Architectural Rationale
 
 | Layer | Technology | Why It Was Chosen |
 | :--- | :--- | :--- |
-| **Frontend Framework** | **React 19** | Ultra-responsive state management, seamless component lifecycle, and modern hooks. |
+| **Frontend Framework** | **React 19** | Modern hooks (`useMemo`, `useState`, `useRef`), declarative state pipeline, and fast component re-renders. |
 | **Build Tool** | **Vite 8 (Rolldown / Oxc)** | Sub-second HMR in development and lightning-fast ~200ms production builds. |
-| **Styling Engine** | **TailwindCSS v4** | Pure utility-first CSS design system with minimal bundle footprint (~10KB gzip). |
-| **Icons & UI** | **Lucide React & React Icons** | Lightweight SVG icons with tree-shaking support and high visual polish. |
+| **Styling Engine** | **TailwindCSS v4** | Pure utility-first CSS design system with zero runtime overhead and minimal bundle footprint (~10KB gzip). |
+| **Icons & UI** | **Lucide React & React Icons** | Lightweight SVG icons with tree-shaking support and full accessibility tags. |
 | **Client Database** | **IndexedDB (`idb-keyval`)** | Stores thousands of scraped products locally without hitting `localStorage` 5MB quota. |
 | **Backend Runtime** | **Node.js & Express** | Lightweight, event-driven async I/O perfect for concurrent web scraping pipelines. |
 | **HTML Parser** | **Cheerio** | Blazing-fast DOM/AST manipulation without the heavy memory overhead of full headless browsers. |
@@ -45,79 +46,68 @@
 
 ---
 
-## 📂 Project Structure & File Directory Map
+## 📂 Complete File Directory & Component Map
 
-```text
-products-csv-downloader/
-├── client/                             # Frontend React + Vite Application
-│   ├── public/
-│   │   ├── favicon.svg                 # Brand icon asset
-│   │   ├── icons.svg                   # Platform logo symbols
-│   │   └── robots.txt                  # Search engine bot directives
-│   ├── src/
-│   │   ├── components/                 # UI Components
-│   │   │   ├── AboutPage.jsx           # Mission statement, technology showcase & roadmap
-│   │   │   ├── AdSlot.jsx              # Responsive ad slot & partner promotion banner
-│   │   │   ├── BrandSlider.jsx         # Infinite marquee slider of supported platforms
-│   │   │   ├── BulkTagModal.jsx        # Modal for bulk adding & removing product tags
-│   │   │   ├── ContactPage.jsx         # Developer contact details & feedback form
-│   │   │   ├── ExportDrawer.jsx        # Single-row toolbar (Markup, Stock, Vendor, Images, Export cards)
-│   │   │   ├── FindReplaceModal.jsx    # Live catalog search & replace tool with match counter
-│   │   │   ├── Footer.jsx              # Fair use disclaimer, legal pillars & author links
-│   │   │   ├── FormatPreviewModal.jsx  # Live spreadsheet/code preview before downloading CSV
-│   │   │   ├── Header.jsx              # Brand logo, page tabs, trial indicator & theme toggle
-│   │   │   ├── PricingPage.jsx         # Tiered pricing plans ($0, $3, $7, $15) with confetti trial activation
-│   │   │   ├── ProductGrid.jsx         # Responsive card-grid view for extracted products
-│   │   │   ├── ProductImage.jsx        # Lazy-loading image component with fallback placeholder
-│   │   │   ├── ProductTable.jsx        # Excel-like spreadsheet table with bulk selection & inline edits
-│   │   │   ├── ProgressConsole.jsx     # Live terminal log console with internal auto-scroll
-│   │   │   ├── StatsBar.jsx            # KPI cards (Total Products, Variants, Price Range, Images)
-│   │   │   └── UrlBar.jsx              # Hero section, typewriter search bar, limit & engine selectors
-│   │   ├── utils/
-│   │   │   └── storage.js              # IndexedDB abstraction layer for persistent local caching
-│   │   ├── App.jsx                     # Root application coordinator & data pipeline
-│   │   ├── index.css                   # Global Tailwind v4 styles, custom fonts & scrollbars
-│   │   └── main.jsx                    # React DOM entry point
-│   ├── index.html                      # SEO-optimized HTML template with non-blocking fonts
-│   ├── package.json                    # Client dependencies & build scripts
-│   └── vite.config.js                  # Vite bundler configuration & backend API proxy
-│
-├── server/                             # Backend Node.js + Express API
-│   ├── scrapers/                       # Extraction Engines
-│   │   ├── amazonScraper.js            # Amazon single product & ASIN parser
-│   │   ├── darazScraper.js             # Daraz & Lazada marketplace multi-page crawler
-│   │   ├── detector.js                 # Heuristic e-commerce platform detection engine
-│   │   ├── genericScraper.js           # Universal Schema.org JSON-LD & OpenGraph crawler
-│   │   ├── index.js                    # Unified scraper router & normalizer
-│   │   ├── shopifyScraper.js           # Shopify high-speed JSON catalog & single product extractor
-│   │   ├── wooScraper.js               # WooCommerce Store API, REST, & HTML scraper
-│   │   └── zatiqScraper.js             # Zatiq / EasyBill inventory API extractor
-│   │
-│   ├── exporters/                      # File Generation & Formatting
-│   │   ├── jsonFormatter.js            # Standard and Shopify native JSON formatter
-│   │   ├── shopifyFormatter.js         # Official Shopify CSV multi-row format generator
-│   │   ├── universalFormatter.js       # Clean Universal flat CSV generator
-│   │   ├── wixFormatter.js             # Wix eCommerce CSV schema formatter
-│   │   └── wooFormatter.js             # WooCommerce product importer CSV generator
-│   │
-│   ├── index.js                        # Express server entry point, SSE streams & export endpoints
-│   └── package.json                    # Server dependencies
-│
-├── .gitignore                          # Git ignore rules
-├── nixpacks.toml                       # Railway deployment build configuration
-├── package.json                        # Monorepo root scripts
-├── railway.toml                        # Railway orchestration configuration
-└── README.md                           # Documentation & architecture guide
-```
+### 💻 Client (`/client`)
+
+| File / Component | Purpose & Business Logic |
+| :--- | :--- |
+| **`client/index.html`** | Single Page Application HTML shell with non-blocking Google Fonts, SEO metadata, canonical links, and theme color tags. |
+| **`client/vite.config.js`** | Vite 8 bundler configuration with Tailwind plugin and `/api` backend proxy setup. |
+| **`client/src/main.jsx`** | React 19 DOM entry point mounting the root application into `#root`. |
+| **`client/src/App.jsx`** | Master state coordinator: manages active tabs, catalog state, vendor overrides, price markup, image limits, and bulk actions. |
+| **`client/src/index.css`** | Tailwind v4 design tokens, custom font definitions, custom scrollbars, and keyframe animations. |
+| **`client/src/utils/storage.js`** | IndexedDB storage adapter using `idb-keyval` for persistent client-side catalog caching. |
+| **`client/src/components/Header.jsx`** | Top navigation bar with branding, tab switcher (`Extractor`, `About`, `Pricing`, `Contact`), active plan badge, and theme toggle. |
+| **`client/src/components/UrlBar.jsx`** | Search input hero, typewriter animation, paste/clear buttons, product limit selector, and engine override dropdown. |
+| **`client/src/components/ProgressConsole.jsx`** | Live SSE terminal log console with internal container auto-scrolling and collapsible view. |
+| **`client/src/components/StatsBar.jsx`** | High-level KPI metric cards (Total Products, Total Variants, Price Range, Photos Extracted, Engine Source). |
+| **`client/src/components/ExportDrawer.jsx`** | Compact toolbar containing Vendor override, Default Stock, Markup, Max Images, and 1-Click Platform Export Cards. |
+| **`client/src/components/ProductTable.jsx`** | Spreadsheet table with bulk checkboxes, inline title/price/vendor editing, and floating bulk action bar. |
+| **`client/src/components/ProductGrid.jsx`** | Responsive card-grid layout displaying high-resolution product thumbnails, pricing, and tag chips. |
+| **`client/src/components/ProductImage.jsx`** | Lazy-loading image component with automatic error fallback placeholder. |
+| **`client/src/components/FindReplaceModal.jsx`** | Search & replace tool for batch-updating titles, descriptions, or vendors with regex and match counter. |
+| **`client/src/components/BulkTagModal.jsx`** | Modal for non-destructively adding new tags or selectively removing existing tags across chosen products. |
+| **`client/src/components/FormatPreviewModal.jsx`** | Live spreadsheet/code preview dialog before downloading CSV files. |
+| **`client/src/components/PricingPage.jsx`** | Pricing tier table ($0 Free, $3 Popular, $7 Plus, $15 Advance) with interactive 7-day trial confetti activation. |
+| **`client/src/components/AboutPage.jsx`** | Technical showcase, mission statement, performance metrics, and platform roadmap. |
+| **`client/src/components/ContactPage.jsx`** | Developer feedback, support channels, and portfolio links. |
+| **`client/src/components/BrandSlider.jsx`** | Infinite marquee slider of supported platforms (Shopify, WooCommerce, Wix, Amazon, etc.). |
+| **`client/src/components/AdSlot.jsx`** | Sponsored partner promo cards and ad unit layout. |
+| **`client/src/components/Footer.jsx`** | Legal disclaimer, Fair Use notice pillars, copyright info, and developer links. |
+
+---
+
+### 🖥️ Server (`/server`)
+
+| File / Component | Purpose & Business Logic |
+| :--- | :--- |
+| **`server/index.js`** | Express application entry point: handles `/api/scrape/stream` (SSE), `/api/export`, `/api/presets`, `/robots.txt`, `/llms.txt`, and static build serving. |
+| **`server/scrapers/detector.js`** | Heuristic detection engine that inspects domains, HTML meta tags, and endpoints to classify target platforms. |
+| **`server/scrapers/index.js`** | Scraper dispatcher that routes requests to platform-specific modules with automated fallback to generic parser. |
+| **`server/scrapers/shopifyScraper.js`** | High-speed JSON catalog (`/products.json`) and single product extractor with variant and gallery expansion. |
+| **`server/scrapers/wooScraper.js`** | WooCommerce extractor supporting Store API (`/wp-json/wc/store/v3/products`), REST API, and HTML fallback. |
+| **`server/scrapers/darazScraper.js`** | Multi-page catalog crawler for Daraz and Lazada marketplaces. |
+| **`server/scrapers/zatiqScraper.js`** | Inventory extractor for Zatiq and ZatiqEasy storefronts. |
+| **`server/scrapers/amazonScraper.js`** | Amazon ASIN and single product extractor for titles, prices, high-res images, and descriptions. |
+| **`server/scrapers/genericScraper.js`** | Universal fallback parser that extracts Schema.org JSON-LD microdata and OpenGraph tags from any HTML page. |
+| **`server/exporters/shopifyFormatter.js`** | Official Shopify multi-row CSV format generator supporting variants, image positions, markup, and image limits. |
+| **`server/exporters/wooFormatter.js`** | WooCommerce product importer CSV format generator with pipe-delimited galleries and attribute variation schemas. |
+| **`server/exporters/wixFormatter.js`** | Wix eCommerce CSV schema formatter with ribbon tags and inventory mapping. |
+| **`server/exporters/universalFormatter.js`** | Clean flat CSV generator suitable for Microsoft Excel, Google Sheets, or custom database ingestion. |
+| **`server/exporters/jsonFormatter.js`** | Structured JSON exporter in standard or Shopify-native format. |
+
+---
 
 ## ⚙️ Special Configuration Files & DevOps Architecture
 
 | File | Type | Purpose & Logic |
 | :--- | :--- | :--- |
-| **`client/.oxlintrc.json`** | **Linter Config** | **Oxlint (Rust-based Linter):** Shipped with Vite 8 / Oxc. It lints React 19 JSX and hooks (`react/rules-of-hooks`) at 50x–100x the speed of legacy ESLint, preventing state bugs and memory leaks. |
-| **`nixpacks.toml`** | **Cloud Buildpack** | **Railway Build Instructions:** Defines the multi-stage cloud container pipeline. It tells the Railway build engine to run `npm run build` to compile the Vite client, then execute `node server/index.js` to start the Node.js backend. |
+| **`client/.oxlintrc.json`** | **Linter Config** | **Oxlint (Rust Linter):** Shipped with Vite 8 / Oxc. Lints React 19 JSX and hooks (`react/rules-of-hooks`) 50x–100x faster than legacy ESLint, preventing state bugs and memory leaks. |
+| **`nixpacks.toml`** | **Cloud Buildpack** | **Railway Build Instructions:** Defines the multi-stage cloud container pipeline. Runs `npm run build` to compile the Vite client, then executes `node server/index.js` to start the Node.js backend. |
 | **`railway.toml`** | **Deployment Config** | **Railway Orchestration:** Specifies production health check endpoints (`healthcheckPath = "/"`) and sets zero-downtime auto-restart policies (`restartPolicyType = "always"`). |
-| **`client/public/robots.txt`** | **SEO Crawl Policy** | **Search Engine Crawler Directives:** Grants clean access to Google, Bing, and AI agents, eliminating the 20+ parsing errors flagged in Google PageSpeed Insights. |
+| **`client/public/robots.txt`** | **SEO Crawl Policy** | **Crawler Directives:** Grants clean access to Google, Bing, and AI crawlers, eliminating the 20+ parsing errors flagged in Google PageSpeed Insights. |
+| **`client/public/llms.txt`** | **AI Agent Manifest** | **LLM & Agentic Discovery:** Standardized Markdown manifest allowing AI agents and web crawlers to understand site features and API capabilities. |
 | **`client/src/utils/storage.js`** | **Storage Adapter** | **IndexedDB Persistence (`idb-keyval`):** Bypasses the 5MB quota limit of browser `localStorage`, letting you store large 5,000+ item catalogs offline without memory loss on page refresh. |
 
 ---
@@ -151,6 +141,17 @@ flowchart TD
     M --> N4["Clean CSV"]
     M --> N5["JSON"]
 ```
+
+---
+
+## 💳 Pricing Architecture & Tier Limits
+
+| Plan | Price | Extraction Limit | Key Features Included |
+| :--- | :--- | :--- | :--- |
+| 🟢 **Starter Free** | **$0** / mo | **20 Products** | Standard CSV & JSON export, platform auto-detection, community support. |
+| ⭐ **Popular** | **$3** / mo | **500 Products** | All CSV export formats, HD image downloader, SKU mapping, SSE streaming. |
+| 🚀 **Plus Exporter** | **$7** / mo | **1,000 Products** | High-speed batch processing, Daraz & Amazon support, priority support. |
+| 💎 **Advance Unlimited** | **$15** / mo | **5,000+ Products** | Unlimited catalog extraction, bot protection bypass, 1-on-1 assistance. |
 
 ---
 

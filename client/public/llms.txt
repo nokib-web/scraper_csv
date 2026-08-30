@@ -1,0 +1,9 @@
+# getProducts — Universal E-Commerce Product Catalog Exporter
+
+> getProducts is a high-performance e-commerce catalog scraper and multi-platform CSV exporter.
+
+## Core Capabilities
+- Scrapes product catalogs from Shopify, WooCommerce, Wix, Daraz, Zatiq, and Amazon.
+- Formats and exports data into ready-to-import CSV files for Shopify, WooCommerce, Wix, and Universal Spreadsheets.
+- Supports price markup calculations (+% or +fixed amount) and image count limits.
+- Supports bulk product tag management and find-and-replace catalog tools.

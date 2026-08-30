@@ -35,31 +35,31 @@ export default function ExportDrawer({
       id: 'shopify',
       title: 'Shopify CSV',
       badge: 'Official',
-      icon: <SiShopify className="w-4 h-4 text-[#95BF47]" />
+      icon: <SiShopify className="w-4 h-4 text-[#95BF47]" aria-label="Shopify" aria-hidden="true" />
     },
     {
       id: 'woocommerce',
       title: 'WooCommerce',
       badge: 'WP Ready',
-      icon: <SiWoocommerce className="w-4 h-4 text-[#96588A]" />
+      icon: <SiWoocommerce className="w-4 h-4 text-[#96588A]" aria-label="WooCommerce" aria-hidden="true" />
     },
     {
       id: 'wix',
       title: 'Wix Store',
       badge: 'Wix CSV',
-      icon: <SiWix className="w-4 h-4 text-white dark:text-white light:text-black" />
+      icon: <SiWix className="w-4 h-4 text-white dark:text-white light:text-black" aria-label="Wix" aria-hidden="true" />
     },
     {
       id: 'universal',
       title: 'Clean CSV',
       badge: 'Excel / Sheets',
-      icon: <FaFileCsv className="w-4 h-4 text-emerald-400" />
+      icon: <FaFileCsv className="w-4 h-4 text-emerald-400" aria-label="CSV" aria-hidden="true" />
     },
     {
       id: 'json',
       title: 'Structured JSON',
       badge: 'API / Raw',
-      icon: <VscJson className="w-4 h-4 text-[#F1FF0A]" />
+      icon: <VscJson className="w-4 h-4 text-[#F1FF0A]" aria-label="JSON" aria-hidden="true" />
     }
   ];
 

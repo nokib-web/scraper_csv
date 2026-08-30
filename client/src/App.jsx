@@ -27,7 +27,13 @@ export default function App() {
   const [userPlan, setUserPlan] = useState(() => {
     try {
       const saved = localStorage.getItem('getproducts_user_plan');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.id === 'popular') parsed.maxLimit = 500;
+        if (parsed.id === 'plus') parsed.maxLimit = 1000;
+        if (parsed.id === 'advance') parsed.maxLimit = 5000;
+        return parsed;
+      }
     } catch (e) {}
     return { id: 'free', name: 'Starter Free', maxLimit: 20, isTrial: false };
   });
@@ -37,6 +43,9 @@ export default function App() {
       const saved = localStorage.getItem('getproducts_user_plan');
       if (saved) {
         const p = JSON.parse(saved);
+        if (p.id === 'popular') return 500;
+        if (p.id === 'plus') return 1000;
+        if (p.id === 'advance') return 5000;
         return p.maxLimit || 20;
       }
     } catch (e) {}

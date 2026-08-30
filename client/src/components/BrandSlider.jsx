@@ -13,14 +13,14 @@ import { FaAmazon } from 'react-icons/fa';
 
 export default function BrandSlider() {
   const brands = [
-    { name: 'Shopify', icon: <SiShopify className="w-8 h-8 sm:w-9 sm:h-9 text-[#95BF47]" />, tag: 'Direct CSV Export' },
-    { name: 'WooCommerce', icon: <SiWoocommerce className="w-9 h-9 sm:w-10 sm:h-10 text-[#96588A]" />, tag: 'Native Import' },
-    { name: 'WordPress', icon: <SiWordpress className="w-8 h-8 sm:w-9 sm:h-9 text-[#21759B]" />, tag: 'Catalog Sync' },
-    { name: 'Wix eCommerce', icon: <SiWix className="w-8 h-8 sm:w-9 sm:h-9 text-neutral-900 dark:text-white" />, tag: 'Ready CSV' },
+    { name: 'Shopify', icon: <SiShopify className="w-8 h-8 sm:w-9 sm:h-9 text-[#95BF47]" aria-label="Shopify" aria-hidden="true" />, tag: 'Direct CSV Export' },
+    { name: 'WooCommerce', icon: <SiWoocommerce className="w-9 h-9 sm:w-10 sm:h-10 text-[#96588A]" aria-label="WooCommerce" aria-hidden="true" />, tag: 'Native Import' },
+    { name: 'WordPress', icon: <SiWordpress className="w-8 h-8 sm:w-9 sm:h-9 text-[#21759B]" aria-label="WordPress" aria-hidden="true" />, tag: 'Catalog Sync' },
+    { name: 'Wix eCommerce', icon: <SiWix className="w-8 h-8 sm:w-9 sm:h-9 text-neutral-900 dark:text-white" aria-label="Wix" aria-hidden="true" />, tag: 'Ready CSV' },
     { 
       name: 'Google', 
       icon: (
-        <svg className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0" viewBox="0 0 24 24">
+        <svg className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0" viewBox="0 0 24 24" aria-label="Google" aria-hidden="true" role="img">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
@@ -29,11 +29,11 @@ export default function BrandSlider() {
       ), 
       tag: 'Merchant Feed' 
     },
-    { name: 'Vercel', icon: <SiVercel className="w-7 h-7 sm:w-8 sm:h-8 text-black dark:text-white" />, tag: 'Cloud Deployed' },
-    { name: 'GitHub', icon: <SiGithub className="w-8 h-8 sm:w-9 sm:h-9 text-black dark:text-white" />, tag: 'Open Ecosystem' },
-    { name: 'Cloudflare', icon: <SiCloudflare className="w-8 h-8 sm:w-9 sm:h-9 text-[#F38020]" />, tag: 'Ultra-Fast CDN' },
-    { name: 'Stripe', icon: <SiStripe className="w-8 h-8 sm:w-9 sm:h-9 text-[#635BFF]" />, tag: 'Payment Ready' },
-    { name: 'Amazon', icon: <FaAmazon className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF9900]" />, tag: 'Catalog Schema' }
+    { name: 'Vercel', icon: <SiVercel className="w-7 h-7 sm:w-8 sm:h-8 text-black dark:text-white" aria-label="Vercel" aria-hidden="true" />, tag: 'Cloud Deployed' },
+    { name: 'GitHub', icon: <SiGithub className="w-8 h-8 sm:w-9 sm:h-9 text-black dark:text-white" aria-label="GitHub" aria-hidden="true" />, tag: 'Open Ecosystem' },
+    { name: 'Cloudflare', icon: <SiCloudflare className="w-8 h-8 sm:w-9 sm:h-9 text-[#F38020]" aria-label="Cloudflare" aria-hidden="true" />, tag: 'Ultra-Fast CDN' },
+    { name: 'Stripe', icon: <SiStripe className="w-8 h-8 sm:w-9 sm:h-9 text-[#635BFF]" aria-label="Stripe" aria-hidden="true" />, tag: 'Payment Ready' },
+    { name: 'Amazon', icon: <FaAmazon className="w-8 h-8 sm:w-9 sm:h-9 text-[#FF9900]" aria-label="Amazon" aria-hidden="true" />, tag: 'Catalog Schema' }
   ];
 
   const renderTrack = (trackId) => (

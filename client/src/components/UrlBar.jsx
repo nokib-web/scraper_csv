@@ -197,22 +197,22 @@ export default function UrlBar({
               >
                 <option value={20}>20 Products (Free)</option>
                 <option value={50}>
-                  {userPlan.maxLimit >= 500 ? '50 Products' : '🔒 50 Products (Popular)'}
+                  {userPlan.maxLimit >= 50 ? '50 Products' : '🔒 50 Products (Popular)'}
                 </option>
                 <option value={100}>
-                  {userPlan.maxLimit >= 500 ? '100 Products' : '🔒 100 Products (Popular)'}
+                  {userPlan.maxLimit >= 100 ? '100 Products' : '🔒 100 Products (Popular)'}
                 </option>
                 <option value={200}>
-                  {userPlan.maxLimit >= 500 ? '200 Products' : '🔒 200 Products (Popular)'}
+                  {userPlan.maxLimit >= 200 ? '200 Products' : '🔒 200 Products (Popular)'}
                 </option>
                 <option value={500}>
-                  {userPlan.maxLimit >= 500 ? '500 Products (Popular)' : '🔒 500 Products (Popular)'}
+                  {userPlan.maxLimit >= 500 ? '500 Products' : '🔒 500 Products (Popular)'}
                 </option>
                 <option value={1000}>
-                  {userPlan.maxLimit >= 1000 ? '1,000 Products (Plus)' : '🔒 1,000 Products (Plus)'}
+                  {userPlan.maxLimit >= 1000 ? '1,000 Products' : '🔒 1,000 Products (Plus)'}
                 </option>
                 <option value={5000}>
-                  {userPlan.maxLimit >= 5000 ? 'Unlimited (Advance)' : '🔒 Unlimited (Advance)'}
+                  {userPlan.maxLimit >= 5000 ? 'Unlimited' : '🔒 Unlimited (Advance)'}
                 </option>
               </select>
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[10px]">

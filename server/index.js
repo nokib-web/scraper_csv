@@ -222,10 +222,15 @@ app.post('/api/export', (req, res) => {
   res.send(output);
 });
 
-// Explicit robots.txt handler
+// Explicit robots.txt & llms.txt handlers
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain');
   res.send('User-agent: *\nAllow: /\n');
+});
+
+app.get('/llms.txt', (req, res) => {
+  res.type('text/plain');
+  res.send('# getProducts — Universal E-Commerce Product Catalog Exporter\n\n> getProducts extracts e-commerce product catalogs from Shopify, WooCommerce, Wix, Daraz, Zatiq, and Amazon, exporting them to ready-to-import CSV formats.\n');
 });
 
 // Serve Client Static Build if in production
