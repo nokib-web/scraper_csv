@@ -68,13 +68,13 @@ export default function PricingPage({ onGoToApp }) {
       
       {/* Header Section */}
       <div className="text-center space-y-3 max-w-2xl mx-auto">
-        <span className="text-[11px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-neutral-900 dark:text-[#F1FF0A]">
+        <span className="text-xs font-semibold uppercase tracking-widest px-3.5 py-1 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-neutral-900 dark:text-[#F1FF0A]">
           Flexible & Transparent Pricing
         </span>
-        <h2 className="text-3xl sm:text-4xl font-black text-neutral-950 dark:text-white tracking-tight">
+        <h2 className="text-3xl sm:text-4xl font-title font-semibold text-neutral-950 dark:text-white tracking-tight">
           Simple Plans for Any Scale
         </h2>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+        <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal">
           Extract full product catalogs with descriptions, images, variants, and prices in one click. Upgrade anytime as your store grows.
         </p>
 
@@ -83,7 +83,7 @@ export default function PricingPage({ onGoToApp }) {
           <div className="flex items-center p-1 rounded-xl bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800">
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 billingCycle === 'monthly'
                   ? 'bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white shadow-sm'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white'
@@ -93,14 +93,14 @@ export default function PricingPage({ onGoToApp }) {
             </button>
             <button
               onClick={() => setBillingCycle('yearly')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 billingCycle === 'yearly'
                   ? 'bg-white dark:bg-neutral-800 text-neutral-950 dark:text-white shadow-sm'
                   : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-950 dark:hover:text-white'
               }`}
             >
               <span>Yearly</span>
-              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-[#F1FF0A] text-black">
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-[#F1FF0A] text-black">
                 Save 20%
               </span>
             </button>
@@ -124,17 +124,17 @@ export default function PricingPage({ onGoToApp }) {
             >
               {/* Badge */}
               {plan.badge && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#F1FF0A] text-black text-[11px] font-black uppercase tracking-wider shadow-md">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-0.5 rounded-full bg-[#F1FF0A] text-black text-xs font-semibold uppercase tracking-wider shadow-md">
                   {plan.badge}
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-extrabold text-neutral-950 dark:text-white">
+                  <h3 className="text-xl font-title font-semibold text-neutral-950 dark:text-white">
                     {plan.name}
                   </h3>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 min-h-[32px]">
+                  <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 mt-1 min-h-[32px] font-normal">
                     {plan.description}
                   </p>
                 </div>
@@ -142,15 +142,15 @@ export default function PricingPage({ onGoToApp }) {
                 {/* Price Display */}
                 <div className="pt-2 pb-4 border-b border-neutral-200 dark:border-neutral-800">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-neutral-950 dark:text-white">
+                    <span className="text-4xl font-title font-semibold text-neutral-950 dark:text-white">
                       ${price}
                     </span>
-                    <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                    <span className="text-xs sm:text-sm font-medium text-neutral-500 dark:text-neutral-400">
                       / month
                     </span>
                   </div>
                   {billingCycle === 'yearly' && plan.priceMonthly > 0 && (
-                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                       Billed annually (${price * 12}/yr)
                     </span>
                   )}
@@ -158,10 +158,10 @@ export default function PricingPage({ onGoToApp }) {
 
                 {/* Features List */}
                 <div className="space-y-2.5 pt-2">
-                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-200 uppercase tracking-wider block">
+                  <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-200 uppercase tracking-wider block">
                     What's Included:
                   </span>
-                  <ul className="space-y-2.5 text-xs text-neutral-700 dark:text-neutral-300">
+                  <ul className="space-y-2.5 text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 font-normal">
                     {plan.features.map((feat, i) => (
                       <li key={i} className="flex items-start gap-2.5">
                         <div className="w-4 h-4 rounded-full bg-[#F1FF0A]/20 dark:bg-[#F1FF0A]/10 border border-[#F1FF0A]/50 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -179,7 +179,7 @@ export default function PricingPage({ onGoToApp }) {
                 <button
                   type="button"
                   onClick={onGoToApp}
-                  className={`w-full py-3 px-4 rounded-xl text-xs font-extrabold tracking-wide uppercase flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  className={`w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-semibold tracking-wide uppercase flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     plan.highlight
                       ? 'bg-[#F1FF0A] hover:bg-[#D4FF00] text-black shadow-lg shadow-[#F1FF0A]/20 active:scale-[0.98]'
                       : 'bg-neutral-950 dark:bg-neutral-900 text-white hover:bg-neutral-800 dark:hover:bg-neutral-800 border border-neutral-950 dark:border-neutral-700'

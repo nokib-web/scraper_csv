@@ -271,7 +271,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col justify-between overflow-hidden bg-[#F5F5F7] dark:bg-[#09090b] text-neutral-950 dark:text-neutral-100 selection:bg-[#F1FF0A] selection:text-black">
+    <div className="min-h-screen flex flex-col bg-[#F5F5F7] dark:bg-[#09090b] text-neutral-950 dark:text-neutral-100 selection:bg-[#F1FF0A] selection:text-black">
       
       {/* Top Header with Navigation Tabs */}
       <Header
@@ -283,8 +283,8 @@ export default function App() {
         onSelectTab={setActiveTab}
       />
 
-      {/* Middle Scrollable Main View Area */}
-      <main className="flex-1 overflow-y-auto py-5">
+      {/* Main View Area */}
+      <main className="flex-1 py-5">
         {activeTab === 'pricing' && (
           <PricingPage onGoToApp={() => setActiveTab('app')} />
         )}

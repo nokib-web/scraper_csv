@@ -32,14 +32,14 @@ export default function ContactPage() {
       
       {/* Header */}
       <div className="text-center space-y-3 max-w-xl mx-auto">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-neutral-950 dark:text-[#F1FF0A] text-xs font-bold">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-neutral-950 dark:text-[#F1FF0A] text-xs font-semibold">
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Get in Touch</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-neutral-950 dark:text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-title font-semibold text-neutral-950 dark:text-white tracking-tight">
           Contact & Support
         </h1>
-        <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 font-normal">
           Have a custom store scraping request, bug report, or feature suggestion? Send a message directly.
         </p>
       </div>
@@ -50,11 +50,11 @@ export default function ContactPage() {
         {/* Contact Information & Channels */}
         <div className="md:col-span-1 space-y-4">
           <div className="p-6 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-5">
-            <h3 className="text-sm font-extrabold text-neutral-950 dark:text-white uppercase tracking-wider">
+            <h3 className="text-xs sm:text-sm font-title font-semibold text-neutral-950 dark:text-white uppercase tracking-wider">
               Direct Channels
             </h3>
 
-            <div className="space-y-4 text-xs">
+            <div className="space-y-4 text-xs sm:text-sm">
               <a
                 href="mailto:nokib.dev@gmail.com"
                 className="flex items-start gap-3 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60 transition-colors group"
@@ -63,10 +63,10 @@ export default function ContactPage() {
                   <Mail className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-neutral-950 dark:text-white group-hover:text-[#687500] dark:group-hover:text-[#F1FF0A] transition-colors">
+                  <div className="font-semibold text-neutral-950 dark:text-white group-hover:text-[#687500] dark:group-hover:text-[#F1FF0A] transition-colors">
                     Email Support
                   </div>
-                  <div className="text-neutral-500 dark:text-neutral-400 text-[11px] truncate">
+                  <div className="text-neutral-500 dark:text-neutral-400 text-xs truncate font-normal">
                     nokib.dev@gmail.com
                   </div>
                 </div>
@@ -82,10 +82,10 @@ export default function ContactPage() {
                   <Globe className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-neutral-950 dark:text-white group-hover:text-[#687500] dark:group-hover:text-[#F1FF0A] transition-colors">
+                  <div className="font-semibold text-neutral-950 dark:text-white group-hover:text-[#687500] dark:group-hover:text-[#F1FF0A] transition-colors">
                     Developer Portfolio
                   </div>
-                  <div className="text-neutral-500 dark:text-neutral-400 text-[11px]">
+                  <div className="text-neutral-500 dark:text-neutral-400 text-xs font-normal">
                     nokib.vercel.app
                   </div>
                 </div>
@@ -93,8 +93,8 @@ export default function ContactPage() {
             </div>
 
             <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800">
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed block">
-                ⚡ Typical response time: within <strong>2–12 hours</strong>.
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed block font-normal">
+                Typical response time: within <strong className="font-semibold text-neutral-800 dark:text-neutral-200">2–12 hours</strong>.
               </span>
             </div>
           </div>
@@ -109,17 +109,17 @@ export default function ContactPage() {
                   <CheckCircle2 className="w-7 h-7 stroke-[2.5]" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-lg font-extrabold text-neutral-950 dark:text-white">
+                  <h3 className="text-lg font-title font-semibold text-neutral-950 dark:text-white">
                     Message Sent Successfully!
                   </h3>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-sm mx-auto">
+                  <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 max-w-sm mx-auto font-normal">
                     Thank you for reaching out. We will get back to your email ({formData.email}) shortly.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="px-5 py-2 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-800 text-xs font-bold transition-all cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-800 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
                 >
                   Send Another Message
                 </button>
@@ -129,7 +129,7 @@ export default function ContactPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Name Input */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-800 dark:text-neutral-300">
+                    <label className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-300">
                       Your Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -138,13 +138,13 @@ export default function ContactPage() {
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="e.g. Nokib Ahmed"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs font-medium outline-none focus:border-[#F1FF0A]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs sm:text-sm font-normal outline-none focus:border-[#F1FF0A]"
                     />
                   </div>
 
                   {/* Email Input */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-800 dark:text-neutral-300">
+                    <label className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-300">
                       Email Address <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -153,20 +153,20 @@ export default function ContactPage() {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="you@example.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs font-medium outline-none focus:border-[#F1FF0A]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs sm:text-sm font-normal outline-none focus:border-[#F1FF0A]"
                     />
                   </div>
                 </div>
 
                 {/* Subject Selector */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-800 dark:text-neutral-300">
+                  <label className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-300">
                     Topic / Category
                   </label>
                   <select
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white text-xs font-medium outline-none focus:border-[#F1FF0A] cursor-pointer"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white text-xs sm:text-sm font-normal outline-none focus:border-[#F1FF0A] cursor-pointer"
                   >
                     <option value="General Inquiry">General Inquiry</option>
                     <option value="Custom Scraper Request">Custom Scraper Request</option>
@@ -178,7 +178,7 @@ export default function ContactPage() {
 
                 {/* Message Box */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-800 dark:text-neutral-300">
+                  <label className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-300">
                     Message <span className="text-red-500">*</span>
                   </label>
                   <textarea
@@ -187,7 +187,7 @@ export default function ContactPage() {
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder="Tell us what store you'd like to scrape, or how we can help..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs font-medium outline-none focus:border-[#F1FF0A] resize-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs sm:text-sm font-normal outline-none focus:border-[#F1FF0A] resize-none"
                   ></textarea>
                 </div>
 
@@ -195,7 +195,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="w-full py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black text-xs font-black uppercase tracking-wider shadow-lg shadow-[#F1FF0A]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer disabled:opacity-50"
+                  className="w-full py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-lg shadow-[#F1FF0A]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer disabled:opacity-50"
                 >
                   {isSending ? (
                     <span>Sending message...</span>

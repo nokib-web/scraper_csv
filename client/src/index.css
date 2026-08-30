@@ -2,6 +2,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+  --font-title: 'Poppins', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
 @layer base {
   :root {
     --bg-main: #F5F5F7;
@@ -23,9 +30,34 @@
     --neon-yellow: #F1FF0A;
   }
 
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 1rem; /* 16px */
+    line-height: 1.65;
+    letter-spacing: -0.011em;
+    color: #1e293b;
     transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .dark body {
+    color: #f1f5f9;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-title, .font-heading {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600 !important;
+    letter-spacing: -0.015em;
+    color: #0f172a;
+  }
+
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6, .dark .font-title, .dark .font-heading {
+    color: #ffffff;
   }
 
   code, pre, .font-mono {

@@ -53,12 +53,12 @@ export default function AdSlot({
     <div className={`w-full space-y-3.5 ${className}`}>
       
       {/* Top Header Label */}
-      <div className="flex items-center justify-between px-1 text-xs">
-        <div className="flex items-center gap-2 text-neutral-800 dark:text-neutral-300 font-bold">
-          <FaRocket className="w-3.5 h-3.5 text-[#687500] dark:text-[#F1FF0A]" />
+      <div className="flex items-center justify-between px-1 text-sm">
+        <div className="flex items-center gap-2 text-neutral-900 dark:text-neutral-200 font-semibold">
+          <FaRocket className="w-4 h-4 text-[#687500] dark:text-[#F1FF0A]" />
           <span>Recommended E-Commerce Tools & Deals</span>
         </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-neutral-200/80 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400">
+        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-200/80 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300">
           Sponsored
         </span>
       </div>
@@ -71,112 +71,112 @@ export default function AdSlot({
           href="https://www.shopify.com"
           target="_blank"
           rel="noopener noreferrer sponsored"
-          className="p-4 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
+          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center flex-shrink-0 text-[#95BF47]">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center flex-shrink-0 text-[#95BF47]">
                   <SiShopify className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-neutral-950 dark:text-white">
+                  <h4 className="text-sm font-semibold text-neutral-950 dark:text-white">
                     Shopify Official
                   </h4>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     $1/Month Special Promo
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300">
                 Verified
               </span>
             </div>
 
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-normal">
               Import your scraped product CSV directly into Shopify. 3-day free trial + $1/month plan available.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
             <span>Claim $1 Shopify Deal</span>
-            <FaExternalLinkAlt className="w-2.5 h-2.5 opacity-70" />
+            <FaExternalLinkAlt className="w-2.5 h-2.5" />
           </div>
         </a>
 
-        {/* Card 2: WooCommerce & WordPress Cloud */}
+        {/* Card 2: WooCommerce & WordPress */}
         <a
           href="https://woocommerce.com"
           target="_blank"
           rel="noopener noreferrer sponsored"
-          className="p-4 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-purple-500/60 dark:hover:border-purple-500/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
+          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-purple-500/60 dark:hover:border-purple-500/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center justify-center flex-shrink-0 text-[#96588A]">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center justify-center flex-shrink-0 text-[#96588A]">
                   <SiWoocommerce className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-neutral-950 dark:text-white">
+                  <h4 className="text-sm font-semibold text-neutral-950 dark:text-white">
                     WooCommerce
                   </h4>
-                  <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">
+                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
                     WordPress Store Suite
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 border border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 border border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300">
                 WP Ready
               </span>
             </div>
 
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-normal">
               Self-host your store with complete freedom. Upload your WooCommerce CSV with attributes & variations.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between text-xs font-bold text-purple-700 dark:text-purple-400 group-hover:translate-x-0.5 transition-transform">
+          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between text-xs font-semibold text-purple-700 dark:text-purple-400 group-hover:translate-x-0.5 transition-transform">
             <span>Explore WooCommerce</span>
-            <FaExternalLinkAlt className="w-2.5 h-2.5 opacity-70" />
+            <FaExternalLinkAlt className="w-2.5 h-2.5" />
           </div>
         </a>
 
-        {/* Card 3: Cloud & CDN Store Hosting */}
+        {/* Card 3: Cloud Hosting & Scalable Proxy Servers */}
         <a
-          href="https://www.hostinger.com"
+          href="https://cloudflare.com"
           target="_blank"
           rel="noopener noreferrer sponsored"
-          className="p-4 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60 dark:hover:border-[#F1FF0A]/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
+          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-amber-500/60 dark:hover:border-amber-500/60 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center flex-shrink-0 text-amber-600 dark:text-amber-400">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center flex-shrink-0 text-amber-600">
                   <FaServer className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-neutral-950 dark:text-white">
+                  <h4 className="text-sm font-semibold text-neutral-950 dark:text-white">
                     Cloud Server & SSL
                   </h4>
-                  <span className="text-[10px] font-bold text-[#687500] dark:text-[#F1FF0A]">
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                     75% Off Cloud Plans
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#F1FF0A]/20 dark:bg-[#F1FF0A]/10 border border-[#F1FF0A]/40 text-neutral-900 dark:text-[#F1FF0A]">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300">
                 Fast Speed
               </span>
             </div>
 
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed font-normal">
               High-speed NVMe servers with automatic CSV import optimization, free domain, and DDoS protection.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between text-xs font-bold text-neutral-900 dark:text-[#F1FF0A] group-hover:translate-x-0.5 transition-transform">
+          <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between text-xs font-semibold text-amber-700 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform">
             <span>Get 75% Hosting Discount</span>
-            <FaExternalLinkAlt className="w-2.5 h-2.5 opacity-70" />
+            <FaExternalLinkAlt className="w-2.5 h-2.5" />
           </div>
         </a>
 

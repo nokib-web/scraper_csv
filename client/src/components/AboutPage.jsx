@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, Zap, Cpu, ShieldCheck, ArrowRight, Layers, FileSpreadsheet, Globe } from 'lucide-react';
 import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
-import { FaFileCsv } from 'react-icons/fa';
+import { FaFileCsv, FaFileCode } from 'react-icons/fa6';
 
 export default function AboutPage({ onGoToApp }) {
   const highlights = [
@@ -31,7 +31,8 @@ export default function AboutPage({ onGoToApp }) {
     { name: 'Shopify', icon: <SiShopify className="w-5 h-5 text-[#95BF47]" />, desc: 'Native handles, options & image positions' },
     { name: 'WooCommerce', icon: <SiWoocommerce className="w-5 h-5 text-[#96588A]" />, desc: 'Standard WP product attributes & prices' },
     { name: 'Wix eCommerce', icon: <SiWix className="w-5 h-5 text-neutral-900 dark:text-white" />, desc: 'Clean CSV ready for Wix catalog import' },
-    { name: 'Universal CSV', icon: <FaFileCsv className="w-5 h-5 text-emerald-500" />, desc: 'Compatible with Excel, Google Sheets, Airtable' }
+    { name: 'Universal CSV', icon: <FaFileCsv className="w-5 h-5 text-emerald-500" />, desc: 'Compatible with Excel, Sheets & Airtable' },
+    { name: 'Raw JSON', icon: <FaFileCode className="w-5 h-5 text-[#8b9900] dark:text-[#F1FF0A]" />, desc: 'Structured schema for APIs & custom DBs' }
   ];
 
   return (
@@ -39,22 +40,22 @@ export default function AboutPage({ onGoToApp }) {
       
       {/* Hero Section */}
       <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-neutral-950 dark:text-[#F1FF0A] text-xs font-bold">
+        <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 text-neutral-950 dark:text-[#F1FF0A] text-xs font-semibold">
           <span>About getProducts</span>
         </div>
         
-        <h1 className="text-3xl sm:text-5xl font-black text-neutral-950 dark:text-white tracking-tight leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-title font-semibold text-neutral-950 dark:text-white tracking-tight leading-tight">
           The Universal Product Extractor for Modern E-Commerce
         </h1>
         
         <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed max-w-2xl mx-auto font-normal">
-          <strong className="text-neutral-950 dark:text-white font-extrabold">getProducts</strong> solves the headache of manual catalog migration. Paste any store URL, extract all products in real-time, and download store-ready CSV files in seconds.
+          <strong className="text-neutral-950 dark:text-white font-semibold">getProducts</strong> solves the headache of manual catalog migration. Paste any store URL, extract all products in real-time, and download store-ready CSV files in seconds.
         </p>
 
         <div className="pt-2">
           <button
             onClick={onGoToApp}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black text-xs font-extrabold tracking-wide uppercase shadow-lg shadow-[#F1FF0A]/20 active:scale-[0.98] transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black text-xs sm:text-sm font-semibold tracking-wide uppercase shadow-lg shadow-[#F1FF0A]/20 active:scale-[0.98] transition-all cursor-pointer"
           >
             <span>Launch Extractor</span>
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
@@ -72,10 +73,10 @@ export default function AboutPage({ onGoToApp }) {
             <div className="w-10 h-10 rounded-xl bg-[#F1FF0A]/20 border border-[#F1FF0A]/40 flex items-center justify-center flex-shrink-0">
               {item.icon}
             </div>
-            <h3 className="text-base font-extrabold text-neutral-950 dark:text-white">
+            <h3 className="text-base sm:text-lg font-title font-semibold text-neutral-950 dark:text-white">
               {item.title}
             </h3>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed font-normal">
               {item.description}
             </p>
           </div>
@@ -85,15 +86,15 @@ export default function AboutPage({ onGoToApp }) {
       {/* Supported Platforms Section */}
       <div className="p-7 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-6">
         <div className="text-center space-y-1">
-          <h3 className="text-xl font-extrabold text-neutral-950 dark:text-white">
+          <h3 className="text-xl font-title font-semibold text-neutral-950 dark:text-white">
             Supported Export Ecosystems
           </h3>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400">
+          <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-normal">
             Validated against official platform schemas for 100% successful imports.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {platforms.map((p, i) => (
             <div
               key={i}
@@ -103,11 +104,11 @@ export default function AboutPage({ onGoToApp }) {
                 <div className="p-2 rounded-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 shadow-sm">
                   {p.icon}
                 </div>
-                <span className="text-xs font-bold text-neutral-950 dark:text-white">
+                <span className="text-sm font-semibold text-neutral-950 dark:text-white">
                   {p.name}
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-normal">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-normal font-normal">
                 {p.desc}
               </p>
             </div>
@@ -118,14 +119,14 @@ export default function AboutPage({ onGoToApp }) {
       {/* Developer Story Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-neutral-100 to-white dark:from-neutral-950 dark:to-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-5 shadow-sm">
         <div className="space-y-1 text-center sm:text-left">
-          <div className="text-xs font-bold text-[#687500] dark:text-[#F1FF0A] uppercase tracking-wider">
+          <div className="text-xs font-semibold text-[#687500] dark:text-[#F1FF0A] uppercase tracking-wider">
             Created with Passion
           </div>
-          <h4 className="text-base font-extrabold text-neutral-950 dark:text-white">
-            Built by Nokib & the Pixelora Team
+          <h4 className="text-base sm:text-lg font-title font-semibold text-neutral-950 dark:text-white">
+            Built by Nazmul Hasan Nokib
           </h4>
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-lg">
-            Focused on building high-performance e-commerce utilities, scraper architectures, and modern web applications.
+          <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 max-w-lg font-normal">
+            Web Developer & Business Researcher and Analyst. Focused on building high-performance e-commerce utilities, scraper architectures, and data analysis systems.
           </p>
         </div>
 
@@ -133,7 +134,7 @@ export default function AboutPage({ onGoToApp }) {
           href="https://nokib.vercel.app/developer"
           target="_blank"
           rel="noopener noreferrer"
-          className="px-5 py-2.5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 dark:bg-[#F1FF0A] dark:text-black dark:hover:bg-[#D4FF00] text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md flex-shrink-0"
+          className="px-5 py-2.5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 dark:bg-[#F1FF0A] dark:text-black dark:hover:bg-[#D4FF00] text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-md flex-shrink-0"
         >
           <span>Developer Portfolio</span>
           <ArrowRight className="w-3.5 h-3.5" />

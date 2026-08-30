@@ -64,11 +64,11 @@ export default function BrandSlider() {
     <div className="w-full space-y-3 pt-2">
       
       {/* Header text */}
-      <div className="text-center space-y-1">
-        <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+      <div className="text-center space-y-1.5 py-1">
+        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
           Seamless Compatibility & Integrations
         </span>
-        <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white">
+        <h3 className="text-base sm:text-lg font-title font-semibold text-neutral-900 dark:text-white">
           Works Flawlessly With Major E-Commerce & Web Platforms
         </h3>
       </div>

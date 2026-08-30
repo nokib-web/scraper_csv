@@ -25,10 +25,10 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
               <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black stroke-[2.5]" />
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-sm sm:text-base font-black tracking-tight text-neutral-950 dark:text-white">
+              <span className="text-base sm:text-lg font-title font-semibold tracking-tight text-neutral-950 dark:text-white">
                 get<span className="text-[#687500] dark:text-[#F1FF0A]">Products</span>
               </span>
-              <span className="hidden md:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-400">
+              <span className="hidden md:inline-block text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-400">
                 Universal Exporter
               </span>
             </div>
