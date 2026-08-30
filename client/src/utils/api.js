@@ -8,7 +8,7 @@ export const getApiBaseUrl = () => {
     if (window.location.protocol === 'chrome-extension:' || window.location.protocol === 'moz-extension:') {
       const customUrl = localStorage.getItem('getproducts_api_url');
       if (customUrl) return customUrl.replace(/\/$/, '');
-      return 'https://scrapercsv-up.railway.app';
+      return 'https://scrapercsv.up.railway.app';
     }
   }
   return '';
