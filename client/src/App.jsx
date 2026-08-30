@@ -603,6 +603,7 @@ export default function App() {
                     <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
+                      aria-label="Search extracted products by title, vendor, or tags"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search extracted products by title, vendor, category, tags..."
@@ -614,6 +615,7 @@ export default function App() {
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
                       onClick={handleClearData}
+                      aria-label="Clear all extracted catalog data"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 border border-red-500/20 text-xs font-semibold transition-colors cursor-pointer"
                       title="Clear Extracted Catalog Data"
                     >
@@ -623,6 +625,7 @@ export default function App() {
 
                     <button
                       onClick={() => handleOpenPreview('shopify')}
+                      aria-label="Open live CSV preview modal"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-300 transition-colors cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" />
@@ -632,6 +635,7 @@ export default function App() {
                     <div className="flex items-center p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800">
                       <button
                         onClick={() => setViewMode('table')}
+                        aria-label="Switch to spreadsheet table view"
                         className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                           viewMode === 'table' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                         }`}
@@ -641,10 +645,11 @@ export default function App() {
                       </button>
                       <button
                         onClick={() => setViewMode('grid')}
+                        aria-label="Switch to product grid view"
                         className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                           viewMode === 'grid' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                         }`}
-                        title="Product Cards Grid View"
+                        title="Card Grid View"
                       >
                         <LayoutGrid className="w-4 h-4" />
                       </button>

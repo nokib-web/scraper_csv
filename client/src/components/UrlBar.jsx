@@ -123,6 +123,8 @@ export default function UrlBar({
           {/* Main URL Input */}
           <input
             type="text"
+            id="store-url-input"
+            aria-label="Store URL to extract products"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder={placeholderText || 'Paste store URL (e.g. https://store.com)...'}
@@ -136,6 +138,7 @@ export default function UrlBar({
               type="button"
               onClick={handleClearUrl}
               disabled={isLoading}
+              aria-label="Clear store URL input"
               className="p-2 rounded-lg text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex-shrink-0 cursor-pointer"
               title="Clear input"
             >
@@ -145,6 +148,7 @@ export default function UrlBar({
             <button
               type="button"
               onClick={handlePaste}
+              aria-label="Paste store URL from clipboard"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black dark:hover:bg-[#F1FF0A] dark:hover:text-black text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm font-semibold transition-all border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A] flex-shrink-0 cursor-pointer shadow-sm"
               title="Paste URL from clipboard"
             >
@@ -157,6 +161,7 @@ export default function UrlBar({
           <button
             type="submit"
             disabled={isLoading || !url.trim()}
+            aria-label="Extract products from store URL"
             className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] active:scale-[0.98] text-black text-xs sm:text-sm font-bold tracking-wide uppercase shadow-lg shadow-[#F1FF0A]/20 disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer whitespace-nowrap"
           >
             {isLoading ? (
@@ -178,11 +183,13 @@ export default function UrlBar({
           
           {/* Left: Product Limit Dropdown with Plan Tier Locks */}
           <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
+            <label htmlFor="limit-select" className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
               Product Limit:
-            </span>
+            </label>
             <div className="relative">
               <select
+                id="limit-select"
+                aria-label="Select maximum product limit to extract"
                 value={limit}
                 onChange={handleLimitChange}
                 disabled={isLoading}
@@ -216,11 +223,13 @@ export default function UrlBar({
 
           {/* Right: Engine Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
+            <label htmlFor="engine-select" className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
               Scraper Engine:
-            </span>
+            </label>
             <div className="relative">
               <select
+                id="engine-select"
+                aria-label="Select scraper engine"
                 value={engine}
                 onChange={(e) => setEngine(e.target.value)}
                 disabled={isLoading}

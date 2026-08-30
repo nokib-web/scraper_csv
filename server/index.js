@@ -222,6 +222,12 @@ app.post('/api/export', (req, res) => {
   res.send(output);
 });
 
+// Explicit robots.txt handler
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nAllow: /\n');
+});
+
 // Serve Client Static Build if in production
 const clientDist = path.join(__dirname, '../client/dist');
 app.use(express.static(clientDist));
