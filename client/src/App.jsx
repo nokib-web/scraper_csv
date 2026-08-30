@@ -20,7 +20,27 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('app'); // 'app' | 'about' | 'pricing' | 'contact'
   const [url, setUrl] = useState('');
   const [engine, setEngine] = useState('auto');
-  const [limit, setLimit] = useState(5000); // Default to All Products
+
+  // User Plan State (Free 20 by default, or trial plan from localStorage)
+  const [userPlan, setUserPlan] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_user_plan');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { id: 'free', name: 'Starter Free', maxLimit: 20, isTrial: false };
+  });
+
+  const [limit, setLimit] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_user_plan');
+      if (saved) {
+        const p = JSON.parse(saved);
+        return p.maxLimit || 20;
+      }
+    } catch (e) {}
+    return 20; // Default to 20 for free users
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState([]);
   const [products, setProducts] = useState([]);
@@ -33,6 +53,20 @@ export default function App() {
   // Preview Modal
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewFormat, setPreviewFormat] = useState('shopify');
+
+  const handleSelectPlan = (plan) => {
+    const updatedPlan = {
+      id: plan.id,
+      name: plan.name,
+      maxLimit: plan.maxLimit,
+      isTrial: plan.trial,
+      trialDaysRemaining: 7,
+      activatedAt: new Date().toISOString()
+    };
+    setUserPlan(updatedPlan);
+    localStorage.setItem('getproducts_user_plan', JSON.stringify(updatedPlan));
+    setLimit(plan.maxLimit);
+  };
 
   // Load saved catalog from IndexedDB on initial mount
   useEffect(() => {
@@ -281,12 +315,17 @@ export default function App() {
         onToggleTheme={toggleTheme}
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        userPlan={userPlan}
       />
 
       {/* Main View Area */}
       <main className="flex-1 py-5">
         {activeTab === 'pricing' && (
-          <PricingPage onGoToApp={() => setActiveTab('app')} />
+          <PricingPage 
+            onGoToApp={() => setActiveTab('app')} 
+            userPlan={userPlan}
+            onSelectPlan={handleSelectPlan}
+          />
         )}
 
         {activeTab === 'about' && (
@@ -312,6 +351,8 @@ export default function App() {
               isLoading={isLoading}
               detection={detection}
               onClear={handleClear}
+              userPlan={userPlan}
+              onOpenPricing={() => setActiveTab('pricing')}
             />
 
             {/* Empty State / Monetization Ad Slot & Brand Marquee Slider */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Loader2, X, ClipboardPaste } from 'lucide-react';
+import { ArrowRight, Loader2, X, ClipboardPaste, Sparkles, Lock } from 'lucide-react';
 import { FaLink } from 'react-icons/fa';
 
 export default function UrlBar({
@@ -12,7 +12,9 @@ export default function UrlBar({
   onSubmit,
   isLoading,
   detection,
-  onClear
+  onClear,
+  userPlan = { id: 'free', name: 'Starter Free', maxLimit: 20 },
+  onOpenPricing
 }) {
   // Typewriter Animation Phrases
   const phrases = [
@@ -61,6 +63,20 @@ export default function UrlBar({
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (url.trim()) onSubmit();
+  };
+
+  const handleLimitChange = (e) => {
+    const chosenVal = Number(e.target.value);
+    const userMax = userPlan?.maxLimit || 20;
+
+    if (chosenVal > userMax) {
+      // Prompt user to upgrade/activate 7-day free trial on Pricing tab
+      if (onOpenPricing) {
+        onOpenPricing();
+      }
+      return;
+    }
+    setLimit(chosenVal);
   };
 
   return (
@@ -149,7 +165,7 @@ export default function UrlBar({
         {/* Single Line Clean Secondary Options Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs sm:text-sm">
           
-          {/* Left: Product Limit Dropdown */}
+          {/* Left: Product Limit Dropdown with Plan Tier Locks */}
           <div className="flex items-center gap-2">
             <span className="text-neutral-600 dark:text-neutral-400 font-medium">
               Product Limit:
@@ -157,22 +173,47 @@ export default function UrlBar({
             <div className="relative">
               <select
                 value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
+                onChange={handleLimitChange}
                 disabled={isLoading}
                 className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-1.5 pr-8 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-sm transition-colors"
               >
-                <option value={5000}>All Products (Full Catalog)</option>
-                <option value={1000}>Max 1,000 Products</option>
-                <option value={500}>Max 500 Products</option>
-                <option value={250}>Max 250 Products</option>
-                <option value={100}>Max 100 Products</option>
-                <option value={50}>Max 50 Products</option>
-                <option value={20}>Max 20 Products</option>
+                <option value={20}>Max 20 Products (Free Plan)</option>
+                <option value={50}>
+                  {userPlan.maxLimit >= 200 ? 'Max 50 Products' : '🔒 Max 50 (Popular Plan - 7d Trial)'}
+                </option>
+                <option value={100}>
+                  {userPlan.maxLimit >= 200 ? 'Max 100 Products' : '🔒 Max 100 (Popular Plan - 7d Trial)'}
+                </option>
+                <option value={200}>
+                  {userPlan.maxLimit >= 200 ? 'Max 200 Products (Popular)' : '🔒 Max 200 (Popular Plan - 7d Trial)'}
+                </option>
+                <option value={500}>
+                  {userPlan.maxLimit >= 1000 ? 'Max 500 Products' : '🔒 Max 500 (Plus Plan - 7d Trial)'}
+                </option>
+                <option value={1000}>
+                  {userPlan.maxLimit >= 1000 ? 'Max 1,000 Products (Plus)' : '🔒 Max 1,000 (Plus Plan - 7d Trial)'}
+                </option>
+                <option value={5000}>
+                  {userPlan.maxLimit >= 5000 ? 'All Products / Unlimited (Advance)' : '🔒 All Products / Unlimited (Advance - 7d Trial)'}
+                </option>
               </select>
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-xs">
                 ▼
               </div>
             </div>
+
+            {/* Quick Upgrade/Trial Trigger Pill for Free Users */}
+            {userPlan?.id === 'free' && (
+              <button
+                type="button"
+                onClick={onOpenPricing}
+                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F1FF0A]/20 hover:bg-[#F1FF0A]/35 text-neutral-900 dark:text-[#F1FF0A] border border-[#F1FF0A]/40 text-xs font-semibold transition-colors cursor-pointer"
+                title="Unlock up to Unlimited products with 7-Day Free Trial"
+              >
+                <Sparkles className="w-3 h-3 text-[#7b8a00] dark:text-[#F1FF0A]" />
+                <span>Unlock 200+ (7-Day Trial)</span>
+              </button>
+            )}
           </div>
 
           {/* Right: Engine Dropdown */}

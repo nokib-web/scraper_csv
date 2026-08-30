@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, ExternalLink, Sun, Moon } from 'lucide-react';
 
-export default function Header({ productsCount, isLoading, isDark, onToggleTheme, activeTab = 'app', onSelectTab }) {
+export default function Header({ productsCount, isLoading, isDark, onToggleTheme, activeTab = 'app', onSelectTab, userPlan }) {
   const navItems = [
     { id: 'app', label: 'Extractor' },
     { id: 'about', label: 'About Us' },
@@ -57,8 +57,24 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
 
           {/* Right Info & Actions */}
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            {/* Active Plan / 7-Day Trial Badge */}
+            <button
+              type="button"
+              onClick={() => onSelectTab && onSelectTab('pricing')}
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
+                userPlan?.isTrial
+                  ? 'bg-[#F1FF0A]/15 text-neutral-950 dark:text-[#F1FF0A] border-[#F1FF0A]/50'
+                  : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/50'
+              }`}
+              title="Click to view plans & trial status"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${userPlan?.isTrial ? 'bg-[#8b9900] dark:bg-[#F1FF0A] animate-pulse' : 'bg-neutral-400'}`}></span>
+              <span>{userPlan?.name || 'Starter Free'}</span>
+              {userPlan?.isTrial && <span className="text-[10px] font-bold text-[#687500] dark:text-[#F1FF0A] uppercase">(7d Trial)</span>}
+            </button>
+
             {productsCount > 0 && activeTab === 'app' && (
-              <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-[11px] sm:text-xs text-neutral-900 dark:text-neutral-300 font-medium">
+              <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-neutral-300 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#F1FF0A] animate-pulse"></span>
                 <span className="font-extrabold text-black dark:text-white">{productsCount}</span>
                 <span className="hidden sm:inline">Products</span>
