@@ -17,6 +17,7 @@ import BrandSlider from './components/BrandSlider';
 import Footer from './components/Footer';
 import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
 import { saveCatalogData, loadCatalogData, clearCatalogData } from './utils/storage';
+import { getApiBaseUrl } from './utils/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('app'); // 'app' | 'about' | 'pricing' | 'contact'
@@ -176,6 +177,24 @@ export default function App() {
       }
     }
     restoreSession();
+  }, []);
+
+  // Auto-detect active browser tab URL if running as Chrome / Edge Extension
+  useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome?.tabs?.query) {
+      try {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs && tabs[0]?.url) {
+            const currentTabUrl = tabs[0].url;
+            if (currentTabUrl.startsWith('http://') || currentTabUrl.startsWith('https://')) {
+              setUrl(currentTabUrl);
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('Chrome extension active tab query info:', e);
+      }
+    }
   }, []);
 
   // Sync state to IndexedDB asynchronously on update
@@ -392,7 +411,8 @@ export default function App() {
     setIsConsoleCollapsed(false);
 
     try {
-      const sseUrl = `/api/scrape-stream?url=${encodeURIComponent(url.trim())}&engine=${engine}&limit=${limit}`;
+      const apiBase = getApiBaseUrl();
+      const sseUrl = `${apiBase}/api/scrape-stream?url=${encodeURIComponent(url.trim())}&engine=${engine}&limit=${limit}`;
       const eventSource = new EventSource(sseUrl);
 
       eventSource.onmessage = (event) => {
@@ -425,7 +445,7 @@ export default function App() {
         setLogs(prev => [...prev, '[INFO] Falling back to standard JSON scrape endpoint...']);
 
         try {
-          const res = await fetch('/api/scrape', {
+          const res = await fetch(`${apiBase}/api/scrape`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url.trim(), engine, limit })
@@ -474,8 +494,9 @@ export default function App() {
         ? Number(customStock) 
         : (defaultStock !== '' ? Number(defaultStock) : 99);
       const effectiveVendor = overrideVendor !== undefined ? overrideVendor : customVendor;
+      const apiBase = getApiBaseUrl();
 
-      const response = await fetch('/api/export', {
+      const response = await fetch(`${apiBase}/api/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

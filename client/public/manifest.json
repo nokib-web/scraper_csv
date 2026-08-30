@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "getProducts — Universal E-Commerce CSV Exporter",
+  "version": "1.0.0",
+  "description": "1-Click product scraper and CSV catalog exporter for Shopify, WooCommerce, Wix, Daraz, and Amazon.",
+  "icons": {
+    "16": "favicon.svg",
+    "32": "favicon.svg",
+    "48": "favicon.svg",
+    "128": "favicon.svg"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Open getProducts Exporter",
+    "default_icon": "favicon.svg"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ]
+}

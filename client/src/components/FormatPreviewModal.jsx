@@ -3,6 +3,7 @@ import { X, Copy, Check, Download, Eye, Table as TableIcon, FileText, Package, S
 import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
 import { FaFileCsv } from 'react-icons/fa';
 import { VscJson } from 'react-icons/vsc';
+import { getApiBaseUrl } from '../utils/api';
 
 export default function FormatPreviewModal({ 
   isOpen, 
@@ -33,7 +34,8 @@ export default function FormatPreviewModal({
     if (!isOpen || !products || products.length === 0) return;
     
     setIsLoading(true);
-    fetch('/api/export', {
+    const apiBase = getApiBaseUrl();
+    fetch(`${apiBase}/api/export`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
