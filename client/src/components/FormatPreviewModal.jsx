@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, Download, Eye, Table as TableIcon, FileText, Package, Store } from 'lucide-react';
+import { X, Copy, Check, Download, Eye, Table as TableIcon, FileText, Package, Store, TrendingUp, Image as ImageIcon } from 'lucide-react';
 import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
 import { FaFileCsv } from 'react-icons/fa';
 import { VscJson } from 'react-icons/vsc';
@@ -14,6 +14,10 @@ export default function FormatPreviewModal({
   onDefaultStockChange, 
   customVendor = '',
   onCustomVendorChange,
+  priceMarkup = { type: 'none', value: 0 },
+  onPriceMarkupChange,
+  maxImages = 0,
+  onMaxImagesChange,
   storeName = 'store' 
 }) {
   const [activeTab, setActiveTab] = useState(defaultFormat);
@@ -38,6 +42,8 @@ export default function FormatPreviewModal({
         storeName, 
         defaultStock,
         customVendor,
+        priceMarkup,
+        maxImages,
         proxyBase: window.location.origin 
       })
     })
@@ -50,7 +56,7 @@ export default function FormatPreviewModal({
         setPreviewContent(`Error generating preview: ${e.message}`);
         setIsLoading(false);
       });
-  }, [isOpen, activeTab, products, storeName, defaultStock, customVendor]);
+  }, [isOpen, activeTab, products, storeName, defaultStock, customVendor, priceMarkup, maxImages]);
 
   const handleCopy = async () => {
     try {
@@ -68,8 +74,6 @@ export default function FormatPreviewModal({
     { id: 'json', label: 'Raw JSON', icon: <VscJson className="w-3.5 h-3.5 text-[#F1FF0A]" /> }
   ];
 
-  const stockPresets = [10, 50, 99, 100, 500];
-
   if (!isOpen) return null;
 
   return (
@@ -83,7 +87,7 @@ export default function FormatPreviewModal({
             <span className="text-sm font-extrabold text-neutral-900 dark:text-white">
               Export Format Live Preview
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-400">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 text-neutral-700 dark:text-neutral-400 font-bold">
               {products?.length || 0} Products
             </span>
           </div>
@@ -114,8 +118,8 @@ export default function FormatPreviewModal({
           </div>
         </div>
 
-        {/* Tab Selection & Controls Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 px-4 py-2 bg-neutral-100 dark:bg-neutral-900/90 border-b border-neutral-200 dark:border-neutral-800">
+        {/* Tab Selection Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 py-2 bg-neutral-100 dark:bg-neutral-900/90 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-1 overflow-x-auto">
             {tabs.map(tab => (
               <button
@@ -133,94 +137,42 @@ export default function FormatPreviewModal({
             ))}
           </div>
 
-          {/* Controls: Vendor & Stock Override inside Modal */}
-          <div className="flex flex-wrap items-center gap-2.5 self-end lg:self-auto text-xs">
-            
-            {/* Custom Vendor Override */}
-            <div className="flex items-center gap-1.5 bg-white dark:bg-neutral-950 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-800">
-              <Store className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" />
-              <span className="font-semibold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Vendor:</span>
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  value={customVendor}
-                  onChange={(e) => onCustomVendorChange && onCustomVendorChange(e.target.value)}
-                  placeholder="Original"
-                  className="w-28 sm:w-36 px-1 py-0.5 text-xs font-medium bg-transparent text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none"
-                  title="Override Vendor in exported CSV"
-                />
-                {customVendor && (
-                  <button
-                    type="button"
-                    onClick={() => onCustomVendorChange && onCustomVendorChange('')}
-                    className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-0.5"
-                    title="Reset vendor"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Default Stock */}
-            <div className="flex items-center gap-1.5 bg-white dark:bg-neutral-950 px-2 py-0.5 rounded border border-neutral-200 dark:border-neutral-800">
-              <Package className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" />
-              <span className="font-semibold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Stock:</span>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  max="999999"
-                  value={defaultStock}
-                  onChange={(e) => onDefaultStockChange && onDefaultStockChange(e.target.value)}
-                  onBlur={() => {
-                    if (defaultStock === '' || isNaN(Number(defaultStock))) {
-                      onDefaultStockChange && onDefaultStockChange(99);
-                    }
-                  }}
-                  placeholder="99"
-                  className="w-14 px-1 py-0.5 text-center font-bold text-xs bg-transparent text-neutral-900 dark:text-white outline-none"
-                  title="Change fallback stock quantity for preview and export"
-                />
-
-                <div className="hidden sm:flex items-center gap-1">
-                  {stockPresets.map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => onDefaultStockChange && onDefaultStockChange(preset)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer ${
-                        Number(defaultStock) === preset
-                          ? 'bg-[#F1FF0A] text-black shadow-sm'
-                          : 'bg-neutral-200/80 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
+          <div className="flex items-center gap-2 text-[11px] text-neutral-500 font-mono">
+            {priceMarkup?.type !== 'none' && (
+              <span className="px-2 py-0.5 rounded bg-[#F1FF0A]/10 text-[#8b9900] dark:text-[#F1FF0A] font-bold">
+                Markup: +{priceMarkup.value}{priceMarkup.type === 'percent' ? '%' : ''}
+              </span>
+            )}
+            {maxImages > 0 && (
+              <span className="px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold">
+                {maxImages} Images/Product
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Preview Code Box */}
-        <div className="flex-1 p-4 bg-[#F8F9FB] dark:bg-neutral-950 overflow-auto font-mono text-xs text-neutral-800 dark:text-neutral-300 select-text leading-relaxed border-t border-neutral-200 dark:border-neutral-800">
+        {/* Code / Text Viewer Body */}
+        <div className="flex-1 p-4 overflow-auto bg-neutral-950 font-mono text-xs text-neutral-300 leading-relaxed select-text">
           {isLoading ? (
-            <div className="h-full flex items-center justify-center text-neutral-500 gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#F1FF0A] animate-ping"></span>
-              Generating formatted preview...
+            <div className="flex items-center justify-center h-full text-neutral-500 gap-2">
+              <div className="w-4 h-4 border-2 border-[#F1FF0A] border-t-transparent rounded-full animate-spin"></div>
+              <span>Generating formatted {activeTab.toUpperCase()} stream...</span>
             </div>
           ) : (
-            <pre className="whitespace-pre overflow-x-auto">{previewContent}</pre>
+            <pre className="whitespace-pre overflow-x-auto text-[11px] leading-5 font-mono">
+              {previewContent}
+            </pre>
           )}
         </div>
 
-        {/* Footer info */}
-        <div className="px-5 py-2.5 bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
-          <span>Format: <strong className="text-neutral-800 dark:text-neutral-300 uppercase">{activeTab}</strong></span>
-          <span>Line count: {previewContent ? previewContent.split('\n').length : 0} lines</span>
+        {/* Footer info bar */}
+        <div className="flex items-center justify-between px-5 py-2.5 bg-neutral-100 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 text-[11px] text-neutral-500">
+          <div>
+            Showing complete formatted output for <span className="font-bold text-neutral-900 dark:text-white">{products?.length || 0} products</span>
+          </div>
+          <div className="font-mono">
+            Format: <span className="font-bold text-neutral-900 dark:text-white uppercase">{activeTab}</span>
+          </div>
         </div>
 
       </div>

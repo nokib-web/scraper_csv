@@ -1,18 +1,31 @@
 import React from 'react';
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, Trash2, CheckSquare, Square } from 'lucide-react';
 import ProductImage from './ProductImage';
 
-export default function ProductGrid({ products, onDeleteProduct, currencySymbol = '$' }) {
+export default function ProductGrid({ 
+  products, 
+  onDeleteProduct, 
+  selectedProductIds = [], 
+  onToggleSelect, 
+  currencySymbol = '$' 
+}) {
   if (!products || products.length === 0) return null;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {products.map((prod, idx) => {
         const mainImg = prod.images?.[0]?.src;
+        const isSelected = selectedProductIds.includes(prod.id);
+        const tagsList = Array.isArray(prod.tags) ? prod.tags : (typeof prod.tags === 'string' ? prod.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+
         return (
           <div
             key={prod.id || idx}
-            className="rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60 overflow-hidden transition-all group flex flex-col justify-between shadow-md dark:shadow-lg"
+            className={`rounded-2xl bg-white dark:bg-neutral-950 border overflow-hidden transition-all group flex flex-col justify-between shadow-md dark:shadow-lg ${
+              isSelected 
+                ? 'border-[#F1FF0A] ring-1 ring-[#F1FF0A] bg-[#F1FF0A]/5' 
+                : 'border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60'
+            }`}
           >
             <div>
               {/* Product Image */}
@@ -24,8 +37,21 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
 
-                {/* Top badges */}
-                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                {/* Top Left Selection Checkbox & Index Badge */}
+                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
+                  <button
+                    type="button"
+                    onClick={() => onToggleSelect && onToggleSelect(prod.id)}
+                    className="p-1 rounded-md bg-black/80 hover:bg-black text-white border border-white/20 transition-all cursor-pointer"
+                    title={isSelected ? "Deselect" : "Select"}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-[#F1FF0A]" />
+                    ) : (
+                      <Square className="w-4 h-4 text-neutral-300" />
+                    )}
+                  </button>
+
                   <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white">
                     #{idx + 1}
                   </span>
@@ -39,7 +65,7 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
                 {/* Delete button */}
                 <button
                   onClick={() => onDeleteProduct(prod.id)}
-                  className="absolute top-2.5 right-2.5 p-1.5 rounded-md bg-black/80 hover:bg-red-500/80 text-neutral-400 hover:text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-md bg-black/80 hover:bg-red-500/80 text-neutral-400 hover:text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer z-10"
                   title="Delete item"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -58,6 +84,22 @@ export default function ProductGrid({ products, onDeleteProduct, currencySymbol 
                 <h4 className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-[#8b9900] dark:group-hover:text-[#F1FF0A] transition-colors line-clamp-2 leading-relaxed">
                   {prod.title}
                 </h4>
+
+                {/* Tags preview */}
+                {tagsList.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {tagsList.slice(0, 3).map((t, i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
+                        #{t}
+                      </span>
+                    ))}
+                    {tagsList.length > 3 && (
+                      <span className="text-[9px] text-neutral-400 font-mono self-center">
+                        +{tagsList.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

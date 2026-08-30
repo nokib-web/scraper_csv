@@ -64,12 +64,27 @@ function sanitizeImageUrl(src) {
   }
 }
 
+function applyPriceMarkup(price, markup) {
+  if (price === undefined || price === null || price === '' || isNaN(Number(price))) return price;
+  const num = Number(price);
+  if (!markup || markup.type === 'none' || !markup.value) return num;
+  if (markup.type === 'percent') {
+    return Number((num * (1 + Number(markup.value) / 100)).toFixed(2));
+  }
+  if (markup.type === 'fixed') {
+    return Number((num + Number(markup.value)).toFixed(2));
+  }
+  return num;
+}
+
 /**
  * Transforms unified product list into WooCommerce CSV format
  * @param {Array} products 
  * @param {Object} [options]
  * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
+ * @param {number} [options.maxImages=0]
+ * @param {Object} [options.priceMarkup]
  * @returns {string} CSV string
  */
 function exportWooCommerceCsv(products, options = {}) {
@@ -77,16 +92,24 @@ function exportWooCommerceCsv(products, options = {}) {
     ? Number(options.defaultStock)
     : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
+  const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
 
   const rows = products.map((p, idx) => {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
-    const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src }] : []);
+    let rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src }] : []);
+    if (maxImagesLimit && rawImages.length > maxImagesLimit) {
+      rawImages = rawImages.slice(0, maxImagesLimit);
+    }
     const images = rawImages.map(img => sanitizeImageUrl(typeof img === 'string' ? img : img.src)).filter(Boolean).join(', ');
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
     const categories = p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General');
     const mainVariant = p.variants?.[0] || {};
-    const hasDiscount = p.regular_price && p.regular_price > p.price;
     const effectiveVendor = customVendor || p.vendor || 'Store';
+
+    const markedPrice = applyPriceMarkup(p.price || 0, priceMarkup);
+    const markedRegPrice = p.regular_price ? applyPriceMarkup(p.regular_price, priceMarkup) : 0;
+    const hasDiscount = markedRegPrice > markedPrice;
 
     let stockQty = defaultStock;
     if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== 99 && mainVariant.inventory_quantity !== '99') {
@@ -102,7 +125,7 @@ function exportWooCommerceCsv(products, options = {}) {
       'Is featured?': '0',
       'Visibility in catalog': 'visible',
       'Short description': `${p.title} by ${effectiveVendor}. 100% genuine product.`,
-      'Description': formatWooDescription(p, customVendor),
+      'Description': formatWooDescription({ ...p, price: markedPrice }, customVendor),
       'Date sale price starts': '',
       'Date sale price ends': '',
       'Tax status': 'taxable',
@@ -117,8 +140,8 @@ function exportWooCommerceCsv(products, options = {}) {
       'Height (cm)': '',
       'Allow customer reviews?': '1',
       'Purchase note': '',
-      'Sale price': hasDiscount ? Number(p.price).toFixed(2) : '',
-      'Regular price': hasDiscount ? Number(p.regular_price).toFixed(2) : Number(p.price || 0).toFixed(2),
+      'Sale price': hasDiscount ? Number(markedPrice).toFixed(2) : '',
+      'Regular price': hasDiscount ? Number(markedRegPrice).toFixed(2) : Number(markedPrice).toFixed(2),
       'Categories': categories,
       'Tags': tags,
       'Shipping class': '',

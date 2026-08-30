@@ -67,12 +67,27 @@ function sanitizeImageUrl(src) {
   }
 }
 
+function applyPriceMarkup(price, markup) {
+  if (price === undefined || price === null || price === '' || isNaN(Number(price))) return price;
+  const num = Number(price);
+  if (!markup || markup.type === 'none' || !markup.value) return num;
+  if (markup.type === 'percent') {
+    return Number((num * (1 + Number(markup.value) / 100)).toFixed(2));
+  }
+  if (markup.type === 'fixed') {
+    return Number((num + Number(markup.value)).toFixed(2));
+  }
+  return num;
+}
+
 /**
  * Transforms unified product list into official Shopify Product CSV format
  * @param {Array} products 
  * @param {Object} [options]
  * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
+ * @param {number} [options.maxImages=0]
+ * @param {Object} [options.priceMarkup]
  * @returns {string} CSV string
  */
 function exportShopifyCsv(products, options = {}) {
@@ -80,23 +95,42 @@ function exportShopifyCsv(products, options = {}) {
     ? Number(options.defaultStock)
     : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
+  const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
   const rows = [];
 
   for (const p of products) {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
     const effectiveVendor = customVendor || p.vendor || '';
-    const variants = p.variants && p.variants.length > 0 ? p.variants : [{
+    const markedPrice = applyPriceMarkup(p.price || 0, priceMarkup);
+    const markedRegPrice = p.regular_price ? applyPriceMarkup(p.regular_price, priceMarkup) : '';
+
+    const rawVariants = p.variants && p.variants.length > 0 ? p.variants : [{
       id: '1',
       title: 'Default Title',
-      price: p.price || 0,
-      compare_at_price: p.regular_price > p.price ? p.regular_price : '',
+      price: markedPrice,
+      compare_at_price: markedRegPrice > markedPrice ? markedRegPrice : '',
       sku: `SKU-${handle}`,
       inventory_quantity: defaultStock,
       option1: null
     }];
+
+    const variants = rawVariants.map(v => {
+      const vPrice = applyPriceMarkup(v.price !== undefined ? v.price : p.price || 0, priceMarkup);
+      const vCompare = v.compare_at_price ? applyPriceMarkup(v.compare_at_price, priceMarkup) : (markedRegPrice > vPrice ? markedRegPrice : '');
+      return {
+        ...v,
+        price: vPrice,
+        compare_at_price: vCompare
+      };
+    });
     
-    const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src, alt: p.title }] : []);
+    let rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src, alt: p.title }] : []);
+    if (maxImagesLimit && rawImages.length > maxImagesLimit) {
+      rawImages = rawImages.slice(0, maxImagesLimit);
+    }
+
     const images = rawImages.map((img, idx) => {
       const srcUrl = sanitizeImageUrl(typeof img === 'string' ? img : img.src);
       return {
@@ -107,7 +141,7 @@ function exportShopifyCsv(products, options = {}) {
     }).filter(i => Boolean(i.src));
 
     const maxRows = Math.max(variants.length, images.length, 1);
-    const bodyHtml = formatHtmlDescription(p, customVendor);
+    const bodyHtml = formatHtmlDescription({ ...p, price: markedPrice }, customVendor);
 
     const cleanOptName = (name, fallback) => {
       if (!name) return fallback;
@@ -155,7 +189,7 @@ function exportShopifyCsv(products, options = {}) {
         'Variant Inventory Qty': variantQty,
         'Variant Inventory Policy': v ? 'deny' : '',
         'Variant Fulfillment Service': v ? 'manual' : '',
-        'Variant Price': v ? (v.price !== undefined ? Number(v.price).toFixed(2) : Number(p.price || 0).toFixed(2)) : '',
+        'Variant Price': v ? (v.price !== undefined ? Number(v.price).toFixed(2) : Number(markedPrice).toFixed(2)) : '',
         'Variant Compare At Price': v && v.compare_at_price ? Number(v.compare_at_price).toFixed(2) : '',
         'Variant Requires Shipping': v ? 'TRUE' : '',
         'Variant Taxable': v ? 'TRUE' : '',

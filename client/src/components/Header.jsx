@@ -1,7 +1,20 @@
 import React from 'react';
 import { Package, ExternalLink, Sun, Moon } from 'lucide-react';
 
-export default function Header({ productsCount, isLoading, isDark, onToggleTheme, activeTab = 'app', onSelectTab, userPlan }) {
+export default function Header({ 
+  productsCount, 
+  isLoading, 
+  isDark, 
+  toggleTheme, 
+  onToggleTheme, 
+  activeTab = 'app', 
+  setActiveTab, 
+  onSelectTab, 
+  userPlan 
+}) {
+  const handleToggle = onToggleTheme || toggleTheme;
+  const handleTabChange = onSelectTab || setActiveTab;
+
   const navItems = [
     { id: 'app', label: 'Extractor' },
     { id: 'about', label: 'About Us' },
@@ -18,7 +31,7 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
           
           {/* Brand */}
           <div 
-            onClick={() => onSelectTab && onSelectTab('app')}
+            onClick={() => handleTabChange && handleTabChange('app')}
             className="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none flex-shrink-0"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#F1FF0A] flex items-center justify-center shadow-md flex-shrink-0">
@@ -42,7 +55,7 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => onSelectTab && onSelectTab(item.id)}
+                  onClick={() => handleTabChange && handleTabChange(item.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isActive
                       ? 'bg-neutral-950 text-white dark:bg-[#F1FF0A] dark:text-black shadow-sm'
@@ -60,7 +73,7 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
             {/* Active Plan / 7-Day Trial Badge */}
             <button
               type="button"
-              onClick={() => onSelectTab && onSelectTab('pricing')}
+              onClick={() => handleTabChange && handleTabChange('pricing')}
               className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
                 userPlan?.isTrial
                   ? 'bg-[#F1FF0A]/15 text-neutral-950 dark:text-[#F1FF0A] border-[#F1FF0A]/50'
@@ -84,7 +97,7 @@ export default function Header({ productsCount, isLoading, isDark, onToggleTheme
             {/* Theme Toggle Button */}
             <button
               type="button"
-              onClick={onToggleTheme}
+              onClick={handleToggle}
               className="p-1.5 sm:p-2 rounded-lg bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-neutral-300 transition-colors cursor-pointer shadow-sm"
               title={isDark ? "Switch to Light Theme" : "Switch to Dark Theme"}
             >

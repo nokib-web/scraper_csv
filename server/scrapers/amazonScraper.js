@@ -51,23 +51,47 @@ async function scrapeAmazon(url, options = {}, onLog) {
   const html = res.data;
   const $ = cheerio.load(html);
 
-  // 1. Single Product Page (/dp/ or /gp/product/)
+  // 1. Single Product Page (/dp/ or /gp/product/ or product title present)
   const asinMatch = targetUrl.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
-  if (asinMatch || $('#productTitle').length > 0) {
-    const title = $('#productTitle').text().trim();
+  const hasProductTitle = $('#productTitle').length > 0 || asinMatch;
+
+  if (hasProductTitle) {
+    let title = $('#productTitle').text().trim() ||
+                $('meta[property="og:title"]').attr('content') ||
+                $('h1').first().text().trim();
+    
+    // Clean Amazon suffix from title
+    title = title.replace(/\s*:\s*Amazon\.[a-z.]+/i, '').replace(/\|\s*Amazon\.[a-z.]+/i, '').trim();
+
     if (title) {
       if (onLog) onLog(`Parsing Amazon Single Product: "${title.slice(0, 40)}..."`);
       
-      const priceText = $('.a-price .a-offscreen, #priceblock_ourprice, #priceblock_dealprice, #corePriceDisplay_desktop_feature_div .a-price-whole').first().text().trim();
+      const priceText = $('.a-price .a-offscreen, #priceblock_ourprice, #priceblock_dealprice, #corePriceDisplay_desktop_feature_div .a-price-whole, .priceToPay, span[class*="price"]').first().text().trim();
       const match = priceText.match(/([0-9,]+(?:\.[0-9]{2})?)/);
       const price = match ? parseFloat(match[1].replace(/,/g, '')) : 0;
       
       let img = $('#landingImage, #imgBlkFront, #main-image').attr('data-old-hires') ||
-                $('#landingImage, #imgBlkFront, #main-image').attr('src') || '';
+                $('#landingImage, #imgBlkFront, #main-image').attr('src') ||
+                $('meta[property="og:image"]').attr('content') || '';
       
-      const asin = asinMatch ? asinMatch[1] : 'AMZ-' + Date.now();
-      const brand = $('#bylineInfo').text().trim() || 'Amazon';
-      const desc = $('#feature-bullets').text().trim() || title;
+      const asin = asinMatch ? asinMatch[1] : ('AMZ-' + Date.now());
+      const brand = $('#bylineInfo').text().trim().replace(/^Visit the\s+/i, '').replace(/\s+Store$/i, '').trim() || 'Amazon';
+      const desc = $('#feature-bullets').text().trim() || $('meta[property="og:description"]').attr('content') || title;
+
+      // Extract additional gallery images if present
+      const imageList = [];
+      if (img) imageList.push({ id: 1, src: img, alt: title, position: 1 });
+      
+      $('#altImages ul li img, .imageThumbnail img').each((idx, el) => {
+        let thumbSrc = $(el).attr('src') || '';
+        if (thumbSrc && !thumbSrc.includes('play-button') && !thumbSrc.includes('icon')) {
+          // Convert thumbnail to high-res if possible
+          const highRes = thumbSrc.replace(/\._[A-Z0-9_]+_\./i, '._UL1500_.');
+          if (!imageList.some(i => i.src === highRes || i.src === thumbSrc)) {
+            imageList.push({ id: imageList.length + 1, src: highRes, alt: title, position: imageList.length + 1 });
+          }
+        }
+      });
 
       products.push({
         id: asin,
@@ -91,7 +115,7 @@ async function scrapeAmazon(url, options = {}, onLog) {
           inventory_quantity: 99,
           available: true
         }],
-        images: img ? [{ id: 1, src: img, alt: title, position: 1 }] : [],
+        images: imageList.length > 0 ? imageList : (img ? [{ id: 1, src: img, alt: title, position: 1 }] : []),
         url: targetUrl,
         source: 'amazon'
       });

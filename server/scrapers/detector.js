@@ -62,14 +62,40 @@ async function detectPlatform(url) {
     let parsedUrl = new URL(url);
     const origin = parsedUrl.origin;
     const pathname = parsedUrl.pathname;
+    const hostname = parsedUrl.hostname.toLowerCase();
 
     const isSingleProduct = Boolean(
       pathname.includes('/products/') ||
       pathname.includes('/product/') ||
       pathname.includes('/item/') ||
       pathname.includes('/p/') ||
+      pathname.includes('/dp/') ||
+      pathname.includes('/gp/product/') ||
       pathname.match(/\/(product|item|dp)\/[a-zA-Z0-9_-]+/i)
     );
+
+    // 0. Instant Domain Check for Amazon & Marketplaces
+    if (hostname.includes('amazon.') || hostname.includes('amzn.')) {
+      return {
+        platform: 'amazon',
+        confidence: 1.0,
+        origin,
+        path: pathname,
+        isSingleProduct: isSingleProduct || pathname.includes('/dp/') || pathname.includes('/gp/product/'),
+        details: 'Amazon Marketplace'
+      };
+    }
+
+    if (hostname.includes('daraz.') || hostname.includes('lazada.')) {
+      return {
+        platform: 'daraz',
+        confidence: 1.0,
+        origin,
+        path: pathname,
+        isSingleProduct,
+        details: 'Daraz / Lazada Marketplace'
+      };
+    }
 
     // 1. Quick probe for Shopify products.json
     try {

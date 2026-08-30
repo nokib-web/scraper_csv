@@ -2,11 +2,11 @@ import React, { useRef, useEffect } from 'react';
 import { Terminal, ChevronUp, ChevronDown, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 
 export default function ProgressConsole({ logs, status, isCollapsed, onToggleCollapse }) {
-  const logsEndRef = useRef(null);
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    if (!isCollapsed && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (!isCollapsed && containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
   }, [logs, isCollapsed]);
 
@@ -46,14 +46,17 @@ export default function ProgressConsole({ logs, status, isCollapsed, onToggleCol
           )}
         </div>
 
-        <button className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 transition-colors">
+        <button className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 transition-colors cursor-pointer">
           {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
         </button>
       </div>
 
       {/* Logs View */}
       {!isCollapsed && (
-        <div className="p-4 bg-[#F8F9FB] dark:bg-black/90 font-mono text-[11px] text-neutral-800 dark:text-neutral-300 max-h-52 overflow-y-auto space-y-1.5 leading-relaxed border-t border-neutral-200 dark:border-neutral-800/80">
+        <div 
+          ref={containerRef}
+          className="p-4 bg-[#F8F9FB] dark:bg-black/90 font-mono text-[11px] text-neutral-800 dark:text-neutral-300 max-h-52 overflow-y-auto space-y-1.5 leading-relaxed border-t border-neutral-200 dark:border-neutral-800/80"
+        >
           {logs.map((log, index) => {
             const isError = log.includes('error') || log.includes('Failed') || log.includes('Error');
             const isSuccess = log.includes('Success') || log.includes('Completed') || log.includes('Extracted');
@@ -77,7 +80,6 @@ export default function ProgressConsole({ logs, status, isCollapsed, onToggleCol
               </div>
             );
           })}
-          <div ref={logsEndRef} />
         </div>
       )}
     </div>

@@ -138,7 +138,16 @@ app.get('/api/img', async (req, res) => {
 
 // Multi-Format Export API
 app.post('/api/export', (req, res) => {
-  const { products, format = 'shopify_csv', filename = 'products', proxyBase: clientProxyBase, defaultStock, customVendor } = req.body;
+  const { 
+    products, 
+    format = 'shopify_csv', 
+    filename = 'products', 
+    proxyBase: clientProxyBase, 
+    defaultStock, 
+    customVendor,
+    maxImages,
+    priceMarkup
+  } = req.body;
 
   if (!products || !Array.isArray(products) || products.length === 0) {
     return res.status(400).json({ error: 'No products provided for export' });
@@ -146,7 +155,9 @@ app.post('/api/export', (req, res) => {
 
   const exportOptions = {
     defaultStock: defaultStock !== undefined ? defaultStock : 99,
-    customVendor: customVendor && typeof customVendor === 'string' ? customVendor.trim() : ''
+    customVendor: customVendor && typeof customVendor === 'string' ? customVendor.trim() : '',
+    maxImages: Number(maxImages) || 0,
+    priceMarkup: priceMarkup || { type: 'none', value: 0 }
   };
 
   const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');

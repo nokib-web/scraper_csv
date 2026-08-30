@@ -7,6 +7,8 @@ import ProductTable from './components/ProductTable';
 import ProductGrid from './components/ProductGrid';
 import ExportDrawer from './components/ExportDrawer';
 import FormatPreviewModal from './components/FormatPreviewModal';
+import FindReplaceModal from './components/FindReplaceModal';
+import BulkTagModal from './components/BulkTagModal';
 import PricingPage from './components/PricingPage';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
@@ -50,9 +52,14 @@ export default function App() {
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Preview Modal
+  // Selection State for Bulk Operations
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+
+  // Modals
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewFormat, setPreviewFormat] = useState('shopify');
+  const [findReplaceModalOpen, setFindReplaceModalOpen] = useState(false);
+  const [bulkTagModalOpen, setBulkTagModalOpen] = useState(false);
 
   // Customizable Default Inventory / Stock Quantity (default: 99)
   const [defaultStock, setDefaultStock] = useState(() => {
@@ -72,12 +79,30 @@ export default function App() {
     return '';
   });
 
+  // Price Markup / Profit Margin (None, +%, +$)
+  const [priceMarkup, setPriceMarkup] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_price_markup');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { type: 'none', value: 0 };
+  });
+
+  // Max Images Limit per Product (0 = All)
+  const [maxImages, setMaxImages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_max_images');
+      if (saved !== null && saved !== undefined) return Number(saved);
+    } catch (e) {}
+    return 0;
+  });
+
   const handleSetDefaultStock = (val) => {
     if (val === '' || val === null) {
       setDefaultStock('');
       return;
     }
-    const cleanVal = String(val).replace(/^0+(?=\d)/, ''); // Remove leading zeros like 01 -> 1
+    const cleanVal = String(val).replace(/^0+(?=\d)/, '');
     const num = Math.max(0, parseInt(cleanVal, 10) || 0);
     setDefaultStock(num);
     try {
@@ -89,6 +114,21 @@ export default function App() {
     setCustomVendor(val);
     try {
       localStorage.setItem('getproducts_custom_vendor', val);
+    } catch (e) {}
+  };
+
+  const handleSetPriceMarkup = (markup) => {
+    setPriceMarkup(markup);
+    try {
+      localStorage.setItem('getproducts_price_markup', JSON.stringify(markup));
+    } catch (e) {}
+  };
+
+  const handleSetMaxImages = (count) => {
+    const num = Math.max(0, parseInt(count, 10) || 0);
+    setMaxImages(num);
+    try {
+      localStorage.setItem('getproducts_max_images', String(num));
     } catch (e) {}
   };
 
@@ -143,6 +183,7 @@ export default function App() {
     setProducts([]);
     setDetection(null);
     setLogs([]);
+    setSelectedProductIds([]);
     setStatus('idle');
     setUrl('');
     await clearCatalogData();
@@ -169,38 +210,41 @@ export default function App() {
 
   const toggleTheme = () => setIsDark(prev => !prev);
 
-  // Statistics calculation
-  const stats = useMemo(() => {
-    if (products.length === 0) return null;
-    const prices = products.map(p => Number(p.price || 0)).filter(p => p > 0);
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-    const totalVariants = products.reduce((acc, p) => acc + (p.variants?.length || 1), 0);
-    const totalImages = products.reduce((acc, p) => acc + (p.images?.length || 0), 0);
-    const currency = products[0]?.currency || 'USD';
-    const currencySymbol = currency === 'BDT' ? '৳' : (currency === 'EUR' ? '€' : (currency === 'GBP' ? '£' : '$'));
+  // Helper for applying price markup dynamically
+  const applyMarkupMath = (val) => {
+    if (val === undefined || val === null || val === '' || isNaN(Number(val))) return val;
+    const num = Number(val);
+    if (!priceMarkup || priceMarkup.type === 'none' || !priceMarkup.value) return num;
+    if (priceMarkup.type === 'percent') {
+      return Number((num * (1 + Number(priceMarkup.value) / 100)).toFixed(2));
+    }
+    if (priceMarkup.type === 'fixed') {
+      return Number((num + Number(priceMarkup.value)).toFixed(2));
+    }
+    return num;
+  };
 
-    return {
-      totalProducts: products.length,
-      totalVariants,
-      totalImages,
-      minPrice: minPrice.toLocaleString(),
-      maxPrice: maxPrice.toLocaleString(),
-      currency,
-      currencySymbol,
-      engineSource: detection?.platform || products[0]?.source || 'Universal'
-    };
-  }, [products, detection]);
-
-  // Effective products list reflecting active custom vendor override
+  // Effective products list reflecting active custom vendor override and price markup
   const effectiveProducts = useMemo(() => {
-    if (!customVendor || !customVendor.trim()) return products;
-    const vName = customVendor.trim();
-    return products.map(p => ({
-      ...p,
-      vendor: vName
-    }));
-  }, [products, customVendor]);
+    return products.map(p => {
+      const vName = customVendor && customVendor.trim() ? customVendor.trim() : p.vendor;
+      const markedPrice = applyMarkupMath(p.price || 0);
+      const markedRegPrice = p.regular_price ? applyMarkupMath(p.regular_price) : 0;
+      
+      let imgs = p.images || (p.image ? [p.image] : []);
+      if (maxImages > 0 && imgs.length > maxImages) {
+        imgs = imgs.slice(0, maxImages);
+      }
+
+      return {
+        ...p,
+        vendor: vName,
+        price: markedPrice,
+        regular_price: markedRegPrice > markedPrice ? markedRegPrice : (p.regular_price || 0),
+        images: imgs
+      };
+    });
+  }, [products, customVendor, priceMarkup, maxImages]);
 
   // Filtered products based on search bar
   const filteredProducts = useMemo(() => {
@@ -210,9 +254,121 @@ export default function App() {
       p.title?.toLowerCase().includes(q) ||
       p.vendor?.toLowerCase().includes(q) ||
       p.product_type?.toLowerCase().includes(q) ||
-      p.handle?.toLowerCase().includes(q)
+      p.handle?.toLowerCase().includes(q) ||
+      (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q)))
     );
   }, [effectiveProducts, searchQuery]);
+
+  // Selected products subset
+  const selectedProducts = useMemo(() => {
+    if (selectedProductIds.length === 0) return [];
+    const set = new Set(selectedProductIds);
+    return effectiveProducts.filter(p => set.has(p.id));
+  }, [effectiveProducts, selectedProductIds]);
+
+  // Statistics calculation
+  const stats = useMemo(() => {
+    if (effectiveProducts.length === 0) return null;
+    const prices = effectiveProducts.map(p => Number(p.price || 0)).filter(p => p > 0);
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+    const totalVariants = effectiveProducts.reduce((acc, p) => acc + (p.variants?.length || 1), 0);
+    const totalImages = effectiveProducts.reduce((acc, p) => acc + (p.images?.length || 0), 0);
+    const currency = effectiveProducts[0]?.currency || 'USD';
+    const currencySymbol = currency === 'BDT' ? '৳' : (currency === 'EUR' ? '€' : (currency === 'GBP' ? '£' : '$'));
+
+    return {
+      totalProducts: effectiveProducts.length,
+      totalVariants,
+      totalImages,
+      minPrice: minPrice.toLocaleString(),
+      maxPrice: maxPrice.toLocaleString(),
+      currency,
+      currencySymbol,
+      engineSource: detection?.platform || products[0]?.source || 'Universal'
+    };
+  }, [effectiveProducts, detection, products]);
+
+  // Selection Handlers
+  const handleToggleSelect = (id) => {
+    setSelectedProductIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = (selectAll) => {
+    if (selectAll) {
+      setSelectedProductIds(filteredProducts.map(p => p.id));
+    } else {
+      setSelectedProductIds([]);
+    }
+  };
+
+  // Bulk Tag Operations
+  const handleBulkAddTags = (targetIds, newTagsList) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      const currentTags = Array.isArray(p.tags) ? [...p.tags] : (typeof p.tags === 'string' ? p.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+      const mergedSet = new Set([...currentTags, ...newTagsList]);
+      return {
+        ...p,
+        tags: Array.from(mergedSet)
+      };
+    }));
+  };
+
+  const handleBulkRemoveTag = (targetIds, tagToRemove) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      const currentTags = Array.isArray(p.tags) ? [...p.tags] : (typeof p.tags === 'string' ? p.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+      const filtered = currentTags.filter(t => t !== tagToRemove);
+      return {
+        ...p,
+        tags: filtered
+      };
+    }));
+  };
+
+  // Find & Replace Handler
+  const handleFindReplace = ({ findText, replaceText, matchTitle, matchDescription, matchVendor, caseSensitive }) => {
+    if (!findText.trim()) return;
+
+    const flags = caseSensitive ? 'g' : 'gi';
+    const escaped = findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, flags);
+
+    setProducts(prev => prev.map(p => {
+      let updatedTitle = p.title;
+      let updatedDesc = p.description;
+      let updatedVendor = p.vendor;
+
+      if (matchTitle && p.title) {
+        updatedTitle = p.title.replace(regex, replaceText);
+      }
+      if (matchDescription && p.description) {
+        updatedDesc = p.description.replace(regex, replaceText);
+      }
+      if (matchVendor && p.vendor) {
+        updatedVendor = p.vendor.replace(regex, replaceText);
+      }
+
+      return {
+        ...p,
+        title: updatedTitle,
+        description: updatedDesc,
+        vendor: updatedVendor
+      };
+    }));
+  };
+
+  // Bulk Delete Handler
+  const handleBulkDelete = (targetIds) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.filter(p => !targetSet.has(p.id)));
+    setSelectedProductIds(prev => prev.filter(id => !targetSet.has(id)));
+  };
 
   // Scrape Submission via Server-Sent Events (SSE)
   const handleScrape = async () => {
@@ -222,6 +378,7 @@ export default function App() {
     setStatus('loading');
     setLogs([]);
     setProducts([]);
+    setSelectedProductIds([]);
     setDetection(null);
     setIsConsoleCollapsed(false);
 
@@ -250,26 +407,27 @@ export default function App() {
             eventSource.close();
           }
         } catch (e) {
-          console.error('SSE JSON error:', e);
+          console.error('SSE JSON parse error:', e);
         }
       };
 
       eventSource.onerror = async () => {
         eventSource.close();
-        // Fallback to standard POST scrape if SSE drops
+        setLogs(prev => [...prev, '[INFO] Falling back to standard JSON scrape endpoint...']);
+
         try {
-          setLogs(prev => [...prev, 'Switching to standard REST extraction pipeline...']);
           const res = await fetch('/api/scrape', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url.trim(), engine, limit })
           });
           const json = await res.json();
-          if (json.success && json.products) {
+
+          if (res.ok && json.products) {
             setProducts(json.products);
             setDetection(json.detection);
             setStatus('done');
-            setLogs(prev => [...prev, `Successfully extracted ${json.total} products!`]);
+            setLogs(prev => [...prev, `[SUCCESS] Extracted ${json.products.length} products.`]);
           } else {
             setStatus('error');
             setLogs(prev => [...prev, `[ERROR] ${json.error || 'Failed to scrape'}`]);
@@ -290,7 +448,10 @@ export default function App() {
 
   // Export Trigger
   const handleExport = async (format, customStock, overrideVendor) => {
-    if (effectiveProducts.length === 0) return;
+    // Export selected items if any are checked, otherwise all effective products
+    const exportItems = selectedProducts.length > 0 ? selectedProducts : effectiveProducts;
+    if (exportItems.length === 0) return;
+
     try {
       const formatMap = {
         shopify: 'shopify_csv',
@@ -309,10 +470,12 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          products: effectiveProducts,
+          products: exportItems,
           format: normalizedFormat,
           defaultStock: effectiveStock,
           customVendor: effectiveVendor,
+          priceMarkup,
+          maxImages,
           proxyBase: window.location.origin,
           storeName: url.replace(/^https?:\/\//, '').split('/')[0] || 'store'
         })
@@ -326,20 +489,16 @@ export default function App() {
       a.href = downloadUrl;
 
       const ext = format === 'json' ? 'json' : 'csv';
-      const cleanHost = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0].replace(/[^a-zA-Z0-9_-]/g, '_');
-      a.download = `${cleanHost}_${format}_products.${ext}`;
+      const cleanHost = url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0].replace(/[^a-zA-Z0-9_-]/g, '_') || 'catalog';
+      const selectionSuffix = selectedProducts.length > 0 ? `_selected_${selectedProducts.length}` : '';
+      a.download = `${cleanHost}_${format}_products${selectionSuffix}.${ext}`;
       document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(downloadUrl);
-      document.body.removeChild(a);
-    } catch (e) {
-      alert(`Export failed: ${e.message}`);
+    } catch (err) {
+      alert(`Export error: ${err.message}`);
     }
-  };
-
-  const handleOpenPreview = (format) => {
-    setPreviewFormat(format || 'shopify');
-    setPreviewModalOpen(true);
   };
 
   const handleUpdateProduct = (id, updatedFields) => {
@@ -348,52 +507,39 @@ export default function App() {
 
   const handleDeleteProduct = (id) => {
     setProducts(prev => prev.filter(p => p.id !== id));
+    setSelectedProductIds(prev => prev.filter(itemId => itemId !== id));
   };
 
-  const handleClear = () => {
-    setUrl('');
-    setProducts([]);
-    setLogs([]);
-    setStatus('idle');
-    setDetection(null);
+  const handleOpenPreview = (format = 'shopify') => {
+    setPreviewFormat(format);
+    setPreviewModalOpen(true);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F5F5F7] dark:bg-[#09090b] text-neutral-950 dark:text-neutral-100 selection:bg-[#F1FF0A] selection:text-black">
+    <div className="min-h-screen bg-[#FDFBF7] dark:bg-[#0A0A0C] text-neutral-900 dark:text-neutral-100 flex flex-col font-sans transition-colors duration-300 antialiased">
       
-      {/* Top Header with Navigation Tabs */}
+      {/* Top Navigation */}
       <Header
-        productsCount={products.length}
-        isLoading={isLoading}
-        isDark={isDark}
-        onToggleTheme={toggleTheme}
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        setActiveTab={setActiveTab}
         userPlan={userPlan}
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        productsCount={products.length}
       />
 
-      {/* Main View Area */}
-      <main className="flex-1 py-5">
-        {activeTab === 'pricing' && (
-          <PricingPage 
-            onGoToApp={() => setActiveTab('app')} 
-            userPlan={userPlan}
-            onSelectPlan={handleSelectPlan}
-          />
-        )}
-
-        {activeTab === 'about' && (
-          <AboutPage onGoToApp={() => setActiveTab('app')} />
-        )}
-
-        {activeTab === 'contact' && (
-          <ContactPage />
-        )}
+      {/* Main App Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+        
+        {/* Route Page Tabs */}
+        {activeTab === 'pricing' && <PricingPage userPlan={userPlan} onSelectPlan={handleSelectPlan} />}
+        {activeTab === 'about' && <AboutPage />}
+        {activeTab === 'contact' && <ContactPage />}
 
         {activeTab === 'app' && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 pb-8">
+          <div className="space-y-4 animate-in fade-in duration-300">
             
-            {/* Main Scraper Input Bar */}
+            {/* Scraper URL & Control Bar */}
             <UrlBar
               url={url}
               setUrl={setUrl}
@@ -401,37 +547,34 @@ export default function App() {
               setEngine={setEngine}
               limit={limit}
               setLimit={setLimit}
-              onSubmit={handleScrape}
-              isLoading={isLoading}
-              detection={detection}
-              onClear={handleClear}
               userPlan={userPlan}
-              onOpenPricing={() => setActiveTab('pricing')}
+              isLoading={isLoading}
+              onSubmit={handleScrape}
+              onClear={() => setUrl('')}
+              onUpgradeClick={() => setActiveTab('pricing')}
             />
 
-            {/* Empty State / Monetization Ad Slot & Brand Marquee Slider */}
-            {products.length === 0 && !isLoading && logs.length === 0 && (
-              <div className="space-y-5 pt-1 animate-in fade-in duration-300">
-                <AdSlot slotType="affiliate" />
-                <BrandSlider />
-              </div>
+            {/* Extraction Live Terminal Console */}
+            {(logs.length > 0 || isLoading) && (
+              <ProgressConsole
+                logs={logs}
+                status={status}
+                detection={detection}
+                productsCount={products.length}
+                isCollapsed={isConsoleCollapsed}
+                setIsCollapsed={setIsConsoleCollapsed}
+              />
             )}
 
-            {/* Real-time Streaming Logs Console */}
-            <ProgressConsole
-              logs={logs}
-              status={status}
-              isCollapsed={isConsoleCollapsed}
-              onToggleCollapse={() => setIsConsoleCollapsed(!isConsoleCollapsed)}
-            />
+            {/* Catalog Overview Statistics */}
+            {stats && (
+              <StatsBar stats={stats} />
+            )}
 
-            {/* Stats Bar */}
-            <StatsBar stats={stats} detection={detection} />
-
-            {/* Compact 1-Click Platform Exporter with Preview Buttons */}
-            {products.length > 0 && (
+            {/* Export Toolbar & Quick Download Cards */}
+            {effectiveProducts.length > 0 && (
               <ExportDrawer
-                products={products}
+                products={effectiveProducts}
                 onExport={handleExport}
                 onOpenPreview={handleOpenPreview}
                 stats={stats}
@@ -439,31 +582,40 @@ export default function App() {
                 onDefaultStockChange={handleSetDefaultStock}
                 customVendor={customVendor}
                 onCustomVendorChange={handleSetCustomVendor}
+                priceMarkup={priceMarkup}
+                onPriceMarkupChange={handleSetPriceMarkup}
+                maxImages={maxImages}
+                onMaxImagesChange={handleSetMaxImages}
+                onOpenFindReplace={() => setFindReplaceModalOpen(true)}
+                selectedCount={selectedProductIds.length}
+                onSelectAll={() => handleToggleSelectAll(true)}
+                onClearSelection={() => handleToggleSelectAll(false)}
               />
             )}
 
-            {/* Extracted Catalog Toolbar & Table / Grid View */}
-            {products.length > 0 && (
-              <div className="space-y-3 pt-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                
-                {/* Filter & View Switcher */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-xl bg-white dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 shadow-sm">
-                  <div className="relative flex-1 max-w-sm">
-                    <Search className="w-4 h-4 text-neutral-400 dark:text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            {/* Search Bar & View Mode Switcher */}
+            {effectiveProducts.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  
+                  {/* Search filter input */}
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search extracted products..."
-                      className="w-full pl-9 pr-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none focus:border-[#F1FF0A]"
+                      placeholder="Search extracted products by title, vendor, category, tags..."
+                      className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-[#F1FF0A] transition-colors shadow-sm"
                     />
                   </div>
 
+                  {/* Actions & View Mode Toggle */}
                   <div className="flex items-center gap-2 self-end sm:self-auto">
                     <button
                       onClick={handleClearData}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-950/40 hover:bg-red-200 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-900/50 text-xs font-semibold text-red-700 dark:text-red-300 transition-colors cursor-pointer"
-                      title="Clear extracted data and cache"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 border border-red-500/20 text-xs font-semibold transition-colors cursor-pointer"
+                      title="Clear Extracted Catalog Data"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>Clear Data</span>
@@ -480,7 +632,7 @@ export default function App() {
                     <div className="flex items-center p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800">
                       <button
                         onClick={() => setViewMode('table')}
-                        className={`p-1.5 rounded-md transition-colors ${
+                        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                           viewMode === 'table' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                         }`}
                         title="Spreadsheet Table View"
@@ -489,7 +641,7 @@ export default function App() {
                       </button>
                       <button
                         onClick={() => setViewMode('grid')}
-                        className={`p-1.5 rounded-md transition-colors ${
+                        className={`p-1.5 rounded-md transition-colors cursor-pointer ${
                           viewMode === 'grid' ? 'bg-[#F1FF0A] text-black font-bold' : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                         }`}
                         title="Product Cards Grid View"
@@ -500,23 +652,37 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Data View */}
+                {/* Catalog View: Table or Grid */}
                 {viewMode === 'table' ? (
                   <ProductTable
                     products={filteredProducts}
                     onUpdateProduct={handleUpdateProduct}
                     onDeleteProduct={handleDeleteProduct}
+                    selectedProductIds={selectedProductIds}
+                    onToggleSelect={handleToggleSelect}
+                    onToggleSelectAll={handleToggleSelectAll}
+                    onOpenBulkTags={() => setBulkTagModalOpen(true)}
+                    onBulkDelete={() => handleBulkDelete(selectedProductIds)}
+                    onBulkExport={() => handleExport('shopify')}
                     currencySymbol={stats?.currencySymbol || '$'}
                   />
                 ) : (
                   <ProductGrid
                     products={filteredProducts}
                     onDeleteProduct={handleDeleteProduct}
+                    selectedProductIds={selectedProductIds}
+                    onToggleSelect={handleToggleSelect}
                     currencySymbol={stats?.currencySymbol || '$'}
                   />
                 )}
               </div>
             )}
+
+            {/* Brand Logo Showcase */}
+            <BrandSlider />
+
+            {/* Native Responsive Ad Banner */}
+            <AdSlot />
 
           </div>
         )}
@@ -526,14 +692,36 @@ export default function App() {
       <FormatPreviewModal
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
-        products={effectiveProducts}
+        products={selectedProducts.length > 0 ? selectedProducts : effectiveProducts}
         defaultFormat={previewFormat}
         onExport={handleExport}
         defaultStock={defaultStock}
         onDefaultStockChange={handleSetDefaultStock}
         customVendor={customVendor}
         onCustomVendorChange={handleSetCustomVendor}
+        priceMarkup={priceMarkup}
+        onPriceMarkupChange={handleSetPriceMarkup}
+        maxImages={maxImages}
+        onMaxImagesChange={handleSetMaxImages}
         storeName={url.replace(/^https?:\/\//, '').split('/')[0] || 'store'}
+      />
+
+      {/* Find & Replace Modal */}
+      <FindReplaceModal
+        isOpen={findReplaceModalOpen}
+        onClose={() => setFindReplaceModalOpen(false)}
+        products={products}
+        onApplyReplace={handleFindReplace}
+      />
+
+      {/* Bulk Tag Modal for Selected Products */}
+      <BulkTagModal
+        isOpen={bulkTagModalOpen}
+        onClose={() => setBulkTagModalOpen(false)}
+        selectedProductIds={selectedProductIds}
+        products={products}
+        onApplyAddTags={handleBulkAddTags}
+        onApplyRemoveTag={handleBulkRemoveTag}
       />
 
       {/* Fixed Bottom Docked Footer */}

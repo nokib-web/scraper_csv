@@ -14,8 +14,11 @@ export default function UrlBar({
   detection,
   onClear,
   userPlan = { id: 'free', name: 'Starter Free', maxLimit: 20 },
-  onOpenPricing
+  onOpenPricing,
+  onUpgradeClick
 }) {
+  const triggerPricing = onUpgradeClick || onOpenPricing;
+
   // Typewriter Animation Phrases
   const phrases = [
     'Paste Shopify store URL (e.g. https://officialdrpen.com)...',
@@ -60,6 +63,14 @@ export default function UrlBar({
     } catch (e) {}
   };
 
+  const handleClearUrl = () => {
+    if (onClear) {
+      onClear();
+    } else {
+      setUrl('');
+    }
+  };
+
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (url.trim()) onSubmit();
@@ -71,8 +82,8 @@ export default function UrlBar({
 
     if (chosenVal > userMax) {
       // Prompt user to upgrade/activate 7-day free trial on Pricing tab
-      if (onOpenPricing) {
-        onOpenPricing();
+      if (triggerPricing) {
+        triggerPricing();
       }
       return;
     }
@@ -123,7 +134,7 @@ export default function UrlBar({
           {url ? (
             <button
               type="button"
-              onClick={onClear}
+              onClick={handleClearUrl}
               disabled={isLoading}
               className="p-2 rounded-lg text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex-shrink-0 cursor-pointer"
               title="Clear input"
@@ -179,16 +190,16 @@ export default function UrlBar({
               >
                 <option value={20}>20 Products (Free)</option>
                 <option value={50}>
-                  {userPlan.maxLimit >= 200 ? '50 Products' : '🔒 50 Products (Popular)'}
+                  {userPlan.maxLimit >= 500 ? '50 Products' : '🔒 50 Products (Popular)'}
                 </option>
                 <option value={100}>
-                  {userPlan.maxLimit >= 200 ? '100 Products' : '🔒 100 Products (Popular)'}
+                  {userPlan.maxLimit >= 500 ? '100 Products' : '🔒 100 Products (Popular)'}
                 </option>
                 <option value={200}>
-                  {userPlan.maxLimit >= 200 ? '200 Products (Popular)' : '🔒 200 Products (Popular)'}
+                  {userPlan.maxLimit >= 500 ? '200 Products' : '🔒 200 Products (Popular)'}
                 </option>
                 <option value={500}>
-                  {userPlan.maxLimit >= 1000 ? '500 Products (Plus)' : '🔒 500 Products (Plus)'}
+                  {userPlan.maxLimit >= 500 ? '500 Products (Popular)' : '🔒 500 Products (Popular)'}
                 </option>
                 <option value={1000}>
                   {userPlan.maxLimit >= 1000 ? '1,000 Products (Plus)' : '🔒 1,000 Products (Plus)'}
