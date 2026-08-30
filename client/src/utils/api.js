@@ -6,7 +6,9 @@
 export const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     if (window.location.protocol === 'chrome-extension:' || window.location.protocol === 'moz-extension:') {
-      return 'https://scrapercsv-up-railway-app.up.railway.app';
+      const customUrl = localStorage.getItem('getproducts_api_url');
+      if (customUrl) return customUrl.replace(/\/$/, '');
+      return 'https://scrapercsv-up.railway.app';
     }
   }
   return '';
