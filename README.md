@@ -110,6 +110,16 @@ products-csv-downloader/
 └── README.md                           # Documentation & architecture guide
 ```
 
+## ⚙️ Special Configuration Files & DevOps Architecture
+
+| File | Type | Purpose & Logic |
+| :--- | :--- | :--- |
+| **`client/.oxlintrc.json`** | **Linter Config** | **Oxlint (Rust-based Linter):** Shipped with Vite 8 / Oxc. It lints React 19 JSX and hooks (`react/rules-of-hooks`) at 50x–100x the speed of legacy ESLint, preventing state bugs and memory leaks. |
+| **`nixpacks.toml`** | **Cloud Buildpack** | **Railway Build Instructions:** Defines the multi-stage cloud container pipeline. It tells the Railway build engine to run `npm run build` to compile the Vite client, then execute `node server/index.js` to start the Node.js backend. |
+| **`railway.toml`** | **Deployment Config** | **Railway Orchestration:** Specifies production health check endpoints (`healthcheckPath = "/"`) and sets zero-downtime auto-restart policies (`restartPolicyType = "always"`). |
+| **`client/public/robots.txt`** | **SEO Crawl Policy** | **Search Engine Crawler Directives:** Grants clean access to Google, Bing, and AI agents, eliminating the 20+ parsing errors flagged in Google PageSpeed Insights. |
+| **`client/src/utils/storage.js`** | **Storage Adapter** | **IndexedDB Persistence (`idb-keyval`):** Bypasses the 5MB quota limit of browser `localStorage`, letting you store large 5,000+ item catalogs offline without memory loss on page refresh. |
+
 ---
 
 ## 🔄 Core Data Pipeline & Business Logic
