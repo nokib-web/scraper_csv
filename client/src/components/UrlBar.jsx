@@ -201,19 +201,6 @@ export default function UrlBar({
                 ▼
               </div>
             </div>
-
-            {/* Quick Upgrade/Trial Trigger Pill for Free Users */}
-            {userPlan?.id === 'free' && (
-              <button
-                type="button"
-                onClick={onOpenPricing}
-                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F1FF0A]/20 hover:bg-[#F1FF0A]/35 text-neutral-900 dark:text-[#F1FF0A] border border-[#F1FF0A]/40 text-xs font-semibold transition-colors cursor-pointer"
-                title="Unlock up to Unlimited products with 7-Day Free Trial"
-              >
-                <Sparkles className="w-3 h-3 text-[#7b8a00] dark:text-[#F1FF0A]" />
-                <span>Unlock 200+ (7-Day Trial)</span>
-              </button>
-            )}
           </div>
 
           {/* Right: Engine Dropdown */}
