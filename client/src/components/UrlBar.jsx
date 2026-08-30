@@ -162,12 +162,12 @@ export default function UrlBar({
           </button>
         </div>
 
-        {/* Single Line Clean Secondary Options Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs sm:text-sm">
+        {/* Smart & Compact Single-Line Options Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
           
           {/* Left: Product Limit Dropdown with Plan Tier Locks */}
           <div className="flex items-center gap-2">
-            <span className="text-neutral-600 dark:text-neutral-400 font-medium">
+            <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
               Product Limit:
             </span>
             <div className="relative">
@@ -175,29 +175,29 @@ export default function UrlBar({
                 value={limit}
                 onChange={handleLimitChange}
                 disabled={isLoading}
-                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-1.5 pr-8 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-sm transition-colors"
+                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl pl-3 pr-7 py-1.5 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-xs transition-colors"
               >
-                <option value={20}>Max 20 Products (Free Plan)</option>
+                <option value={20}>20 Products (Free)</option>
                 <option value={50}>
-                  {userPlan.maxLimit >= 200 ? 'Max 50 Products' : '🔒 Max 50 (Popular Plan - 7d Trial)'}
+                  {userPlan.maxLimit >= 200 ? '50 Products' : '🔒 50 Products (Popular)'}
                 </option>
                 <option value={100}>
-                  {userPlan.maxLimit >= 200 ? 'Max 100 Products' : '🔒 Max 100 (Popular Plan - 7d Trial)'}
+                  {userPlan.maxLimit >= 200 ? '100 Products' : '🔒 100 Products (Popular)'}
                 </option>
                 <option value={200}>
-                  {userPlan.maxLimit >= 200 ? 'Max 200 Products (Popular)' : '🔒 Max 200 (Popular Plan - 7d Trial)'}
+                  {userPlan.maxLimit >= 200 ? '200 Products (Popular)' : '🔒 200 Products (Popular)'}
                 </option>
                 <option value={500}>
-                  {userPlan.maxLimit >= 1000 ? 'Max 500 Products' : '🔒 Max 500 (Plus Plan - 7d Trial)'}
+                  {userPlan.maxLimit >= 1000 ? '500 Products (Plus)' : '🔒 500 Products (Plus)'}
                 </option>
                 <option value={1000}>
-                  {userPlan.maxLimit >= 1000 ? 'Max 1,000 Products (Plus)' : '🔒 Max 1,000 (Plus Plan - 7d Trial)'}
+                  {userPlan.maxLimit >= 1000 ? '1,000 Products (Plus)' : '🔒 1,000 Products (Plus)'}
                 </option>
                 <option value={5000}>
-                  {userPlan.maxLimit >= 5000 ? 'All Products / Unlimited (Advance)' : '🔒 All Products / Unlimited (Advance - 7d Trial)'}
+                  {userPlan.maxLimit >= 5000 ? 'Unlimited (Advance)' : '🔒 Unlimited (Advance)'}
                 </option>
               </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-xs">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[10px]">
                 ▼
               </div>
             </div>
@@ -205,7 +205,7 @@ export default function UrlBar({
 
           {/* Right: Engine Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-neutral-600 dark:text-neutral-400 font-medium">
+            <span className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
               Scraper Engine:
             </span>
             <div className="relative">
@@ -213,16 +213,16 @@ export default function UrlBar({
                 value={engine}
                 onChange={(e) => setEngine(e.target.value)}
                 disabled={isLoading}
-                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl px-3.5 py-1.5 pr-8 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-sm transition-colors"
+                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl pl-3 pr-7 py-1.5 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-xs transition-colors"
               >
-                <option value="auto">Auto Detect (Recommended)</option>
-                <option value="shopify">Shopify Engine</option>
-                <option value="woocommerce">WooCommerce Engine</option>
-                <option value="daraz">Daraz Engine</option>
-                <option value="zatiq">Zatiq Engine</option>
-                <option value="generic">Universal / HTML Parser</option>
+                <option value="auto">Auto Detect</option>
+                <option value="shopify">Shopify</option>
+                <option value="woocommerce">WooCommerce</option>
+                <option value="daraz">Daraz</option>
+                <option value="zatiq">Zatiq</option>
+                <option value="generic">Universal / HTML</option>
               </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-xs">
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[10px]">
                 ▼
               </div>
             </div>
