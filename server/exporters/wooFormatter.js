@@ -41,11 +41,11 @@ const WOO_HEADERS = [
   'Position'
 ];
 
-function formatWooDescription(p) {
+function formatWooDescription(p, customBrand) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim() && p.description.includes('<p>')) {
     return p.description.trim();
   }
-  const brand = p.vendor || 'Store';
+  const brand = customBrand || p.vendor || 'Store';
   const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   const price = p.price ? `${p.currency || 'USD'} ${p.price}` : '';
 
@@ -67,9 +67,17 @@ function sanitizeImageUrl(src) {
 /**
  * Transforms unified product list into WooCommerce CSV format
  * @param {Array} products 
+ * @param {Object} [options]
+ * @param {number|string} [options.defaultStock=99]
+ * @param {string} [options.customVendor='']
  * @returns {string} CSV string
  */
-function exportWooCommerceCsv(products) {
+function exportWooCommerceCsv(products, options = {}) {
+  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
+    ? Number(options.defaultStock)
+    : 99;
+  const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+
   const rows = products.map((p, idx) => {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src }] : []);
@@ -78,6 +86,12 @@ function exportWooCommerceCsv(products) {
     const categories = p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General');
     const mainVariant = p.variants?.[0] || {};
     const hasDiscount = p.regular_price && p.regular_price > p.price;
+    const effectiveVendor = customVendor || p.vendor || 'Store';
+
+    let stockQty = defaultStock;
+    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== 99 && mainVariant.inventory_quantity !== '99') {
+      stockQty = mainVariant.inventory_quantity;
+    }
 
     return {
       'ID': p.id || String(idx + 1),
@@ -87,14 +101,14 @@ function exportWooCommerceCsv(products) {
       'Published': '1',
       'Is featured?': '0',
       'Visibility in catalog': 'visible',
-      'Short description': `${p.title} by ${p.vendor || 'Store'}. 100% genuine product.`,
-      'Description': formatWooDescription(p),
+      'Short description': `${p.title} by ${effectiveVendor}. 100% genuine product.`,
+      'Description': formatWooDescription(p, customVendor),
       'Date sale price starts': '',
       'Date sale price ends': '',
       'Tax status': 'taxable',
       'Tax class': '',
       'In stock?': mainVariant.available !== false ? '1' : '0',
-      'Stock': mainVariant.inventory_quantity !== undefined ? mainVariant.inventory_quantity : '99',
+      'Stock': String(stockQty),
       'Backorders allowed?': '0',
       'Sold individually?': '0',
       'Weight (kg)': mainVariant.weight || '',

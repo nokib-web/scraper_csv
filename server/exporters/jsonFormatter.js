@@ -1,10 +1,13 @@
 /**
  * Exports products as formatted JSON string
  */
-function exportJson(products, format = 'standard') {
+function exportJson(products, format = 'standard', options = {}) {
+  const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const prods = customVendor ? products.map(p => ({ ...p, vendor: customVendor })) : products;
+
   if (format === 'shopify_native') {
     return JSON.stringify({
-      products: products.map(p => ({
+      products: prods.map(p => ({
         id: p.id,
         title: p.title,
         body_html: p.description,
@@ -21,7 +24,7 @@ function exportJson(products, format = 'standard') {
     }, null, 2);
   }
 
-  return JSON.stringify(products, null, 2);
+  return JSON.stringify(prods, null, 2);
 }
 
 module.exports = {

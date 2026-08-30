@@ -138,11 +138,16 @@ app.get('/api/img', async (req, res) => {
 
 // Multi-Format Export API
 app.post('/api/export', (req, res) => {
-  const { products, format = 'shopify_csv', filename = 'products', proxyBase: clientProxyBase } = req.body;
+  const { products, format = 'shopify_csv', filename = 'products', proxyBase: clientProxyBase, defaultStock, customVendor } = req.body;
 
   if (!products || !Array.isArray(products) || products.length === 0) {
     return res.status(400).json({ error: 'No products provided for export' });
   }
+
+  const exportOptions = {
+    defaultStock: defaultStock !== undefined ? defaultStock : 99,
+    customVendor: customVendor && typeof customVendor === 'string' ? customVendor.trim() : ''
+  };
 
   const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
   let output = '';
@@ -157,7 +162,7 @@ app.post('/api/export', (req, res) => {
   switch (format) {
     case 'shopify':
     case 'shopify_csv':
-      output = exportShopifyCsv(products);
+      output = exportShopifyCsv(products, exportOptions);
       fileExt = 'shopify.csv';
       break;
 
@@ -165,13 +170,13 @@ app.post('/api/export', (req, res) => {
     case 'woocommerce':
     case 'woo_csv':
     case 'woocommerce_csv':
-      output = exportWooCommerceCsv(products);
+      output = exportWooCommerceCsv(products, exportOptions);
       fileExt = 'woocommerce.csv';
       break;
 
     case 'wix':
     case 'wix_csv':
-      output = exportWixCsv(products);
+      output = exportWixCsv(products, exportOptions);
       fileExt = 'wix.csv';
       break;
 
@@ -179,24 +184,24 @@ app.post('/api/export', (req, res) => {
     case 'universal_csv':
     case 'clean':
     case 'clean_csv':
-      output = exportUniversalCsv(products);
+      output = exportUniversalCsv(products, exportOptions);
       fileExt = 'clean.csv';
       break;
 
     case 'json':
-      output = exportJson(products, 'standard');
+      output = exportJson(products, 'standard', exportOptions);
       contentType = 'application/json';
       fileExt = 'json';
       break;
 
     case 'shopify_json':
-      output = exportJson(products, 'shopify_native');
+      output = exportJson(products, 'shopify_native', exportOptions);
       contentType = 'application/json';
       fileExt = 'shopify.json';
       break;
 
     default:
-      output = exportUniversalCsv(products);
+      output = exportUniversalCsv(products, exportOptions);
       fileExt = 'csv';
       break;
   }

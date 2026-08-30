@@ -54,6 +54,44 @@ export default function App() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewFormat, setPreviewFormat] = useState('shopify');
 
+  // Customizable Default Inventory / Stock Quantity (default: 99)
+  const [defaultStock, setDefaultStock] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_default_stock');
+      if (saved !== null && saved !== '') return Number(saved);
+    } catch (e) {}
+    return 99;
+  });
+
+  // Customizable Vendor / Brand (Optional override, default: '')
+  const [customVendor, setCustomVendor] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_custom_vendor');
+      if (saved !== null && saved !== undefined) return saved;
+    } catch (e) {}
+    return '';
+  });
+
+  const handleSetDefaultStock = (val) => {
+    if (val === '' || val === null) {
+      setDefaultStock('');
+      return;
+    }
+    const cleanVal = String(val).replace(/^0+(?=\d)/, ''); // Remove leading zeros like 01 -> 1
+    const num = Math.max(0, parseInt(cleanVal, 10) || 0);
+    setDefaultStock(num);
+    try {
+      localStorage.setItem('getproducts_default_stock', String(num));
+    } catch (e) {}
+  };
+
+  const handleSetCustomVendor = (val) => {
+    setCustomVendor(val);
+    try {
+      localStorage.setItem('getproducts_custom_vendor', val);
+    } catch (e) {}
+  };
+
   const handleSelectPlan = (plan) => {
     const updatedPlan = {
       id: plan.id,
@@ -154,17 +192,27 @@ export default function App() {
     };
   }, [products, detection]);
 
+  // Effective products list reflecting active custom vendor override
+  const effectiveProducts = useMemo(() => {
+    if (!customVendor || !customVendor.trim()) return products;
+    const vName = customVendor.trim();
+    return products.map(p => ({
+      ...p,
+      vendor: vName
+    }));
+  }, [products, customVendor]);
+
   // Filtered products based on search bar
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
+    if (!searchQuery.trim()) return effectiveProducts;
     const q = searchQuery.toLowerCase();
-    return products.filter(p =>
+    return effectiveProducts.filter(p =>
       p.title?.toLowerCase().includes(q) ||
       p.vendor?.toLowerCase().includes(q) ||
       p.product_type?.toLowerCase().includes(q) ||
       p.handle?.toLowerCase().includes(q)
     );
-  }, [products, searchQuery]);
+  }, [effectiveProducts, searchQuery]);
 
   // Scrape Submission via Server-Sent Events (SSE)
   const handleScrape = async () => {
@@ -241,8 +289,8 @@ export default function App() {
   };
 
   // Export Trigger
-  const handleExport = async (format) => {
-    if (products.length === 0) return;
+  const handleExport = async (format, customStock, overrideVendor) => {
+    if (effectiveProducts.length === 0) return;
     try {
       const formatMap = {
         shopify: 'shopify_csv',
@@ -252,13 +300,19 @@ export default function App() {
         json: 'json'
       };
       const normalizedFormat = formatMap[format] || format;
+      const effectiveStock = (customStock !== undefined && customStock !== '') 
+        ? Number(customStock) 
+        : (defaultStock !== '' ? Number(defaultStock) : 99);
+      const effectiveVendor = overrideVendor !== undefined ? overrideVendor : customVendor;
 
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          products,
+          products: effectiveProducts,
           format: normalizedFormat,
+          defaultStock: effectiveStock,
+          customVendor: effectiveVendor,
           proxyBase: window.location.origin,
           storeName: url.replace(/^https?:\/\//, '').split('/')[0] || 'store'
         })
@@ -381,6 +435,10 @@ export default function App() {
                 onExport={handleExport}
                 onOpenPreview={handleOpenPreview}
                 stats={stats}
+                defaultStock={defaultStock}
+                onDefaultStockChange={handleSetDefaultStock}
+                customVendor={customVendor}
+                onCustomVendorChange={handleSetCustomVendor}
               />
             )}
 
@@ -468,9 +526,13 @@ export default function App() {
       <FormatPreviewModal
         isOpen={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
-        products={products}
+        products={effectiveProducts}
         defaultFormat={previewFormat}
         onExport={handleExport}
+        defaultStock={defaultStock}
+        onDefaultStockChange={handleSetDefaultStock}
+        customVendor={customVendor}
+        onCustomVendorChange={handleSetCustomVendor}
         storeName={url.replace(/^https?:\/\//, '').split('/')[0] || 'store'}
       />
 

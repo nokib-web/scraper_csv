@@ -38,11 +38,11 @@ const SHOPIFY_HEADERS = [
   'Status'
 ];
 
-function formatHtmlDescription(p) {
+function formatHtmlDescription(p, customBrand) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim() && p.description.includes('<p>')) {
     return p.description.trim();
   }
-  const brand = p.vendor || 'Store';
+  const brand = customBrand || p.vendor || 'Store';
   const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   const price = p.price ? `${p.currency || 'USD'} ${p.price}` : '';
 
@@ -70,21 +70,29 @@ function sanitizeImageUrl(src) {
 /**
  * Transforms unified product list into official Shopify Product CSV format
  * @param {Array} products 
+ * @param {Object} [options]
+ * @param {number|string} [options.defaultStock=99]
+ * @param {string} [options.customVendor='']
  * @returns {string} CSV string
  */
-function exportShopifyCsv(products) {
+function exportShopifyCsv(products, options = {}) {
+  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
+    ? Number(options.defaultStock)
+    : 99;
+  const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const rows = [];
 
   for (const p of products) {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
+    const effectiveVendor = customVendor || p.vendor || '';
     const variants = p.variants && p.variants.length > 0 ? p.variants : [{
       id: '1',
       title: 'Default Title',
       price: p.price || 0,
       compare_at_price: p.regular_price > p.price ? p.regular_price : '',
       sku: `SKU-${handle}`,
-      inventory_quantity: 99,
+      inventory_quantity: defaultStock,
       option1: null
     }];
     
@@ -99,7 +107,7 @@ function exportShopifyCsv(products) {
     }).filter(i => Boolean(i.src));
 
     const maxRows = Math.max(variants.length, images.length, 1);
-    const bodyHtml = formatHtmlDescription(p);
+    const bodyHtml = formatHtmlDescription(p, customVendor);
 
     const cleanOptName = (name, fallback) => {
       if (!name) return fallback;
@@ -117,11 +125,20 @@ function exportShopifyCsv(products) {
       const v = variants[i] || null;
       const img = images[i] || null;
 
+      let variantQty = '';
+      if (v) {
+        if (v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== 99) {
+          variantQty = v.inventory_quantity;
+        } else {
+          variantQty = defaultStock;
+        }
+      }
+
       const row = {
         'Handle': handle,
         'Title': isFirstRow ? p.title : '',
         'Body (HTML)': isFirstRow ? bodyHtml : '',
-        'Vendor': isFirstRow ? (p.vendor || '') : '',
+        'Vendor': isFirstRow ? effectiveVendor : '',
         'Product Category': '',
         'Type': isFirstRow ? (p.product_type || '') : '',
         'Tags': isFirstRow ? tags : '',
@@ -135,7 +152,7 @@ function exportShopifyCsv(products) {
         'Variant SKU': v ? (v.sku || `SKU-${handle}`) : '',
         'Variant Grams': v ? (Math.round((v.weight || 0) * 1000) || 0) : '',
         'Variant Inventory Tracker': v ? 'shopify' : '',
-        'Variant Inventory Qty': v ? (v.inventory_quantity !== undefined ? v.inventory_quantity : 99) : '',
+        'Variant Inventory Qty': variantQty,
         'Variant Inventory Policy': v ? 'deny' : '',
         'Variant Fulfillment Service': v ? 'manual' : '',
         'Variant Price': v ? (v.price !== undefined ? Number(v.price).toFixed(2) : Number(p.price || 0).toFixed(2)) : '',

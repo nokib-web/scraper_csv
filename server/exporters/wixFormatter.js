@@ -19,11 +19,11 @@ const WIX_HEADERS = [
   'cost'
 ];
 
-function formatWixDescription(p) {
+function formatWixDescription(p, customBrand) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim()) {
     return p.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
-  const brand = p.vendor || 'Store';
+  const brand = customBrand || p.vendor || 'Store';
   const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   return `${p.title} - High quality ${cat} by ${brand}. Genuine item in stock for fast delivery.`;
 }
@@ -31,9 +31,17 @@ function formatWixDescription(p) {
 /**
  * Transforms unified product list into Wix Store CSV format
  * @param {Array} products 
+ * @param {Object} [options]
+ * @param {number|string} [options.defaultStock=99]
+ * @param {string} [options.customVendor='']
  * @returns {string} CSV string
  */
-function exportWixCsv(products) {
+function exportWixCsv(products, options = {}) {
+  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
+    ? Number(options.defaultStock)
+    : 99;
+  const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+
   const rows = products.map((p, idx) => {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const rawImages = p.images && p.images.length > 0 ? p.images : (p.image ? [{ src: typeof p.image === 'string' ? p.image : p.image.src }] : []);
@@ -43,11 +51,16 @@ function exportWixCsv(products) {
     const hasDiscount = p.regular_price && p.regular_price > p.price;
     const discountVal = hasDiscount ? Number(p.regular_price - p.price).toFixed(2) : '';
 
+    let stockQty = defaultStock;
+    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== 99 && mainVariant.inventory_quantity !== '99') {
+      stockQty = mainVariant.inventory_quantity;
+    }
+
     return {
       'handleId': handle,
       'fieldType': 'Product',
       'name': p.title || '',
-      'description': formatWixDescription(p),
+      'description': formatWixDescription(p, customVendor),
       'productImageUrl': images,
       'collection': collection,
       'sku': mainVariant.sku || `SKU-${handle}`,
@@ -57,7 +70,7 @@ function exportWixCsv(products) {
       'visible': 'true',
       'discountMode': hasDiscount ? 'AMOUNT' : '',
       'discountValue': discountVal,
-      'inventory': mainVariant.inventory_quantity !== undefined ? mainVariant.inventory_quantity : 99,
+      'inventory': stockQty,
       'weight': mainVariant.weight || '',
       'cost': ''
     };
