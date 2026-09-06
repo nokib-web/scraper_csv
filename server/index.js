@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
 const { scrapeProducts, detectPlatform } = require('./scrapers');
-const { exportShopifyCsv } = require('./exporters/shopifyFormatter');
+const { exportShopifyCsv, exportShopifyInventoryCsv } = require('./exporters/shopifyFormatter');
 const { exportWooCommerceCsv } = require('./exporters/wooFormatter');
 const { exportWixCsv } = require('./exporters/wixFormatter');
 const { exportUniversalCsv } = require('./exporters/universalFormatter');
@@ -146,7 +146,10 @@ app.post('/api/export', (req, res) => {
     defaultStock, 
     customVendor,
     maxImages,
-    priceMarkup
+    priceMarkup,
+    inventoryPolicy,
+    inventoryTracker,
+    locationName
   } = req.body;
 
   if (!products || !Array.isArray(products) || products.length === 0) {
@@ -157,7 +160,10 @@ app.post('/api/export', (req, res) => {
     defaultStock: defaultStock !== undefined ? defaultStock : 99,
     customVendor: customVendor && typeof customVendor === 'string' ? customVendor.trim() : '',
     maxImages: Number(maxImages) || 0,
-    priceMarkup: priceMarkup || { type: 'none', value: 0 }
+    priceMarkup: priceMarkup || { type: 'none', value: 0 },
+    inventoryPolicy: inventoryPolicy || 'continue',
+    inventoryTracker: inventoryTracker !== undefined ? inventoryTracker : 'shopify',
+    locationName: locationName || 'Location'
   };
 
   const safeName = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -175,6 +181,12 @@ app.post('/api/export', (req, res) => {
     case 'shopify_csv':
       output = exportShopifyCsv(products, exportOptions);
       fileExt = 'shopify.csv';
+      break;
+
+    case 'shopify_inventory':
+    case 'shopify_inventory_csv':
+      output = exportShopifyInventoryCsv(products, exportOptions);
+      fileExt = 'shopify_inventory.csv';
       break;
 
     case 'woo':

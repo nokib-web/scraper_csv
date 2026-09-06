@@ -12,7 +12,8 @@ export default function ProductTable({
   onOpenBulkTags, 
   onBulkDelete, 
   onBulkExport, 
-  currencySymbol = '$' 
+  currencySymbol = '$',
+  defaultStock = 99
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -20,15 +21,21 @@ export default function ProductTable({
   const isAllSelected = products.length > 0 && products.every(p => selectedProductIds.includes(p.id));
   const isSomeSelected = selectedProductIds.length > 0 && !isAllSelected;
 
+  const activeDefaultStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
+
   const startEdit = (prod) => {
     setEditingId(prod.id);
     const tagsStr = Array.isArray(prod.tags) ? prod.tags.join(', ') : (prod.tags || '');
+    const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined 
+      ? prod.variants[0].inventory_quantity 
+      : activeDefaultStock;
     setEditForm({
       title: prod.title,
       price: prod.price,
       vendor: prod.vendor,
       product_type: prod.product_type,
-      tags: tagsStr
+      tags: tagsStr,
+      stock: currentStock
     });
   };
 
@@ -36,6 +43,23 @@ export default function ProductTable({
     const updated = { ...editForm };
     if (typeof updated.tags === 'string') {
       updated.tags = updated.tags.split(',').map(t => t.trim()).filter(Boolean);
+    }
+    const currentProd = products.find(p => p.id === id);
+    const stockNum = Math.max(0, parseInt(updated.stock, 10) || 0);
+    if (currentProd && currentProd.variants && currentProd.variants.length > 0) {
+      updated.variants = currentProd.variants.map(v => ({
+        ...v,
+        inventory_quantity: stockNum,
+        _customStock: true
+      }));
+    } else {
+      updated.variants = [{
+        id: '1',
+        title: 'Default Title',
+        price: updated.price || 0,
+        inventory_quantity: stockNum,
+        _customStock: true
+      }];
     }
     onUpdateProduct(id, updated);
     setEditingId(null);
@@ -132,6 +156,7 @@ export default function ProductTable({
                 <th className="py-3 px-4 w-16">Image</th>
                 <th className="py-3 px-4">Title & Handle</th>
                 <th className="py-3 px-4 w-28">Price</th>
+                <th className="py-3 px-3 w-24 text-center">Stock</th>
                 <th className="py-3 px-4 w-28">Vendor</th>
                 <th className="py-3 px-4 w-32">Category & Tags</th>
                 <th className="py-3 px-4 w-16 text-center">Variants</th>
@@ -144,6 +169,7 @@ export default function ProductTable({
                 const isSelected = selectedProductIds.includes(prod.id);
                 const mainImg = prod.images?.[0]?.src;
                 const tagsList = Array.isArray(prod.tags) ? prod.tags : (typeof prod.tags === 'string' ? prod.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
+                const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock;
 
                 return (
                   <tr
@@ -222,6 +248,27 @@ export default function ProductTable({
                             </span>
                           )}
                         </div>
+                      )}
+                    </td>
+
+                    {/* Stock */}
+                    <td className="py-3 px-3 text-center">
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          min="0"
+                          value={editForm.stock ?? 99}
+                          onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                          className="w-16 px-1.5 py-1 text-center bg-neutral-100 dark:bg-neutral-900 border border-[#F1FF0A] rounded text-neutral-900 dark:text-white text-xs font-bold outline-none"
+                        />
+                      ) : (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          currentStock > 0
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                        }`}>
+                          {currentStock} in stock
+                        </span>
                       )}
                     </td>
 

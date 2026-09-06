@@ -80,6 +80,15 @@ export default function App() {
     return 99;
   });
 
+  // Inventory Stock Policy: 'continue' (Active & buyable) | 'deny' | 'untracked'
+  const [inventoryPolicy, setInventoryPolicy] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_inventory_policy');
+      if (saved) return saved;
+    } catch (e) {}
+    return 'continue';
+  });
+
   // Customizable Vendor / Brand (Optional override, default: '')
   const [customVendor, setCustomVendor] = useState(() => {
     try {
@@ -117,6 +126,13 @@ export default function App() {
     setDefaultStock(num);
     try {
       localStorage.setItem('getproducts_default_stock', String(num));
+    } catch (e) {}
+  };
+
+  const handleSetInventoryPolicy = (val) => {
+    setInventoryPolicy(val);
+    try {
+      localStorage.setItem('getproducts_inventory_policy', val);
     } catch (e) {}
   };
 
@@ -252,8 +268,10 @@ export default function App() {
     return num;
   };
 
-  // Effective products list reflecting active custom vendor override and price markup
+  // Effective products list reflecting active custom vendor override, price markup, and stock
   const effectiveProducts = useMemo(() => {
+    const activeStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
+
     return products.map(p => {
       const vName = customVendor && customVendor.trim() ? customVendor.trim() : p.vendor;
       const markedPrice = applyMarkupMath(p.price || 0);
@@ -264,15 +282,30 @@ export default function App() {
         imgs = imgs.slice(0, maxImages);
       }
 
+      const rawVariants = p.variants && p.variants.length > 0 ? p.variants : [{
+        id: '1',
+        title: 'Default Title',
+        price: markedPrice,
+        inventory_quantity: activeStock
+      }];
+
+      const variants = rawVariants.map(v => ({
+        ...v,
+        inventory_quantity: (v._customStock && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '')
+          ? Number(v.inventory_quantity)
+          : activeStock
+      }));
+
       return {
         ...p,
         vendor: vName,
         price: markedPrice,
         regular_price: markedRegPrice > markedPrice ? markedRegPrice : (p.regular_price || 0),
-        images: imgs
+        images: imgs,
+        variants
       };
     });
-  }, [products, customVendor, priceMarkup, maxImages]);
+  }, [products, customVendor, priceMarkup, maxImages, defaultStock]);
 
   // Filtered products based on search bar
   const filteredProducts = useMemo(() => {
@@ -484,6 +517,7 @@ export default function App() {
     try {
       const formatMap = {
         shopify: 'shopify_csv',
+        shopify_inventory: 'shopify_inventory_csv',
         woocommerce: 'woocommerce_csv',
         wix: 'wix_csv',
         universal: 'universal_csv',
@@ -503,6 +537,7 @@ export default function App() {
           products: exportItems,
           format: normalizedFormat,
           defaultStock: effectiveStock,
+          inventoryPolicy,
           customVendor: effectiveVendor,
           priceMarkup,
           maxImages,
@@ -610,6 +645,8 @@ export default function App() {
                 stats={stats}
                 defaultStock={defaultStock}
                 onDefaultStockChange={handleSetDefaultStock}
+                inventoryPolicy={inventoryPolicy}
+                onInventoryPolicyChange={handleSetInventoryPolicy}
                 customVendor={customVendor}
                 onCustomVendorChange={handleSetCustomVendor}
                 priceMarkup={priceMarkup}
@@ -700,6 +737,7 @@ export default function App() {
                     onBulkDelete={() => handleBulkDelete(selectedProductIds)}
                     onBulkExport={() => handleExport('shopify')}
                     currencySymbol={stats?.currencySymbol || '$'}
+                    defaultStock={defaultStock}
                   />
                 ) : (
                   <ProductGrid
@@ -708,6 +746,7 @@ export default function App() {
                     selectedProductIds={selectedProductIds}
                     onToggleSelect={handleToggleSelect}
                     currencySymbol={stats?.currencySymbol || '$'}
+                    defaultStock={defaultStock}
                   />
                 )}
               </div>
@@ -732,6 +771,7 @@ export default function App() {
         onExport={handleExport}
         defaultStock={defaultStock}
         onDefaultStockChange={handleSetDefaultStock}
+        inventoryPolicy={inventoryPolicy}
         customVendor={customVendor}
         onCustomVendorChange={handleSetCustomVendor}
         priceMarkup={priceMarkup}

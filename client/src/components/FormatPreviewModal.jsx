@@ -13,6 +13,7 @@ export default function FormatPreviewModal({
   onExport, 
   defaultStock = 99, 
   onDefaultStockChange, 
+  inventoryPolicy = 'continue',
   customVendor = '',
   onCustomVendorChange,
   priceMarkup = { type: 'none', value: 0 },
@@ -43,6 +44,7 @@ export default function FormatPreviewModal({
         format: activeTab, 
         storeName, 
         defaultStock,
+        inventoryPolicy,
         customVendor,
         priceMarkup,
         maxImages,
@@ -58,7 +60,7 @@ export default function FormatPreviewModal({
         setPreviewContent(`Error generating preview: ${e.message}`);
         setIsLoading(false);
       });
-  }, [isOpen, activeTab, products, storeName, defaultStock, customVendor, priceMarkup, maxImages]);
+  }, [isOpen, activeTab, products, storeName, defaultStock, inventoryPolicy, customVendor, priceMarkup, maxImages]);
 
   const handleCopy = async () => {
     try {

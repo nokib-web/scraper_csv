@@ -10,6 +10,7 @@ const UNIVERSAL_HEADERS = [
   'Category',
   'SKU',
   'Stock Status',
+  'Stock Qty',
   'Main Image',
   'All Images',
   'Product URL',
@@ -55,12 +56,16 @@ function applyPriceMarkup(price, markup) {
  * Transforms unified product list into clean Universal CSV format
  * @param {Array} products 
  * @param {Object} [options]
+ * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
  * @param {number} [options.maxImages=0]
  * @param {Object} [options.priceMarkup]
  * @returns {string} CSV string
  */
 function exportUniversalCsv(products, options = {}) {
+  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
+    ? Number(options.defaultStock)
+    : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
@@ -82,6 +87,11 @@ function exportUniversalCsv(products, options = {}) {
     const mainImg = images[0] || sanitizeImageUrl(fallbackRaw);
     const allImagesStr = images.length > 0 ? images.join(' | ') : mainImg;
 
+    let stockQty = defaultStock;
+    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== '' && !isNaN(Number(mainVariant.inventory_quantity))) {
+      stockQty = Number(mainVariant.inventory_quantity);
+    }
+
     return {
       'ID': p.id || String(idx + 1),
       'Title': p.title || '',
@@ -91,7 +101,8 @@ function exportUniversalCsv(products, options = {}) {
       'Brand / Vendor': effectiveVendor,
       'Category': p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General'),
       'SKU': mainVariant.sku || `SKU-${p.id || idx + 1}`,
-      'Stock Status': mainVariant.available !== false ? 'In Stock' : 'Out of Stock',
+      'Stock Status': (mainVariant.available !== false && stockQty > 0) ? 'In Stock' : (stockQty > 0 ? 'In Stock' : 'Out of Stock'),
+      'Stock Qty': stockQty,
       'Main Image': mainImg,
       'All Images': allImagesStr,
       'Product URL': p.url || '',

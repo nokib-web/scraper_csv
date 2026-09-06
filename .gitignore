@@ -32,8 +32,8 @@ raw_user_input.*
 *.log
 toyyub_*.*
 all_next_f.txt
-inventories_response.json
 ryans_home.html
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
+*.zip

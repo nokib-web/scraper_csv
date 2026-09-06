@@ -7,8 +7,10 @@ export default function ProductGrid({
   onDeleteProduct, 
   selectedProductIds = [], 
   onToggleSelect, 
-  currencySymbol = '$' 
+  currencySymbol = '$',
+  defaultStock = 99
 }) {
+  const activeDefaultStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
   if (!products || products.length === 0) return null;
 
   return (
@@ -103,17 +105,22 @@ export default function ProductGrid({
               </div>
             </div>
 
-            {/* Bottom Price & Link */}
+            {/* Bottom Price, Stock & Link */}
             <div className="p-4 pt-0 flex items-center justify-between border-t border-neutral-200 dark:border-neutral-900 mt-2">
               <div className="pt-3">
-                <div className="text-sm font-extrabold text-neutral-900 dark:text-[#F1FF0A]">
-                  {currencySymbol}{Number(prod.price || 0).toLocaleString()}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-extrabold text-neutral-900 dark:text-[#F1FF0A]">
+                    {currencySymbol}{Number(prod.price || 0).toLocaleString()}
+                  </span>
+                  {prod.regular_price > prod.price && (
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through">
+                      {currencySymbol}{Number(prod.regular_price).toLocaleString()}
+                    </span>
+                  )}
                 </div>
-                {prod.regular_price > prod.price && (
-                  <div className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through">
-                    {currencySymbol}{Number(prod.regular_price).toLocaleString()}
-                  </div>
-                )}
+                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock} in stock
+                </div>
               </div>
 
               {prod.url && (

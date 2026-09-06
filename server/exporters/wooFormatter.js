@@ -112,8 +112,8 @@ function exportWooCommerceCsv(products, options = {}) {
     const hasDiscount = markedRegPrice > markedPrice;
 
     let stockQty = defaultStock;
-    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== 99 && mainVariant.inventory_quantity !== '99') {
-      stockQty = mainVariant.inventory_quantity;
+    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== '' && !isNaN(Number(mainVariant.inventory_quantity))) {
+      stockQty = Number(mainVariant.inventory_quantity);
     }
 
     return {
