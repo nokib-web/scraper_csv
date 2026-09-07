@@ -138,14 +138,14 @@ html.a11y-text-2 {
 /* 2. Bigger High-Contrast Mouse Cursor */
 body.a11y-bigger-cursor,
 body.a11y-bigger-cursor * {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='%230047FF' stroke='%23ffffff' stroke-width='1.5'%3E%3Cpath d='M3 3l7 18 3-7 7-3L3 3z'/%3E%3C/svg%3E"), auto !important;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='%23F1FF0A' stroke='%23000000' stroke-width='1.5'%3E%3Cpath d='M3 3l7 18 3-7 7-3L3 3z'/%3E%3C/svg%3E"), auto !important;
 }
 
 /* 3. Highlight Links & Actionable Buttons */
 html.a11y-highlight-links a:not(.a11y-widget-portal *),
 html.a11y-highlight-links button:not(.a11y-widget-portal *),
 html.a11y-highlight-links [role="button"]:not(.a11y-widget-portal *) {
-  outline: 3px solid #0047FF !important;
+  outline: 3px solid #F1FF0A !important;
   outline-offset: 3px !important;
   text-decoration: underline !important;
   text-decoration-thickness: 2px !important;

@@ -196,23 +196,23 @@ export default function AccessibilityWidget() {
           aria-label="Open Accessibility Options"
           aria-expanded={isOpen}
           title="Accessibility Options"
-          className="a11y-trigger-btn group relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-r-2xl bg-[#0047FF] hover:bg-[#0038CC] text-white shadow-2xl border-y border-r border-white/20 transition-all duration-300 hover:w-14 cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#0047FF]/40 active:scale-95"
+          className="a11y-trigger-btn group relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-r-2xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black shadow-[0_0_20px_rgba(241,255,10,0.35)] border-y border-r border-black/20 transition-all duration-300 hover:w-14 cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#F1FF0A]/40 active:scale-95"
         >
-          <div className="p-1 rounded-full bg-white/10 group-hover:scale-110 transition-transform">
-            <FaUniversalAccess className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          <div className="p-1 rounded-full bg-black/10 group-hover:scale-110 transition-transform">
+            <FaUniversalAccess className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
           </div>
           {activeCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-[#D4FF00] text-black font-extrabold text-[11px] shadow-md border-2 border-white dark:border-neutral-900">
+            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-black text-[#F1FF0A] font-extrabold text-[11px] shadow-md border-2 border-[#F1FF0A]">
               {activeCount}
             </span>
           )}
         </button>
       </div>
 
-      {/* Accessibility Side Drawer (Right Sliding Panel) - Clean without background blur */}
+      {/* Accessibility Side Drawer (Right Sliding Panel) */}
       <div 
         ref={drawerRef}
-        className={`fixed top-0 right-0 z-50 h-full w-full sm:w-[420px] max-w-full bg-[#0D1520] text-slate-100 shadow-2xl border-l border-slate-800/80 flex flex-col transform transition-transform duration-300 ease-out overflow-hidden ${
+        className={`fixed top-0 right-0 z-50 h-full w-full sm:w-[420px] max-w-full bg-[#09090b] text-neutral-100 shadow-2xl border-l border-neutral-800 flex flex-col transform transition-transform duration-300 ease-out overflow-hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
@@ -220,28 +220,28 @@ export default function AccessibilityWidget() {
         aria-labelledby="a11y-title"
       >
         {/* Drawer Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-[#080E18] border-b border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 bg-[#121216] border-b border-neutral-800">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-[#0047FF] text-white shadow-sm">
-              <FaUniversalAccess className="w-4 h-4" />
+            <div className="p-1.5 rounded-lg bg-[#F1FF0A] text-black shadow-sm font-extrabold">
+              <FaUniversalAccess className="w-4 h-4 text-black" />
             </div>
             <div>
               <h2 id="a11y-title" className="text-base font-bold text-white tracking-tight leading-none">
                 Accessibility Options
               </h2>
-              <span className="text-[11px] text-slate-400">ADA & WCAG Compliance Tool</span>
+              <span className="text-[11px] text-neutral-400">ADA & WCAG Compliance Tool</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700">
-              <Globe className="w-3 h-3 text-[#00E5FF]" />
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-900 text-neutral-300 text-xs font-semibold border border-neutral-800">
+              <Globe className="w-3 h-3 text-[#F1FF0A]" />
               <span>EN</span>
             </div>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
               aria-label="Close Accessibility Options"
             >
               <X className="w-5 h-5" />
@@ -255,10 +255,10 @@ export default function AccessibilityWidget() {
           {/* SECTION 1: CONTENT */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                 Content
               </span>
-              <span className="text-[11px] text-slate-500 font-medium">Text & Visuals</span>
+              <span className="text-[11px] text-neutral-500 font-medium">Text & Visuals</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -269,13 +269,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('biggerText', (settings.biggerText + 1) % 3)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.biggerText > 0 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <Type className="w-5 h-5 text-[#00E5FF]" />
+                <Type className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Bigger Text</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.biggerText > 0 ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.biggerText > 0 ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.biggerText === 0 ? 'Default' : settings.biggerText === 1 ? '+15%' : '+30%'}
                 </span>
               </button>
@@ -286,13 +286,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('biggerCursor', !settings.biggerCursor)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.biggerCursor 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <MousePointer className="w-5 h-5 text-[#00E5FF]" />
+                <MousePointer className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Bigger Cursor</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.biggerCursor ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.biggerCursor ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.biggerCursor ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -303,13 +303,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('highlightLinks', !settings.highlightLinks)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.highlightLinks 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <LinkIcon className="w-5 h-5 text-[#00E5FF]" />
+                <LinkIcon className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Tooltips & Links</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.highlightLinks ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.highlightLinks ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.highlightLinks ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -320,13 +320,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('lineHeight', !settings.lineHeight)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.lineHeight 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <AlignJustify className="w-5 h-5 text-[#00E5FF]" />
+                <AlignJustify className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Line Height</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.lineHeight ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.lineHeight ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.lineHeight ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -337,13 +337,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('hideImages', !settings.hideImages)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.hideImages 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <ImageOff className="w-5 h-5 text-[#00E5FF]" />
+                <ImageOff className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Hide Images</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.hideImages ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.hideImages ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.hideImages ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -357,13 +357,13 @@ export default function AccessibilityWidget() {
                 }}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.readableFont 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <span className="text-base font-extrabold text-[#00E5FF]">Aa</span>
+                <span className="text-base font-extrabold text-[#F1FF0A]">Aa</span>
                 <span className="text-xs font-semibold leading-tight">Readable Fonts</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.readableFont ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.readableFont ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.readableFont ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -377,13 +377,13 @@ export default function AccessibilityWidget() {
                 }}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.dyslexicFont 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <BookOpen className="w-5 h-5 text-[#00E5FF]" />
+                <BookOpen className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Dyslexic Font</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.dyslexicFont ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.dyslexicFont ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.dyslexicFont ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -394,13 +394,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('stopAnimations', !settings.stopAnimations)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.stopAnimations 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <PauseCircle className="w-5 h-5 text-[#00E5FF]" />
+                <PauseCircle className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Stop Animations</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.stopAnimations ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.stopAnimations ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.stopAnimations ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -409,12 +409,12 @@ export default function AccessibilityWidget() {
           </div>
 
           {/* SECTION 2: COLORS & CONTRAST */}
-          <div className="space-y-3 pt-2 border-t border-slate-800/80">
+          <div className="space-y-3 pt-2 border-t border-neutral-800/80">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">
                 Colors & Contrast
               </span>
-              <span className="text-[11px] text-slate-500 font-medium">Display Modes</span>
+              <span className="text-[11px] text-neutral-500 font-medium">Display Modes</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
@@ -425,13 +425,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('invertColors', !settings.invertColors)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.invertColors 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <Contrast className="w-5 h-5 text-[#00E5FF]" />
+                <Contrast className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Invert Colors</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.invertColors ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.invertColors ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.invertColors ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -442,13 +442,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('brightness', (settings.brightness + 1) % 3)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.brightness > 0 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <Sun className="w-5 h-5 text-[#00E5FF]" />
+                <Sun className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Brightness</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.brightness > 0 ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.brightness > 0 ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.brightness === 0 ? 'Normal' : settings.brightness === 1 ? 'High' : 'Low'}
                 </span>
               </button>
@@ -459,15 +459,15 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('contrast', settings.contrast === 1 ? 0 : 1)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.contrast > 0 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <div className="w-5 h-5 rounded-full border-2 border-[#00E5FF] flex overflow-hidden">
-                  <div className="w-1/2 h-full bg-[#00E5FF]" />
+                <div className="w-5 h-5 rounded-full border-2 border-[#F1FF0A] flex overflow-hidden">
+                  <div className="w-1/2 h-full bg-[#F1FF0A]" />
                 </div>
                 <span className="text-xs font-semibold leading-tight">Contrast</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.contrast > 0 ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.contrast > 0 ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.contrast > 0 ? 'High' : 'Normal'}
                 </span>
               </button>
@@ -478,13 +478,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('saturation', (settings.saturation + 1) % 3)}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.saturation > 0 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <Droplet className="w-5 h-5 text-[#00E5FF]" />
+                <Droplet className="w-5 h-5 text-[#F1FF0A]" />
                 <span className="text-xs font-semibold leading-tight">Saturation</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.saturation > 0 ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.saturation > 0 ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.saturation === 0 ? 'Normal' : settings.saturation === 1 ? 'Low' : 'High'}
                 </span>
               </button>
@@ -495,13 +495,13 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('colorFilter', settings.colorFilter === 'grayscale' ? 'none' : 'grayscale')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.colorFilter === 'grayscale' 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <div className="w-5 h-5 rounded-full bg-gradient-to-r from-gray-400 to-gray-700 border border-slate-600" />
+                <div className="w-5 h-5 rounded-full bg-gradient-to-r from-gray-400 to-gray-700 border border-neutral-600" />
                 <span className="text-xs font-semibold leading-tight">Grayscale</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.colorFilter === 'grayscale' ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.colorFilter === 'grayscale' ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
                   {settings.colorFilter === 'grayscale' ? 'Active' : 'Off'}
                 </span>
               </button>
@@ -512,14 +512,14 @@ export default function AccessibilityWidget() {
                 onClick={() => updateSetting('colorFilter', settings.colorFilter === 'colorblind' ? 'none' : 'colorblind')}
                 className={`p-3 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer select-none ${
                   settings.colorFilter === 'colorblind' 
-                    ? 'bg-[#0047FF]/20 border-[#0047FF] text-white shadow-[0_0_15px_rgba(0,71,255,0.3)]' 
-                    : 'bg-[#131D2D] border-slate-800 hover:border-slate-700 text-slate-300'
+                    ? 'bg-[#F1FF0A]/15 border-[#F1FF0A] text-white shadow-[0_0_15px_rgba(241,255,10,0.2)]' 
+                    : 'bg-neutral-900/90 border-neutral-800 hover:border-neutral-700 text-neutral-300'
                 }`}
               >
-                <div className="w-5 h-5 rounded-full bg-gradient-to-r from-red-500 to-green-500 border border-slate-600" />
+                <div className="w-5 h-5 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 border border-neutral-600" />
                 <span className="text-xs font-semibold leading-tight">Color Filters</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.colorFilter === 'colorblind' ? 'bg-[#0047FF] text-white' : 'text-slate-500'}`}>
-                  {settings.colorFilter === 'colorblind' ? 'Red/Green' : 'Off'}
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${settings.colorFilter === 'colorblind' ? 'bg-[#F1FF0A] text-black font-extrabold' : 'text-neutral-500'}`}>
+                  {settings.colorFilter === 'colorblind' ? 'Active' : 'Off'}
                 </span>
               </button>
 
@@ -529,23 +529,23 @@ export default function AccessibilityWidget() {
         </div>
 
         {/* Drawer Bottom Bar with Reset */}
-        <div className="px-5 py-3.5 bg-[#080E18] border-t border-slate-800 space-y-2.5">
+        <div className="px-5 py-3.5 bg-[#121216] border-t border-neutral-800 space-y-2.5">
           <button
             type="button"
             onClick={handleReset}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 hover:border-slate-600 transition-all cursor-pointer active:scale-[0.98] shadow-sm"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neutral-900 hover:bg-[#F1FF0A] text-neutral-200 hover:text-black font-extrabold text-xs border border-neutral-700 hover:border-[#F1FF0A] transition-all cursor-pointer active:scale-[0.98] shadow-md group"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-[#00E5FF]" />
+            <RotateCcw className="w-3.5 h-3.5 text-[#F1FF0A] group-hover:text-black transition-colors" />
             <span>Reset Settings</span>
           </button>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+          <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-1">
             <span className="hover:text-white transition-colors cursor-default flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#00E5FF]" />
+              <ShieldCheck className="w-3.5 h-3.5 text-[#F1FF0A]" />
               Accessibility Standard
             </span>
-            <span className="font-semibold text-slate-300 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+            <span className="font-semibold text-neutral-300 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[#F1FF0A] inline-block animate-pulse" />
               Accessibly Verified
             </span>
           </div>
