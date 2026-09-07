@@ -236,7 +236,8 @@ html.a11y-filter-colorblind {
   filter: sepia(50%) hue-rotate(190deg) !important;
 }
 
-/* Keep Accessibility Portal Clean from global filters */
+/* Keep Accessibility Portal Clean from global filters and always above all page layers */
 .a11y-widget-portal {
-  isolation: isolate;
+  position: relative;
+  z-index: 999999 !important;
 }

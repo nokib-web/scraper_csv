@@ -187,9 +187,9 @@ export default function AccessibilityWidget() {
   }).length;
 
   return (
-    <div className="a11y-widget-portal font-sans">
+    <div className="a11y-widget-portal font-sans relative z-[999999]">
       {/* Floating Trigger Button on the Left Edge */}
-      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-40">
+      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-[999990]">
         <button
           type="button"
           onClick={() => setIsOpen(prev => !prev)}
@@ -212,7 +212,7 @@ export default function AccessibilityWidget() {
       {/* Accessibility Side Drawer (Right Sliding Panel) */}
       <div 
         ref={drawerRef}
-        className={`fixed top-0 right-0 z-50 h-full w-full sm:w-[420px] max-w-full bg-[#09090b] text-neutral-100 shadow-2xl border-l border-neutral-800 flex flex-col transform transition-transform duration-300 ease-out overflow-hidden ${
+        className={`fixed top-0 right-0 z-[999999] h-full w-full sm:w-[420px] max-w-full bg-[#09090b] text-neutral-100 shadow-2xl border-l border-neutral-800 flex flex-col transform transition-transform duration-300 ease-out overflow-hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         role="dialog"
