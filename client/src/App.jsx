@@ -15,6 +15,7 @@ import ContactPage from './components/ContactPage';
 import AdSlot from './components/AdSlot';
 import BrandSlider from './components/BrandSlider';
 import Footer from './components/Footer';
+import AccessibilityWidget from './components/AccessibilityWidget';
 import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
 import { saveCatalogData, loadCatalogData, clearCatalogData } from './utils/storage';
 import { getApiBaseUrl } from './utils/api';
@@ -801,6 +802,9 @@ export default function App() {
 
       {/* Fixed Bottom Docked Footer */}
       <Footer />
+
+      {/* ADA & WCAG Accessibility Drawer & Floating Trigger */}
+      <AccessibilityWidget />
 
     </div>
   );
