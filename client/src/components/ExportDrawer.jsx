@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Eye, Check, Package, Store, X, TrendingUp, Image as ImageIcon, Replace, CheckSquare } from 'lucide-react';
+import { Download, Eye, Check, Package, Store, FolderTree, Layers, LayoutTemplate, X, TrendingUp, Image as ImageIcon, Replace, CheckSquare } from 'lucide-react';
 import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
 import { FaFileCsv } from 'react-icons/fa';
 import { VscJson } from 'react-icons/vsc';
@@ -13,6 +13,12 @@ export default function ExportDrawer({
   onDefaultStockChange,
   customVendor = '',
   onCustomVendorChange,
+  customCategory = '',
+  onCustomCategoryChange,
+  customType = '',
+  onCustomTypeChange,
+  customTemplate = '',
+  onCustomTemplateChange,
   priceMarkup = { type: 'none', value: 0 },
   onPriceMarkupChange,
   maxImages = 0,
@@ -26,7 +32,7 @@ export default function ExportDrawer({
 
   const handleDownload = async (format) => {
     setDownloadingFormat(format);
-    await onExport(format, defaultStock, customVendor);
+    await onExport(format, defaultStock, customVendor, customCategory, customType, customTemplate);
     setTimeout(() => setDownloadingFormat(null), 1200);
   };
 
@@ -110,10 +116,10 @@ export default function ExportDrawer({
       </div>
 
       {/* Ultra-Compact Single-Row Power Tools Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-0.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 pt-0.5">
         
         {/* 1. Vendor Override */}
-        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
+        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
           <Store className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
           <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Vendor:</span>
           <div className="relative flex-1 flex items-center min-w-0">
@@ -137,7 +143,101 @@ export default function ExportDrawer({
           </div>
         </div>
 
-        {/* 2. Default Stock */}
+        {/* 2. Category Override / Default */}
+        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
+          <FolderTree className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
+          <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Category:</span>
+          <div className="relative flex-1 flex items-center min-w-0">
+            <input
+              type="text"
+              value={customCategory}
+              onChange={(e) => onCustomCategoryChange && onCustomCategoryChange(e.target.value)}
+              placeholder="Original"
+              className="w-full px-2 py-0.5 text-xs font-semibold rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-[#F1FF0A]"
+            />
+            {customCategory && (
+              <button
+                type="button"
+                onClick={() => onCustomCategoryChange && onCustomCategoryChange('')}
+                className="absolute right-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-0.5 cursor-pointer"
+                title="Reset to original categories"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 3. Product Type Override */}
+        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
+          <Layers className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
+          <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Type:</span>
+          <div className="relative flex-1 flex items-center min-w-0">
+            <input
+              type="text"
+              value={customType}
+              onChange={(e) => onCustomTypeChange && onCustomTypeChange(e.target.value)}
+              placeholder="Original"
+              className="w-full px-2 py-0.5 text-xs font-semibold rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-[#F1FF0A]"
+            />
+            {customType && (
+              <button
+                type="button"
+                onClick={() => onCustomTypeChange && onCustomTypeChange('')}
+                className="absolute right-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-0.5 cursor-pointer"
+                title="Reset to original product type"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 4. Template Suffix */}
+        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
+          <LayoutTemplate className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
+          <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Template:</span>
+          <div className="relative flex-1 flex items-center min-w-0">
+            <input
+              type="text"
+              value={customTemplate}
+              onChange={(e) => onCustomTemplateChange && onCustomTemplateChange(e.target.value)}
+              placeholder="Default"
+              className="w-full px-2 py-0.5 text-xs font-semibold font-mono rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-[#F1FF0A]"
+            />
+            {customTemplate && (
+              <button
+                type="button"
+                onClick={() => onCustomTemplateChange && onCustomTemplateChange('')}
+                className="absolute right-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-0.5 cursor-pointer"
+                title="Reset to default template"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <select
+            value={['', 'book', 'food', 'pre-order', 'custom-layout', 'gift-card', 'bundle', 'coming-soon'].includes(customTemplate) ? customTemplate : 'custom'}
+            onChange={(e) => {
+              if (e.target.value !== 'custom') {
+                onCustomTemplateChange && onCustomTemplateChange(e.target.value);
+              }
+            }}
+            className="w-16 px-1 py-0.5 text-[10px] font-semibold font-mono rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer truncate"
+          >
+            <option value="">Default</option>
+            <option value="book">book</option>
+            <option value="food">food</option>
+            <option value="pre-order">pre-order</option>
+            <option value="custom-layout">custom</option>
+            <option value="gift-card">gift-card</option>
+            <option value="bundle">bundle</option>
+            <option value="coming-soon">coming-soon</option>
+            <option value="custom">Other</option>
+          </select>
+        </div>
+
+        {/* 3. Default Stock */}
         <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
           <Package className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
           <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Stock:</span>
@@ -173,7 +273,7 @@ export default function ExportDrawer({
           </select>
         </div>
 
-        {/* 3. Price Markup */}
+        {/* 4. Price Markup */}
         <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
           <TrendingUp className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
           <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Markup:</span>
@@ -227,7 +327,7 @@ export default function ExportDrawer({
           </select>
         </div>
 
-        {/* 4. Images Limit */}
+        {/* 5. Images Limit */}
         <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
           <ImageIcon className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
           <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Images:</span>

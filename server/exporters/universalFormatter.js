@@ -17,12 +17,12 @@ const UNIVERSAL_HEADERS = [
   'Description'
 ];
 
-function formatPlainDescription(p, customBrand) {
+function formatPlainDescription(p, customBrand, customCat) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim()) {
     return p.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
   const brand = customBrand || p.vendor || 'Official Store';
-  const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
+  const cat = customCat || p.product_type || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   const price = p.price ? `${p.currency || 'USD'} ${p.price}` : '';
   return `${p.title} - High quality authentic ${cat} provided by ${brand}. ${price ? `Price: ${price}. ` : ''}100% original product available in stock for immediate order and fast delivery.`;
 }
@@ -58,6 +58,7 @@ function applyPriceMarkup(price, markup) {
  * @param {Object} [options]
  * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
+ * @param {string} [options.customCategory='']
  * @param {number} [options.maxImages=0]
  * @param {Object} [options.priceMarkup]
  * @returns {string} CSV string
@@ -67,6 +68,7 @@ function exportUniversalCsv(products, options = {}) {
     ? Number(options.defaultStock)
     : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
 
@@ -99,14 +101,14 @@ function exportUniversalCsv(products, options = {}) {
       'Regular Price': Number(markedRegPrice).toFixed(2),
       'Currency': p.currency || 'USD',
       'Brand / Vendor': effectiveVendor,
-      'Category': p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General'),
+      'Category': customCategory || p.product_type || p.category || (Array.isArray(p.tags) ? p.tags[0] : 'General'),
       'SKU': mainVariant.sku || `SKU-${p.id || idx + 1}`,
       'Stock Status': (mainVariant.available !== false && stockQty > 0) ? 'In Stock' : (stockQty > 0 ? 'In Stock' : 'Out of Stock'),
       'Stock Qty': stockQty,
       'Main Image': mainImg,
       'All Images': allImagesStr,
       'Product URL': p.url || '',
-      'Description': formatPlainDescription({ ...p, price: markedPrice }, customVendor)
+      'Description': formatPlainDescription({ ...p, price: markedPrice }, customVendor, customCategory)
     };
   });
 

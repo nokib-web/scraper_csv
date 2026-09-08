@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { ExternalLink, Edit2, Check, X, Trash2, Tag, Download, CheckSquare, Square } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ExternalLink, Edit2, Check, X, Trash2, Tag, Download, CheckSquare, Square, ChevronDown, Eye } from 'lucide-react';
+import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
+import { FaFileCsv } from 'react-icons/fa';
+import { VscJson } from 'react-icons/vsc';
 import ProductImage from './ProductImage';
+import { getCurrencySymbol } from '../utils/currency';
 
 export default function ProductTable({ 
   products, 
@@ -12,16 +16,81 @@ export default function ProductTable({
   onOpenBulkTags, 
   onBulkDelete, 
   onBulkExport, 
+  onOpenPreview,
   currencySymbol = '$',
   defaultStock = 99
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+  const exportDropdownRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
+        setExportDropdownOpen(false);
+      }
+    }
+    if (exportDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [exportDropdownOpen]);
 
   const isAllSelected = products.length > 0 && products.every(p => selectedProductIds.includes(p.id));
   const isSomeSelected = selectedProductIds.length > 0 && !isAllSelected;
 
   const activeDefaultStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
+
+  const exportPlatforms = [
+    {
+      id: 'shopify',
+      title: 'Shopify CSV',
+      desc: 'Official template with Type & Suffix',
+      icon: <SiShopify className="w-4 h-4 text-[#95BF47]" />
+    },
+    {
+      id: 'woocommerce',
+      title: 'WooCommerce CSV',
+      desc: 'WordPress WP Ready',
+      icon: <SiWoocommerce className="w-4 h-4 text-[#96588A]" />
+    },
+    {
+      id: 'wix',
+      title: 'Wix Store CSV',
+      desc: 'Wix eCommerce compatible',
+      icon: <SiWix className="w-4 h-4 text-white" />
+    },
+    {
+      id: 'universal',
+      title: 'Clean CSV',
+      desc: 'Excel & Google Sheets',
+      icon: <FaFileCsv className="w-4 h-4 text-emerald-400" />
+    },
+    {
+      id: 'json',
+      title: 'Structured JSON',
+      desc: 'Raw catalog data',
+      icon: <VscJson className="w-4 h-4 text-[#F1FF0A]" />
+    }
+  ];
+
+  const handleExportSelected = (formatId) => {
+    setExportDropdownOpen(false);
+    if (onBulkExport) {
+      onBulkExport(formatId);
+    }
+  };
+
+  const handlePreviewSelected = (formatId) => {
+    setExportDropdownOpen(false);
+    if (onOpenPreview) {
+      onOpenPreview(formatId);
+    }
+  };
 
   const startEdit = (prod) => {
     setEditingId(prod.id);
@@ -33,7 +102,9 @@ export default function ProductTable({
       title: prod.title,
       price: prod.price,
       vendor: prod.vendor,
-      product_type: prod.product_type,
+      product_type: prod.product_type || prod.category || 'General',
+      type: prod.type || prod.product_type || prod.category || '',
+      template_suffix: prod.template_suffix || prod.template || '',
       tags: tagsStr,
       stock: currentStock
     });
@@ -93,20 +164,70 @@ export default function ProductTable({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-[#F1FF0A] font-bold border border-neutral-700 hover:border-[#F1FF0A]/40 transition-all cursor-pointer"
             >
               <Tag className="w-3.5 h-3.5" />
-              <span>Manage Tags</span>
+              <span>Manage Tags & Category</span>
             </button>
 
-            {/* Export Selected Button */}
-            {onBulkExport && (
+            {/* Export Selected Dropdown Button & Popover */}
+            <div className="relative" ref={exportDropdownRef}>
               <button
                 type="button"
-                onClick={onBulkExport}
+                onClick={() => setExportDropdownOpen(prev => !prev)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold transition-all shadow-sm cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Export Selected</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${exportDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-            )}
+
+              {/* Dropdown Menu */}
+              {exportDropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-neutral-900 border border-[#F1FF0A]/40 shadow-2xl backdrop-blur-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                  <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 border-b border-neutral-800 flex items-center justify-between">
+                    <span>Choose Export Format</span>
+                    <span className="text-[#F1FF0A] font-bold">{selectedProductIds.length} selected</span>
+                  </div>
+
+                  <div className="space-y-0.5 pt-0.5">
+                    {exportPlatforms.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleExportSelected(p.id)}
+                        className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left hover:bg-neutral-800 transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="p-1.5 rounded-md bg-black border border-neutral-800 flex-shrink-0">
+                            {p.icon}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white group-hover:text-[#F1FF0A] transition-colors truncate">
+                              {p.title}
+                            </div>
+                            <div className="text-[10px] text-neutral-400 truncate">
+                              {p.desc}
+                            </div>
+                          </div>
+                        </div>
+                        <Download className="w-3.5 h-3.5 text-neutral-500 group-hover:text-[#F1FF0A] flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+
+                  {onOpenPreview && (
+                    <div className="pt-1 border-t border-neutral-800">
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewSelected('shopify')}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/80 hover:bg-neutral-800 text-[11px] font-semibold text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-[#F1FF0A]" />
+                        <span>Live Preview Selected</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Delete Selected Button */}
             {onBulkDelete && (
@@ -133,10 +254,10 @@ export default function ProductTable({
         </div>
       )}
 
-      {/* Main Table Container */}
+      {/* Main Table Container with Horizontal Scroll */}
       <div className="rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-xl dark:shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-800">
+          <table className="w-full text-left border-collapse text-xs min-w-[1350px]">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/90 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
                 {/* Master Checkbox */}
@@ -154,11 +275,14 @@ export default function ProductTable({
                 </th>
                 <th className="py-3 px-2 w-10 text-center font-mono">#</th>
                 <th className="py-3 px-4 w-16">Image</th>
-                <th className="py-3 px-4">Title & Handle</th>
+                <th className="py-3 px-4 min-w-[200px]">Title & Handle</th>
                 <th className="py-3 px-4 w-28">Price</th>
                 <th className="py-3 px-3 w-24 text-center">Stock</th>
                 <th className="py-3 px-4 w-28">Vendor</th>
-                <th className="py-3 px-4 w-32">Category & Tags</th>
+                <th className="py-3 px-4 w-32">Category</th>
+                <th className="py-3 px-4 w-28">Type</th>
+                <th className="py-3 px-4 w-28">Template</th>
+                <th className="py-3 px-4 w-36">Tags</th>
                 <th className="py-3 px-4 w-16 text-center">Variants</th>
                 <th className="py-3 px-4 w-24 text-right">Actions</th>
               </tr>
@@ -170,6 +294,9 @@ export default function ProductTable({
                 const mainImg = prod.images?.[0]?.src;
                 const tagsList = Array.isArray(prod.tags) ? prod.tags : (typeof prod.tags === 'string' ? prod.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
                 const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock;
+                const displayType = prod.type || prod.product_type || prod.category || 'General';
+                const displayTemplate = prod.template_suffix || prod.template || '';
+                const rowCurrencySymbol = prod.currency ? getCurrencySymbol(prod.currency) : (currencySymbol || '$');
 
                 return (
                   <tr
@@ -240,11 +367,11 @@ export default function ProductTable({
                         />
                       ) : (
                         <div className="font-bold text-neutral-900 dark:text-[#F1FF0A]">
-                          {currencySymbol}
+                          {rowCurrencySymbol}
                           {Number(prod.price || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                           {prod.regular_price > prod.price && (
                             <span className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through ml-1.5 font-normal">
-                              {currencySymbol}{Number(prod.regular_price).toLocaleString()}
+                              {rowCurrencySymbol}{Number(prod.regular_price).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -286,45 +413,88 @@ export default function ProductTable({
                       )}
                     </td>
 
-                    {/* Category & Tags */}
-                    <td className="py-3 px-4 max-w-[160px]">
+                    {/* Dedicated Category Column */}
+                    <td className="py-3 px-4 max-w-[140px]">
                       {isEditing ? (
-                        <div className="space-y-1">
-                          <input
-                            type="text"
-                            placeholder="Category"
-                            value={editForm.product_type}
-                            onChange={(e) => setEditForm({ ...editForm, product_type: e.target.value })}
-                            className="w-full px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white text-[11px] outline-none"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Tags (comma-separated)"
-                            value={editForm.tags}
-                            onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                            className="w-full px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded text-neutral-900 dark:text-white text-[10px] outline-none"
-                          />
-                        </div>
+                        <input
+                          type="text"
+                          placeholder="Category"
+                          value={editForm.product_type}
+                          onChange={(e) => setEditForm({ ...editForm, product_type: e.target.value })}
+                          className="w-full px-2 py-1 bg-neutral-100 dark:bg-neutral-900 border border-[#F1FF0A] rounded text-neutral-900 dark:text-white text-xs font-semibold outline-none"
+                        />
                       ) : (
-                        <div className="space-y-1">
-                          <span className="inline-block px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] text-neutral-700 dark:text-neutral-300 truncate max-w-full">
-                            {prod.product_type || 'General'}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-full">
+                          {prod.product_type || prod.category || 'General'}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Dedicated Product Type Column */}
+                    <td className="py-3 px-4 max-w-[130px]">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          placeholder="Type (e.g. T-Shirt)"
+                          value={editForm.type}
+                          onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                          className="w-full px-2 py-1 bg-neutral-100 dark:bg-neutral-900 border border-[#F1FF0A] rounded text-neutral-900 dark:text-white text-xs font-semibold outline-none"
+                        />
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-bold truncate max-w-full">
+                          {displayType}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Dedicated Template Suffix Column */}
+                    <td className="py-3 px-4 max-w-[120px]">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          placeholder="Suffix (e.g. pre-order)"
+                          value={editForm.template_suffix}
+                          onChange={(e) => setEditForm({ ...editForm, template_suffix: e.target.value })}
+                          className="w-full px-2 py-1 bg-neutral-100 dark:bg-neutral-900 border border-[#F1FF0A] rounded text-neutral-900 dark:text-white text-xs font-mono outline-none"
+                        />
+                      ) : (
+                        displayTemplate ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-mono font-bold truncate max-w-full">
+                            {displayTemplate}
                           </span>
-                          {tagsList.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {tagsList.slice(0, 2).map((t, i) => (
-                                <span key={i} className="text-[9px] px-1.5 py-0.2 rounded bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-400 truncate max-w-[80px]">
-                                  #{t}
-                                </span>
-                              ))}
-                              {tagsList.length > 2 && (
-                                <span className="text-[9px] font-mono text-neutral-400">
-                                  +{tagsList.length - 2}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        ) : (
+                          <span className="text-neutral-400 dark:text-neutral-600 text-[11px] font-mono">default</span>
+                        )
+                      )}
+                    </td>
+
+                    {/* Dedicated Tags Column */}
+                    <td className="py-3 px-4 max-w-[180px]">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          placeholder="Tags (comma-separated)"
+                          value={editForm.tags}
+                          onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                          className="w-full px-2 py-1 bg-neutral-100 dark:bg-neutral-900 border border-[#F1FF0A] rounded text-neutral-900 dark:text-white text-xs outline-none"
+                        />
+                      ) : (
+                        tagsList.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {tagsList.slice(0, 2).map((t, i) => (
+                              <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 truncate max-w-[90px]">
+                                #{t}
+                              </span>
+                            ))}
+                            {tagsList.length > 2 && (
+                              <span className="text-[10px] font-mono text-neutral-400 font-semibold" title={tagsList.slice(2).join(', ')}>
+                                +{tagsList.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-neutral-400 dark:text-neutral-600 text-[11px]">-</span>
+                        )
                       )}
                     </td>
 

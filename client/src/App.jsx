@@ -19,6 +19,7 @@ import AccessibilityWidget from './components/AccessibilityWidget';
 import { Table, LayoutGrid, Eye, Search, RotateCcw } from 'lucide-react';
 import { saveCatalogData, loadCatalogData, clearCatalogData } from './utils/storage';
 import { getApiBaseUrl } from './utils/api';
+import { getCurrencySymbol } from './utils/currency';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('app'); // 'app' | 'about' | 'pricing' | 'contact'
@@ -99,6 +100,33 @@ export default function App() {
     return '';
   });
 
+  // Customizable Category (Optional override, default: '')
+  const [customCategory, setCustomCategory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_custom_category');
+      if (saved !== null && saved !== undefined) return saved;
+    } catch (e) {}
+    return '';
+  });
+
+  // Customizable Product Type (Optional override, default: '')
+  const [customType, setCustomType] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_custom_type');
+      if (saved !== null && saved !== undefined) return saved;
+    } catch (e) {}
+    return '';
+  });
+
+  // Customizable Theme Template Suffix (Optional override, default: '')
+  const [customTemplate, setCustomTemplate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('getproducts_custom_template');
+      if (saved !== null && saved !== undefined) return saved;
+    } catch (e) {}
+    return '';
+  });
+
   // Price Markup / Profit Margin (None, +%, +$)
   const [priceMarkup, setPriceMarkup] = useState(() => {
     try {
@@ -141,6 +169,27 @@ export default function App() {
     setCustomVendor(val);
     try {
       localStorage.setItem('getproducts_custom_vendor', val);
+    } catch (e) {}
+  };
+
+  const handleSetCustomCategory = (val) => {
+    setCustomCategory(val);
+    try {
+      localStorage.setItem('getproducts_custom_category', val);
+    } catch (e) {}
+  };
+
+  const handleSetCustomType = (val) => {
+    setCustomType(val);
+    try {
+      localStorage.setItem('getproducts_custom_type', val);
+    } catch (e) {}
+  };
+
+  const handleSetCustomTemplate = (val) => {
+    setCustomTemplate(val);
+    try {
+      localStorage.setItem('getproducts_custom_template', val);
     } catch (e) {}
   };
 
@@ -269,12 +318,15 @@ export default function App() {
     return num;
   };
 
-  // Effective products list reflecting active custom vendor override, price markup, and stock
+  // Effective products list reflecting active custom vendor override, category override, type, template, price markup, and stock
   const effectiveProducts = useMemo(() => {
     const activeStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
 
     return products.map(p => {
       const vName = customVendor && customVendor.trim() ? customVendor.trim() : p.vendor;
+      const catName = customCategory && customCategory.trim() ? customCategory.trim() : (p.product_type || p.category || 'General');
+      const typeName = customType && customType.trim() ? customType.trim() : (p.type || p.product_type || p.category || 'General');
+      const templateSuffix = customTemplate && customTemplate.trim() ? customTemplate.trim() : (p.template_suffix || p.template || '');
       const markedPrice = applyMarkupMath(p.price || 0);
       const markedRegPrice = p.regular_price ? applyMarkupMath(p.regular_price) : 0;
       
@@ -297,16 +349,34 @@ export default function App() {
           : activeStock
       }));
 
+      // Preserve or auto-resolve accurate currency
+      const isBdSite = Boolean(
+        url.includes('.bd') ||
+        url.includes('maktabatulas') ||
+        url.includes('rokomari') ||
+        url.includes('wafilife') ||
+        (p.title && /[\u0980-\u09FF]/.test(p.title))
+      );
+      const itemCurrency = (p.currency && p.currency !== 'USD')
+        ? p.currency
+        : (isBdSite ? 'BDT' : (p.currency || 'USD'));
+
       return {
         ...p,
         vendor: vName,
+        product_type: catName,
+        category: catName,
+        type: typeName,
+        template_suffix: templateSuffix,
+        template: templateSuffix,
         price: markedPrice,
         regular_price: markedRegPrice > markedPrice ? markedRegPrice : (p.regular_price || 0),
+        currency: itemCurrency,
         images: imgs,
         variants
       };
     });
-  }, [products, customVendor, priceMarkup, maxImages, defaultStock]);
+  }, [products, url, customVendor, customCategory, customType, customTemplate, priceMarkup, maxImages, defaultStock]);
 
   // Filtered products based on search bar
   const filteredProducts = useMemo(() => {
@@ -316,6 +386,9 @@ export default function App() {
       p.title?.toLowerCase().includes(q) ||
       p.vendor?.toLowerCase().includes(q) ||
       p.product_type?.toLowerCase().includes(q) ||
+      p.category?.toLowerCase().includes(q) ||
+      p.type?.toLowerCase().includes(q) ||
+      p.template_suffix?.toLowerCase().includes(q) ||
       p.handle?.toLowerCase().includes(q) ||
       (Array.isArray(p.tags) && p.tags.some(t => t.toLowerCase().includes(q)))
     );
@@ -337,7 +410,7 @@ export default function App() {
     const totalVariants = effectiveProducts.reduce((acc, p) => acc + (p.variants?.length || 1), 0);
     const totalImages = effectiveProducts.reduce((acc, p) => acc + (p.images?.length || 0), 0);
     const currency = effectiveProducts[0]?.currency || 'USD';
-    const currencySymbol = currency === 'BDT' ? '৳' : (currency === 'EUR' ? '€' : (currency === 'GBP' ? '£' : '$'));
+    const currencySymbol = getCurrencySymbol(currency);
 
     return {
       totalProducts: effectiveProducts.length,
@@ -366,7 +439,42 @@ export default function App() {
     }
   };
 
-  // Bulk Tag Operations
+  // Bulk Category & Tag Operations
+  const handleBulkSetCategory = (targetIds, newCategory) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      return {
+        ...p,
+        product_type: newCategory,
+        category: newCategory
+      };
+    }));
+  };
+
+  const handleBulkSetType = (targetIds, newType) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      return {
+        ...p,
+        type: newType
+      };
+    }));
+  };
+
+  const handleBulkSetTemplate = (targetIds, newTemplate) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      return {
+        ...p,
+        template_suffix: newTemplate,
+        template: newTemplate
+      };
+    }));
+  };
+
   const handleBulkAddTags = (targetIds, newTagsList) => {
     const targetSet = new Set(targetIds);
     setProducts(prev => prev.map(p => {
@@ -394,7 +502,7 @@ export default function App() {
   };
 
   // Find & Replace Handler
-  const handleFindReplace = ({ findText, replaceText, matchTitle, matchDescription, matchVendor, caseSensitive }) => {
+  const handleFindReplace = ({ findText, replaceText, matchTitle, matchDescription, matchVendor, matchCategory, caseSensitive }) => {
     if (!findText.trim()) return;
 
     const flags = caseSensitive ? 'g' : 'gi';
@@ -405,6 +513,9 @@ export default function App() {
       let updatedTitle = p.title;
       let updatedDesc = p.description;
       let updatedVendor = p.vendor;
+      let updatedProductType = p.product_type;
+      let updatedCategory = p.category;
+      let updatedType = p.type;
 
       if (matchTitle && p.title) {
         updatedTitle = p.title.replace(regex, replaceText);
@@ -415,12 +526,23 @@ export default function App() {
       if (matchVendor && p.vendor) {
         updatedVendor = p.vendor.replace(regex, replaceText);
       }
+      if (matchCategory && (p.product_type || p.category || p.type)) {
+        const catStr = p.product_type || p.category || '';
+        updatedProductType = catStr.replace(regex, replaceText);
+        updatedCategory = updatedProductType;
+        if (p.type) {
+          updatedType = p.type.replace(regex, replaceText);
+        }
+      }
 
       return {
         ...p,
         title: updatedTitle,
         description: updatedDesc,
-        vendor: updatedVendor
+        vendor: updatedVendor,
+        product_type: updatedProductType,
+        category: updatedCategory,
+        type: updatedType
       };
     }));
   };
@@ -510,7 +632,7 @@ export default function App() {
   };
 
   // Export Trigger
-  const handleExport = async (format, customStock, overrideVendor) => {
+  const handleExport = async (format, customStock, overrideVendor, overrideCategory, overrideType, overrideTemplate) => {
     // Export selected items if any are checked, otherwise all effective products
     const exportItems = selectedProducts.length > 0 ? selectedProducts : effectiveProducts;
     if (exportItems.length === 0) return;
@@ -529,6 +651,9 @@ export default function App() {
         ? Number(customStock) 
         : (defaultStock !== '' ? Number(defaultStock) : 99);
       const effectiveVendor = overrideVendor !== undefined ? overrideVendor : customVendor;
+      const effectiveCategory = overrideCategory !== undefined ? overrideCategory : customCategory;
+      const effectiveType = overrideType !== undefined ? overrideType : customType;
+      const effectiveTemplate = overrideTemplate !== undefined ? overrideTemplate : customTemplate;
       const apiBase = getApiBaseUrl();
 
       const response = await fetch(`${apiBase}/api/export`, {
@@ -540,6 +665,9 @@ export default function App() {
           defaultStock: effectiveStock,
           inventoryPolicy,
           customVendor: effectiveVendor,
+          customCategory: effectiveCategory,
+          customType: effectiveType,
+          customTemplate: effectiveTemplate,
           priceMarkup,
           maxImages,
           proxyBase: window.location.origin,
@@ -650,6 +778,12 @@ export default function App() {
                 onInventoryPolicyChange={handleSetInventoryPolicy}
                 customVendor={customVendor}
                 onCustomVendorChange={handleSetCustomVendor}
+                customCategory={customCategory}
+                onCustomCategoryChange={handleSetCustomCategory}
+                customType={customType}
+                onCustomTypeChange={handleSetCustomType}
+                customTemplate={customTemplate}
+                onCustomTemplateChange={handleSetCustomTemplate}
                 priceMarkup={priceMarkup}
                 onPriceMarkupChange={handleSetPriceMarkup}
                 maxImages={maxImages}
@@ -674,7 +808,7 @@ export default function App() {
                       aria-label="Search extracted products by title, vendor, or tags"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search extracted products by title, vendor, category, tags..."
+                      placeholder="Search extracted products by title, vendor, category, type, tags..."
                       className="w-full pl-9 pr-4 py-2 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-[#F1FF0A] transition-colors shadow-sm"
                     />
                   </div>
@@ -736,7 +870,8 @@ export default function App() {
                     onToggleSelectAll={handleToggleSelectAll}
                     onOpenBulkTags={() => setBulkTagModalOpen(true)}
                     onBulkDelete={() => handleBulkDelete(selectedProductIds)}
-                    onBulkExport={() => handleExport('shopify')}
+                    onBulkExport={(format) => handleExport(format || 'shopify')}
+                    onOpenPreview={(format) => handleOpenPreview(format || 'shopify')}
                     currencySymbol={stats?.currencySymbol || '$'}
                     defaultStock={defaultStock}
                   />
@@ -775,6 +910,12 @@ export default function App() {
         inventoryPolicy={inventoryPolicy}
         customVendor={customVendor}
         onCustomVendorChange={handleSetCustomVendor}
+        customCategory={customCategory}
+        onCustomCategoryChange={handleSetCustomCategory}
+        customType={customType}
+        onCustomTypeChange={handleSetCustomType}
+        customTemplate={customTemplate}
+        onCustomTemplateChange={handleSetCustomTemplate}
         priceMarkup={priceMarkup}
         onPriceMarkupChange={handleSetPriceMarkup}
         maxImages={maxImages}
@@ -790,7 +931,7 @@ export default function App() {
         onApplyReplace={handleFindReplace}
       />
 
-      {/* Bulk Tag Modal for Selected Products */}
+      {/* Bulk Tag, Category, Type & Template Modal for Selected Products */}
       <BulkTagModal
         isOpen={bulkTagModalOpen}
         onClose={() => setBulkTagModalOpen(false)}
@@ -798,6 +939,9 @@ export default function App() {
         products={products}
         onApplyAddTags={handleBulkAddTags}
         onApplyRemoveTag={handleBulkRemoveTag}
+        onApplySetCategory={handleBulkSetCategory}
+        onApplySetType={handleBulkSetType}
+        onApplySetTemplate={handleBulkSetTemplate}
       />
 
       {/* Fixed Bottom Docked Footer */}

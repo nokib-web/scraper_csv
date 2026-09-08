@@ -16,6 +16,12 @@ export default function FormatPreviewModal({
   inventoryPolicy = 'continue',
   customVendor = '',
   onCustomVendorChange,
+  customCategory = '',
+  onCustomCategoryChange,
+  customType = '',
+  onCustomTypeChange,
+  customTemplate = '',
+  onCustomTemplateChange,
   priceMarkup = { type: 'none', value: 0 },
   onPriceMarkupChange,
   maxImages = 0,
@@ -46,6 +52,9 @@ export default function FormatPreviewModal({
         defaultStock,
         inventoryPolicy,
         customVendor,
+        customCategory,
+        customType,
+        customTemplate,
         priceMarkup,
         maxImages,
         proxyBase: window.location.origin 
@@ -60,7 +69,7 @@ export default function FormatPreviewModal({
         setPreviewContent(`Error generating preview: ${e.message}`);
         setIsLoading(false);
       });
-  }, [isOpen, activeTab, products, storeName, defaultStock, inventoryPolicy, customVendor, priceMarkup, maxImages]);
+  }, [isOpen, activeTab, products, storeName, defaultStock, inventoryPolicy, customVendor, customCategory, customType, customTemplate, priceMarkup, maxImages]);
 
   const handleCopy = async () => {
     try {
@@ -106,7 +115,7 @@ export default function FormatPreviewModal({
             </button>
 
             <button
-              onClick={() => onExport(activeTab, defaultStock, customVendor)}
+              onClick={() => onExport(activeTab, defaultStock, customVendor, customCategory, customType, customTemplate)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F1FF0A] hover:bg-[#D4FF00] text-black text-xs font-extrabold transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -141,7 +150,17 @@ export default function FormatPreviewModal({
             ))}
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-neutral-500 font-mono">
+          <div className="flex items-center gap-2 text-[11px] text-neutral-500 font-mono flex-wrap">
+            {customType && (
+              <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20">
+                Type: {customType}
+              </span>
+            )}
+            {customTemplate && (
+              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                Template: {customTemplate}
+              </span>
+            )}
             {priceMarkup?.type !== 'none' && (
               <span className="px-2 py-0.5 rounded bg-[#F1FF0A]/10 text-[#8b9900] dark:text-[#F1FF0A] font-bold">
                 Markup: +{priceMarkup.value}{priceMarkup.type === 'percent' ? '%' : ''}

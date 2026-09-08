@@ -1,11 +1,12 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { fetchWithBrowserFallback, DEFAULT_HEADERS } = require('./detector');
+const { detectStoreCurrency, normalizeCurrencyCode } = require('./currencyHelper');
 
 /**
  * Normalizes a WooCommerce Store API product into the unified format
  */
-function normalizeWooProduct(item, origin) {
+function normalizeWooProduct(item, origin, defaultCurrency = 'USD') {
   const images = (item.images || []).map((img, idx) => {
     let src = typeof img === 'string' ? img : (img.src || img.thumbnail || img.url || '');
     if (src.startsWith('//')) src = `https:${src}`;
@@ -86,7 +87,7 @@ function normalizeWooProduct(item, origin) {
     created_at: item.date_created || new Date().toISOString(),
     price: price,
     regular_price: regularPrice,
-    currency: item.prices?.currency_code || 'USD',
+    currency: normalizeCurrencyCode(item.prices?.currency_code) || normalizeCurrencyCode(item.prices?.currency_symbol) || defaultCurrency || 'USD',
     variants: variations,
     images: images,
     options: item.attributes || [],
@@ -174,6 +175,8 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
   try {
     const res = await fetchWithBrowserFallback(shopUrl, 10000);
     const $ = cheerio.load(res.data);
+    const detectedCurrency = detectStoreCurrency(res.data, shopUrl, $);
+    if (onLog) onLog(`Detected WooCommerce store currency: ${detectedCurrency}`);
 
     // Single product page
     if ($('.single-product').length > 0 || $('.product.type-product').length === 1) {
@@ -205,7 +208,7 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
         created_at: new Date().toISOString(),
         price: parseFloat(priceText) || 0,
         regular_price: parseFloat(regPriceText) || parseFloat(priceText) || 0,
-        currency: 'USD',
+        currency: detectedCurrency,
         variants: [{
           id: '1',
           title: 'Default Title',
@@ -254,7 +257,7 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
           created_at: new Date().toISOString(),
           price: parseFloat(priceText) || 0,
           regular_price: parseFloat(regPriceText) || parseFloat(priceText) || 0,
-          currency: 'USD',
+          currency: detectedCurrency,
           variants: [{
             id: `${Date.now()}-${idx}`,
             title: 'Default Title',

@@ -41,12 +41,12 @@ const WOO_HEADERS = [
   'Position'
 ];
 
-function formatWooDescription(p, customBrand) {
+function formatWooDescription(p, customBrand, customCat) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim() && p.description.includes('<p>')) {
     return p.description.trim();
   }
   const brand = customBrand || p.vendor || 'Store';
-  const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
+  const cat = customCat || p.product_type || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   const price = p.price ? `${p.currency || 'USD'} ${p.price}` : '';
 
   return `<p><strong>${p.title}</strong> is a high-grade ${cat} provided by <strong>${brand}</strong>.</p><ul><li><strong>Category:</strong> ${cat}</li><li><strong>Brand:</strong> ${brand}</li>${price ? `<li><strong>Price:</strong> ${price}</li>` : ''}<li><strong>Condition:</strong> 100% Genuine & Brand New</li><li><strong>In Stock:</strong> Yes</li></ul>`;
@@ -83,6 +83,7 @@ function applyPriceMarkup(price, markup) {
  * @param {Object} [options]
  * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
+ * @param {string} [options.customCategory='']
  * @param {number} [options.maxImages=0]
  * @param {Object} [options.priceMarkup]
  * @returns {string} CSV string
@@ -92,6 +93,7 @@ function exportWooCommerceCsv(products, options = {}) {
     ? Number(options.defaultStock)
     : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
 
@@ -103,7 +105,7 @@ function exportWooCommerceCsv(products, options = {}) {
     }
     const images = rawImages.map(img => sanitizeImageUrl(typeof img === 'string' ? img : img.src)).filter(Boolean).join(', ');
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
-    const categories = p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General');
+    const categories = customCategory || p.product_type || p.category || (Array.isArray(p.tags) ? p.tags[0] : 'General');
     const mainVariant = p.variants?.[0] || {};
     const effectiveVendor = customVendor || p.vendor || 'Store';
 
@@ -125,7 +127,7 @@ function exportWooCommerceCsv(products, options = {}) {
       'Is featured?': '0',
       'Visibility in catalog': 'visible',
       'Short description': `${p.title} by ${effectiveVendor}. 100% genuine product.`,
-      'Description': formatWooDescription({ ...p, price: markedPrice }, customVendor),
+      'Description': formatWooDescription({ ...p, price: markedPrice }, customVendor, customCategory),
       'Date sale price starts': '',
       'Date sale price ends': '',
       'Tax status': 'taxable',

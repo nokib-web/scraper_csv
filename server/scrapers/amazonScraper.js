@@ -1,5 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { detectStoreCurrency } = require('./currencyHelper');
 
 const AMAZON_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -50,6 +51,7 @@ async function scrapeAmazon(url, options = {}, onLog) {
 
   const html = res.data;
   const $ = cheerio.load(html);
+  const detectedCurrency = detectStoreCurrency(html, targetUrl, $);
 
   // 1. Single Product Page (/dp/ or /gp/product/ or product title present)
   const asinMatch = targetUrl.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
@@ -106,7 +108,7 @@ async function scrapeAmazon(url, options = {}, onLog) {
         created_at: new Date().toISOString(),
         price,
         regular_price: price,
-        currency: 'USD',
+        currency: detectedCurrency,
         variants: [{
           id: asin,
           title: 'Default Title',
@@ -175,7 +177,7 @@ async function scrapeAmazon(url, options = {}, onLog) {
         created_at: new Date().toISOString(),
         price,
         regular_price: price,
-        currency: 'USD',
+        currency: detectedCurrency,
         variants: [{
           id: asin,
           title: 'Default Title',

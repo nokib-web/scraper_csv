@@ -1,6 +1,7 @@
 const cheerio = require('cheerio');
 const axios = require('axios');
 const { fetchWithBrowserFallback } = require('./detector');
+const { detectStoreCurrency, normalizeCurrencyCode } = require('./currencyHelper');
 
 /**
  * Universal Image URL Extractor with Hotlink, Lazy-load, Picture tag & CSS Background resolution
@@ -176,14 +177,14 @@ const GLOBAL_BLACKLIST = new Set([
 /**
  * Parses Schema.org Product JSON-LD block
  */
-function parseJsonLdProduct(item, origin, fallbackUrl) {
+function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') {
   if (!item) return null;
   const title = item.name || item.headline;
   if (!title) return null;
 
   let price = 0;
   let regularPrice = 0;
-  let currency = 'USD';
+  let currency = defaultCurrency || 'USD';
   let sku = item.sku || item.productID || item.mpn || `SKU-${Date.now()}`;
   let inStock = true;
 
@@ -191,7 +192,7 @@ function parseJsonLdProduct(item, origin, fallbackUrl) {
     const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
     price = parseFloat(offer.price || offer.lowPrice || offer.highPrice || 0) || 0;
     regularPrice = parseFloat(offer.highPrice || offer.price || price) || price;
-    currency = offer.priceCurrency || (fallbackUrl.includes('.bd') ? 'BDT' : 'USD');
+    currency = normalizeCurrencyCode(offer.priceCurrency) || defaultCurrency || 'USD';
     if (offer.availability) {
       inStock = !offer.availability.includes('OutOfStock');
     }
@@ -247,7 +248,7 @@ function parseJsonLdProduct(item, origin, fallbackUrl) {
 /**
  * Universal Next.js RSC (__next_f) Extractor (for Wafilife and Next.js Apps)
  */
-function extractNextJsProducts(html, origin, maxProducts = 5000) {
+function extractNextJsProducts(html, origin, maxProducts = 5000, defaultCurrency = 'BDT') {
   const products = [];
   const jsonChunks = [...html.matchAll(/self\.__next_f\.push\(\[1,"(.*)"\]\)/g)];
 
@@ -273,16 +274,16 @@ function extractNextJsProducts(html, origin, maxProducts = 5000) {
               id: String(itemJson.id || itemJson._id || Date.now() + Math.random()),
               title: title,
               handle: slug,
-              description: itemJson.description || `${title} - Available on Wafilife.`,
-              vendor: itemJson.author || itemJson.publisher || 'Wafilife',
-              product_type: itemJson.category || 'Books',
+              description: itemJson.description || `${title} - Available on store.`,
+              vendor: itemJson.author || itemJson.publisher || 'Store',
+              product_type: itemJson.category || 'General',
               tags: [itemJson.category, itemJson.author].filter(Boolean),
               status: 'active',
               published_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               price: price,
               regular_price: regPrice >= price ? regPrice : price,
-              currency: 'BDT',
+              currency: defaultCurrency || 'BDT',
               variants: [{
                 id: '1',
                 title: 'Default Title',
@@ -308,7 +309,7 @@ function extractNextJsProducts(html, origin, maxProducts = 5000) {
 /**
  * Universal SPA Bundle Scanner for React / Vite / Vercel applications with full pagination
  */
-async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
+async function scanSpaBundles(html, origin, maxProducts = 5000, onLog, defaultCurrency = 'USD') {
   const $ = cheerio.load(html);
   const scriptUrls = [];
   $('script[src]').each((_, el) => {
@@ -319,102 +320,82 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog) {
     }
   });
 
-  const products = [];
-
-  for (const sUrl of scriptUrls.slice(0, 5)) {
+  const apiEndpoints = [];
+  for (const sUrl of scriptUrls.slice(0, 8)) {
     try {
-      const res = await fetchWithBrowserFallback(sUrl, 6000);
-      const code = res.data;
-      if (typeof code !== 'string') continue;
-
-      const backendUrls = [...code.matchAll(/https?:\/\/[a-zA-Z0-9_.-]+(?:\.onrender\.com|\.vercel\.app|\.railway\.app|\.cyclic\.app|\.herokuapp\.com)/g)].map(m => m[0]);
-      const uniqueBackends = [...new Set(backendUrls)].filter(u => 
-        !u.includes('firebase') && !u.includes('google') && !u.includes('facebook') &&
-        !u.includes('localhost') && !u.includes('127.0.0.1') && !u.includes('192.168.')
-      );
-
-      const testPaths = [
-        '/services?limit=5000',
-        '/products?limit=5000',
-        '/items?limit=5000',
-        '/api/products?limit=5000',
-        '/api/services?limit=5000',
-        '/api/items?limit=5000'
-      ];
-
-      for (const backend of uniqueBackends) {
-        for (const tp of testPaths) {
-          try {
-            if (onLog) onLog(`Probing SPA backend API: ${backend}${tp}...`);
-            const apiRes = await axios.get(`${backend}${tp}`, { timeout: 6000 });
-            let list = Array.isArray(apiRes.data) ? apiRes.data : (apiRes.data?.data || apiRes.data?.services || apiRes.data?.products || []);
-
-            const totalInBackend = apiRes.data?.total || list.length;
-            if (totalInBackend > list.length) {
-              const fetchLimit = Math.min(totalInBackend, maxProducts);
-              try {
-                const fullRes = await axios.get(`${backend}${tp.split('?')[0]}?limit=${fetchLimit}&page=1`, { timeout: 6000 });
-                const fullList = Array.isArray(fullRes.data) ? fullRes.data : (fullRes.data?.data || fullRes.data?.services || fullRes.data?.products || []);
-                if (fullList.length > list.length) list = fullList;
-              } catch (e) {}
-            }
-
-            if (Array.isArray(list) && list.length > 0 && (list[0].title || list[0].name)) {
-              if (onLog) onLog(`Discovered live backend API! Extracted ${list.length} total items from ${backend}`);
-              for (const item of list) {
-                if (products.length >= maxProducts) break;
-                const title = item.title || item.name;
-                const price = parseFloat(item.price || item.cost || item.amount || 0) || 0;
-                const img = item.image || item.imageUrl || item.img || (Array.isArray(item.images) ? item.images[0] : '');
-                const desc = item.description || item.details || title;
-                const category = item.category || 'General';
-
-                products.push({
-                  id: String(item._id || item.id || Date.now() + Math.random()),
-                  title: title,
-                  handle: title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
-                  description: desc,
-                  vendor: item.serviceProvider || origin.replace(/^https?:\/\//, ''),
-                  product_type: category,
-                  tags: Array.isArray(item.tags) ? item.tags : [category],
-                  status: 'active',
-                  published_at: item.createdAt || new Date().toISOString(),
-                  created_at: item.createdAt || new Date().toISOString(),
-                  price: price,
-                  regular_price: price,
-                  currency: 'USD',
-                  variants: [{
-                    id: '1',
-                    title: 'Default Title',
-                    price: price,
-                    compare_at_price: null,
-                    sku: `SKU-${Date.now()}`,
-                    inventory_quantity: 99,
-                    available: true,
-                    weight: 0,
-                    barcode: ''
-                  }],
-                  images: img ? [{ id: 1, src: img, alt: title, position: 1 }] : [],
-                  options: [],
-                  url: origin,
-                  source: 'spa_backend'
-                });
-              }
-              return products;
-            }
-          } catch (e) {}
+      const res = await axios.get(sUrl, { timeout: 6000 });
+      const js = res.data;
+      if (typeof js === 'string') {
+        const matches = js.match(/\/api\/[a-zA-Z0-9_\-\/]+/g) || [];
+        for (const m of matches) {
+          if (!apiEndpoints.includes(m) && (m.includes('product') || m.includes('item') || m.includes('catalog') || m.includes('decor'))) {
+            apiEndpoints.push(m);
+          }
         }
       }
     } catch (e) {}
   }
 
-  return products;
+  for (const ep of apiEndpoints) {
+    try {
+      const apiUrl = `${origin}${ep}`;
+      const res = await axios.get(apiUrl, { timeout: 6000 });
+      const data = res.data;
+      const list = Array.isArray(data) ? data : (data.products || data.items || data.data || []);
+      if (Array.isArray(list) && list.length > 0) {
+        const products = [];
+        for (const item of list) {
+          if (products.length >= maxProducts) break;
+          const title = item.title || item.name || item.productName;
+          const price = parseFloat(item.price || item.currentPrice || 0) || 0;
+          let img = item.image || item.imageUrl || (Array.isArray(item.images) ? item.images[0] : '');
+          if (img && img.startsWith('//')) img = `https:${img}`;
+
+          if (title) {
+            products.push({
+              id: String(item.id || item._id || Date.now() + Math.random()),
+              title: title,
+              handle: item.slug || title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
+              description: item.description || title,
+              vendor: origin.replace(/^https?:\/\//, ''),
+              product_type: item.category || 'General',
+              tags: [item.category].filter(Boolean),
+              status: 'active',
+              published_at: item.createdAt || new Date().toISOString(),
+              created_at: item.createdAt || new Date().toISOString(),
+              price: price,
+              regular_price: price,
+              currency: defaultCurrency || 'USD',
+              variants: [{
+                id: '1',
+                title: 'Default Title',
+                price: price,
+                compare_at_price: null,
+                sku: `SKU-${Date.now()}`,
+                inventory_quantity: 99,
+                available: true,
+                weight: 0,
+                barcode: ''
+              }],
+              images: img ? [{ id: 1, src: img, alt: title, position: 1 }] : [],
+              options: [],
+              url: origin,
+              source: 'spa_backend'
+            });
+          }
+        }
+        return products;
+      }
+    } catch (e) {}
+  }
+
+  return [];
 }
 
 /**
  * Extracts products from raw Cheerio DOM (Universal Cluster Matching)
  */
-function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
+function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defaultCurrency = 'USD') {
   const products = [];
 
   const cardSelectors = [
@@ -472,7 +453,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog) {
               created_at: new Date().toISOString(),
               price,
               regular_price: regularPrice >= price ? regularPrice : price,
-              currency: (currentUrl.includes('.bd') || origin.includes('.bd') || origin.includes('ryans.com') || origin.includes('wafilife') || origin.includes('rokomari') || origin.includes('ghorerbazar') || origin.includes('startech') || origin.includes('batabd')) ? 'BDT' : 'USD',
+              currency: defaultCurrency || 'USD',
               variants: [{
                 id: `${Date.now()}-${idx}`,
                 title: 'Default Title',
@@ -515,10 +496,13 @@ async function scrapeGenericSite(url, options = {}, onLog) {
   const html = response.data;
   const $ = cheerio.load(html);
 
+  const detectedCurrency = detectStoreCurrency(html, url, $);
+  if (onLog) onLog(`Detected store currency: ${detectedCurrency}`);
+
   // 1. Next.js RSC Stream / Wafilife
   if (html.includes('self.__next_f.push')) {
     if (onLog) onLog('Inspecting Next.js React Server Component catalog stream...');
-    const nextProds = extractNextJsProducts(html, origin, maxProducts);
+    const nextProds = extractNextJsProducts(html, origin, maxProducts, detectedCurrency);
     if (nextProds.length > 0) {
       if (onLog) onLog(`Extracted ${nextProds.length} products from Next.js catalog stream!`);
       return nextProds.slice(0, maxProducts);
@@ -528,7 +512,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
   // 2. Client-Side SPA Bundles (Only for empty skeleton SPAs like style-decor)
   if (html.length < 3500 && ($('#root').length > 0 || $('#app').length > 0 || $('div#root, div#__next, div#app').length > 0)) {
     if (onLog) onLog('Inspecting SPA JavaScript bundles for connected REST API backend...');
-    const spaProducts = await scanSpaBundles(html, origin, maxProducts, onLog);
+    const spaProducts = await scanSpaBundles(html, origin, maxProducts, onLog, detectedCurrency);
     if (spaProducts.length > 0) {
       if (onLog) onLog(`Successfully extracted ${spaProducts.length} total products from SPA backend!`);
       return spaProducts.slice(0, maxProducts);
@@ -550,7 +534,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       for (const item of candidates) {
         if (products.length >= maxProducts) break;
         if (item['@type'] === 'Product' || item['@type']?.includes?.('Product')) {
-          const prod = parseJsonLdProduct(item, origin, url);
+          const prod = parseJsonLdProduct(item, origin, url, detectedCurrency);
           if (prod && !products.some(p => p.title === prod.title)) {
             products.push(prod);
           }
@@ -560,7 +544,7 @@ async function scrapeGenericSite(url, options = {}, onLog) {
   });
 
   // 4. Universal DOM Cards
-  const initialDom = extractProductsFromDom($, origin, url, maxProducts, onLog);
+  const initialDom = extractProductsFromDom($, origin, url, maxProducts, onLog, detectedCurrency);
   for (const p of initialDom) {
     if (!products.some(x => x.title === p.title)) products.push(p);
   }

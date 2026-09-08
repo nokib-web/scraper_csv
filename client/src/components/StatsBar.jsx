@@ -39,8 +39,15 @@ export default function StatsBar({ stats, detection }) {
           <DollarSign className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-sm font-bold text-neutral-900 dark:text-white tracking-tight truncate max-w-[130px]">
-            {stats.currencySymbol || '$'}{stats.minPrice} - {stats.currencySymbol || '$'}{stats.maxPrice}
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-bold text-neutral-900 dark:text-white tracking-tight truncate max-w-[130px]">
+              {stats.currencySymbol || '$'}{stats.minPrice} - {stats.currencySymbol || '$'}{stats.maxPrice}
+            </span>
+            {stats.currency && (
+              <span className="px-1.5 py-0.5 rounded bg-[#F1FF0A]/10 text-[#8b9900] dark:text-[#F1FF0A] text-[9px] font-mono font-extrabold border border-[#F1FF0A]/20">
+                {stats.currency}
+              </span>
+            )}
           </div>
           <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Price Range</div>
         </div>

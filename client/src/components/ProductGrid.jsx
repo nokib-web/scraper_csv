@@ -1,6 +1,7 @@
 import React from 'react';
 import { ExternalLink, Trash2, CheckSquare, Square } from 'lucide-react';
 import ProductImage from './ProductImage';
+import { getCurrencySymbol } from '../utils/currency';
 
 export default function ProductGrid({ 
   products, 
@@ -76,11 +77,23 @@ export default function ProductGrid({
 
               {/* Product Info */}
               <div className="p-4 space-y-2">
-                <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-                  <span className="truncate max-w-[120px] font-medium">{prod.vendor || 'General'}</span>
-                  <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] text-neutral-700 dark:text-neutral-300">
-                    {prod.product_type || 'Item'}
-                  </span>
+                <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400 gap-1 flex-wrap">
+                  <span className="truncate max-w-[110px] font-medium">{prod.vendor || 'General'}</span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] text-neutral-700 dark:text-neutral-300 font-semibold truncate max-w-[100px]">
+                      {prod.product_type || prod.category || 'General'}
+                    </span>
+                    {prod.type && prod.type !== (prod.product_type || prod.category) && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[9px] font-bold">
+                        {prod.type}
+                      </span>
+                    )}
+                    {prod.template_suffix && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[9px] font-mono font-bold">
+                        {prod.template_suffix}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <h4 className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-[#8b9900] dark:group-hover:text-[#F1FF0A] transition-colors line-clamp-2 leading-relaxed">
@@ -106,35 +119,40 @@ export default function ProductGrid({
             </div>
 
             {/* Bottom Price, Stock & Link */}
-            <div className="p-4 pt-0 flex items-center justify-between border-t border-neutral-200 dark:border-neutral-900 mt-2">
-              <div className="pt-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-extrabold text-neutral-900 dark:text-[#F1FF0A]">
-                    {currencySymbol}{Number(prod.price || 0).toLocaleString()}
-                  </span>
-                  {prod.regular_price > prod.price && (
-                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through">
-                      {currencySymbol}{Number(prod.regular_price).toLocaleString()}
-                    </span>
+            {(() => {
+              const cardCurrencySymbol = prod.currency ? getCurrencySymbol(prod.currency) : (currencySymbol || '$');
+              return (
+                <div className="p-4 pt-0 flex items-center justify-between border-t border-neutral-200 dark:border-neutral-900 mt-2">
+                  <div className="pt-3">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-extrabold text-neutral-900 dark:text-[#F1FF0A]">
+                        {cardCurrencySymbol}{Number(prod.price || 0).toLocaleString()}
+                      </span>
+                      {prod.regular_price > prod.price && (
+                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 line-through">
+                          {cardCurrencySymbol}{Number(prod.regular_price).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      {prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock} in stock
+                    </div>
+                  </div>
+
+                  {prod.url && (
+                    <a
+                      href={prod.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer mt-3"
+                      title="View original"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
                   )}
                 </div>
-                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  {prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock} in stock
-                </div>
-              </div>
-
-              {prod.url && (
-                <a
-                  href={prod.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer mt-3"
-                  title="View original"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-            </div>
+              );
+            })()}
           </div>
         );
       })}

@@ -19,12 +19,12 @@ const WIX_HEADERS = [
   'cost'
 ];
 
-function formatWixDescription(p, customBrand) {
+function formatWixDescription(p, customBrand, customCat) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim()) {
     return p.description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
   const brand = customBrand || p.vendor || 'Store';
-  const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
+  const cat = customCat || p.product_type || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   return `${p.title} - High quality ${cat} by ${brand}. Genuine item in stock for fast delivery.`;
 }
 
@@ -47,6 +47,7 @@ function applyPriceMarkup(price, markup) {
  * @param {Object} [options]
  * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
+ * @param {string} [options.customCategory='']
  * @param {number} [options.maxImages=0]
  * @param {Object} [options.priceMarkup]
  * @returns {string} CSV string
@@ -56,6 +57,7 @@ function exportWixCsv(products, options = {}) {
     ? Number(options.defaultStock)
     : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
 
@@ -66,7 +68,7 @@ function exportWixCsv(products, options = {}) {
       rawImages = rawImages.slice(0, maxImagesLimit);
     }
     const images = rawImages.map(img => typeof img === 'string' ? img : img.src).filter(Boolean).join(';');
-    const collection = p.product_type || (Array.isArray(p.tags) ? p.tags[0] : 'General');
+    const collection = customCategory || p.product_type || p.category || (Array.isArray(p.tags) ? p.tags[0] : 'General');
     const mainVariant = p.variants?.[0] || {};
     
     const markedPrice = applyPriceMarkup(p.price || 0, priceMarkup);
@@ -83,7 +85,7 @@ function exportWixCsv(products, options = {}) {
       'handleId': handle,
       'fieldType': 'Product',
       'name': p.title || '',
-      'description': formatWixDescription({ ...p, price: markedPrice }, customVendor),
+      'description': formatWixDescription({ ...p, price: markedPrice }, customVendor, customCategory),
       'productImageUrl': images,
       'collection': collection,
       'sku': mainVariant.sku || `SKU-${handle}`,

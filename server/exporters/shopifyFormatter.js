@@ -35,7 +35,8 @@ const SHOPIFY_HEADERS = [
   'Variant Image',
   'Variant Weight Unit',
   'Cost per item',
-  'Status'
+  'Status',
+  'Template Suffix'
 ];
 
 const SHOPIFY_INVENTORY_HEADERS = [
@@ -52,12 +53,12 @@ const SHOPIFY_INVENTORY_HEADERS = [
   'Available'
 ];
 
-function formatHtmlDescription(p, customBrand) {
+function formatHtmlDescription(p, customBrand, customCat) {
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim() && p.description.includes('<p>')) {
     return p.description.trim();
   }
   const brand = customBrand || p.vendor || 'Store';
-  const cat = p.product_type || (Array.isArray(p.tags) && p.tags[0]) || 'General';
+  const cat = customCat || p.product_type || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'General';
   const price = p.price ? `${p.currency || 'USD'} ${p.price}` : '';
 
   if (p.description && p.description.trim() !== '' && p.description.trim() !== p.title?.trim()) {
@@ -74,6 +75,8 @@ function sanitizeImageUrl(src) {
   if (!s.startsWith('http://') && !s.startsWith('https://')) return '';
   
   try {
+    const parsed = new URL(s);
+    if (!parsed.protocol.startsWith('http')) return '';
     // Encode Unicode/Bangla characters so Shopify image downloader can fetch them properly
     return encodeURI(decodeURI(s));
   } catch (e) {
@@ -100,6 +103,9 @@ function applyPriceMarkup(price, markup) {
  * @param {Object} [options]
  * @param {number|string} [options.defaultStock=99]
  * @param {string} [options.customVendor='']
+ * @param {string} [options.customCategory='']
+ * @param {string} [options.customType='']
+ * @param {string} [options.customTemplate='']
  * @param {number} [options.maxImages=0]
  * @param {Object} [options.priceMarkup]
  * @param {string} [options.inventoryPolicy='continue'] - 'continue' | 'deny'
@@ -111,6 +117,9 @@ function exportShopifyCsv(products, options = {}) {
     ? Number(options.defaultStock)
     : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
+  const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
+  const customType = options.customType && options.customType.trim() ? options.customType.trim() : null;
+  const customTemplate = options.customTemplate && options.customTemplate.trim() ? options.customTemplate.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
   
@@ -125,6 +134,10 @@ function exportShopifyCsv(products, options = {}) {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
     const effectiveVendor = customVendor || p.vendor || '';
+    const effectiveCat = customCategory || p.category || p.product_type || '';
+    const effectiveType = customType || p.type || p.product_type || p.category || '';
+    const rawTemplate = customTemplate || p.template_suffix || p.template || '';
+    const effectiveTemplate = String(rawTemplate || '').replace(/^product\./i, '').trim();
     const markedPrice = applyPriceMarkup(p.price || 0, priceMarkup);
     const markedRegPrice = p.regular_price ? applyPriceMarkup(p.regular_price, priceMarkup) : '';
 
@@ -168,7 +181,7 @@ function exportShopifyCsv(products, options = {}) {
     }).filter(i => Boolean(i.src));
 
     const maxRows = Math.max(variants.length, images.length, 1);
-    const bodyHtml = formatHtmlDescription({ ...p, price: markedPrice }, customVendor);
+    const bodyHtml = formatHtmlDescription({ ...p, price: markedPrice }, customVendor, customCategory);
 
     const cleanOptName = (name, fallback) => {
       if (!name) return fallback;
@@ -202,8 +215,8 @@ function exportShopifyCsv(products, options = {}) {
         'Title': isFirstRow ? p.title : '',
         'Body (HTML)': isFirstRow ? bodyHtml : '',
         'Vendor': isFirstRow ? effectiveVendor : '',
-        'Product Category': '',
-        'Type': isFirstRow ? (p.product_type || '') : '',
+        'Product Category': isFirstRow ? effectiveCat : '',
+        'Type': isFirstRow ? effectiveType : '',
         'Tags': isFirstRow ? tags : '',
         'Published': isFirstRow ? 'TRUE' : '',
         'Option1 Name': isFirstRow ? opt1Name : '',
@@ -232,7 +245,8 @@ function exportShopifyCsv(products, options = {}) {
         'Variant Image': v && isFirstRow && img ? img.src : '',
         'Variant Weight Unit': v ? 'kg' : '',
         'Cost per item': '',
-        'Status': isFirstRow ? 'active' : ''
+        'Status': isFirstRow ? (p.status || 'active') : '',
+        'Template Suffix': isFirstRow ? effectiveTemplate : ''
       };
 
       rows.push(row);

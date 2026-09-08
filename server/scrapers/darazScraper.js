@@ -1,8 +1,9 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { fetchWithBrowserFallback } = require('./detector');
+const { detectStoreCurrency } = require('./currencyHelper');
 
-function normalizeDarazItem(it, origin) {
+function normalizeDarazItem(it, origin, defaultCurrency = 'BDT') {
   const title = it.name || it.title || 'Daraz Product';
   const handle = title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') || `item-${it.itemId || Date.now()}`;
   const price = parseFloat(it.price || it.priceShow || 0) || 0;
@@ -20,7 +21,7 @@ function normalizeDarazItem(it, origin) {
     id: String(it.itemId || Date.now() + Math.random()),
     title: title,
     handle: handle,
-    description: `${title} - Available on Daraz Bangladesh.`,
+    description: `${title} - Available on ${origin.replace(/^https?:\/\//, '')}.`,
     vendor: it.sellerName || 'Daraz Seller',
     product_type: category,
     tags: [category].filter(Boolean),
@@ -29,7 +30,7 @@ function normalizeDarazItem(it, origin) {
     created_at: new Date().toISOString(),
     price: price,
     regular_price: regularPrice,
-    currency: 'BDT',
+    currency: it.currency || defaultCurrency || 'BDT',
     variants: [{
       id: '1',
       title: 'Default Title',
@@ -53,6 +54,7 @@ async function scrapeDarazCatalog(url, options = {}, onLog) {
   const origin = parsedUrl.origin;
   const maxProducts = options.limit || 50;
   const products = [];
+  const detectedCurrency = detectStoreCurrency('', url);
 
   let targetUrl = url;
   const isHome = parsedUrl.pathname === '/' || parsedUrl.pathname === '';
@@ -82,7 +84,7 @@ async function scrapeDarazCatalog(url, options = {}, onLog) {
           if (Array.isArray(items) && items.length > 0) {
             for (const it of items) {
               if (products.length >= maxProducts) break;
-              const norm = normalizeDarazItem(it, origin);
+              const norm = normalizeDarazItem(it, origin, detectedCurrency);
               if (!products.some(p => p.title === norm.title)) {
                 products.push(norm);
               }
@@ -136,7 +138,7 @@ async function scrapeDarazCatalog(url, options = {}, onLog) {
 
       for (const it of items) {
         if (products.length >= maxProducts) break;
-        const norm = normalizeDarazItem(it, origin);
+        const norm = normalizeDarazItem(it, origin, detectedCurrency);
         if (!products.some(p => p.title === norm.title)) {
           products.push(norm);
         }

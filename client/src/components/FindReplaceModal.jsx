@@ -7,6 +7,7 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
   const [matchTitle, setMatchTitle] = useState(true);
   const [matchDescription, setMatchDescription] = useState(true);
   const [matchVendor, setMatchVendor] = useState(false);
+  const [matchCategory, setMatchCategory] = useState(false);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -42,6 +43,11 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
         const m = p.vendor.match(regex);
         if (m) prodMatches += m.length;
       }
+      if (matchCategory && (p.product_type || p.category)) {
+        const cat = p.product_type || p.category;
+        const m = cat.match(regex);
+        if (m) prodMatches += m.length;
+      }
 
       if (prodMatches > 0) {
         matchingProductsCount++;
@@ -50,7 +56,7 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
     }
 
     return { totalMatches, matchingProductsCount };
-  }, [findText, matchTitle, matchDescription, matchVendor, caseSensitive, products]);
+  }, [findText, matchTitle, matchDescription, matchVendor, matchCategory, caseSensitive, products]);
 
   if (!isOpen) return null;
 
@@ -63,6 +69,7 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
       matchTitle,
       matchDescription,
       matchVendor,
+      matchCategory,
       caseSensitive
     });
 
@@ -180,11 +187,20 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
+                  checked={matchCategory}
+                  onChange={(e) => setMatchCategory(e.target.checked)}
+                  className="rounded text-[#F1FF0A] focus:ring-[#F1FF0A]"
+                />
+                <span>Categories</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none col-span-2 pt-1 border-t border-neutral-200 dark:border-neutral-800/80">
+                <input
+                  type="checkbox"
                   checked={caseSensitive}
                   onChange={(e) => setCaseSensitive(e.target.checked)}
                   className="rounded text-[#F1FF0A] focus:ring-[#F1FF0A]"
                 />
-                <span>Case Sensitive</span>
+                <span>Case Sensitive Match</span>
               </label>
             </div>
           </div>

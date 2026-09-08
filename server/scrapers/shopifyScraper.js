@@ -1,11 +1,12 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { DEFAULT_HEADERS } = require('./detector');
+const { detectStoreCurrency } = require('./currencyHelper');
 
 /**
  * Normalizes a raw Shopify product object to the unified format
  */
-function normalizeShopifyProduct(item, origin) {
+function normalizeShopifyProduct(item, origin, defaultCurrency = 'USD') {
   const handle = item.handle || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `prod-${item.id}`);
   const productUrl = item.url ? (item.url.startsWith('http') ? item.url : `${origin}${item.url.startsWith('/') ? '' : '/'}${item.url}`) : `${origin}/products/${handle}`;
 
@@ -84,7 +85,7 @@ function normalizeShopifyProduct(item, origin) {
     created_at: item.created_at || new Date().toISOString(),
     price: primaryPrice,
     regular_price: regularPrice,
-    currency: item.currency || 'USD',
+    currency: item.currency || defaultCurrency || 'USD',
     variants: variants,
     images: images,
     options: item.options || [],
@@ -220,6 +221,22 @@ async function scrapeShopifyCatalog(url, options = {}, onLog) {
   let page = 1;
   const pageSize = 250; // Shopify max limit per page
 
+  // Detect active store currency via /cart.js or domain
+  let storeCurrency = 'USD';
+  try {
+    const cartRes = await axios.get(`${origin}/cart.js`, {
+      headers: DEFAULT_HEADERS,
+      timeout: 3500,
+      validateStatus: (s) => s === 200
+    });
+    if (cartRes.data && cartRes.data.currency) {
+      storeCurrency = cartRes.data.currency.toUpperCase();
+      if (onLog) onLog(`Detected active Shopify store currency: ${storeCurrency}`);
+    }
+  } catch (e) {
+    storeCurrency = detectStoreCurrency('', origin);
+  }
+
   if (onLog) onLog(`Connecting to Shopify Store catalog at ${origin}...`);
 
   while (products.length < maxProducts) {
@@ -241,7 +258,7 @@ async function scrapeShopifyCatalog(url, options = {}, onLog) {
       }
 
       for (const item of batch) {
-        products.push(normalizeShopifyProduct(item, origin));
+        products.push(normalizeShopifyProduct(item, origin, storeCurrency));
         if (products.length >= maxProducts) break;
       }
 
