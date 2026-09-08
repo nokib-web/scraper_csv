@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Loader2, X, ClipboardPaste, Sparkles, Lock } from 'lucide-react';
+import { ArrowRight, Loader2, X, ClipboardPaste, Sparkles, Lock, FileSpreadsheet } from 'lucide-react';
 import { FaLink } from 'react-icons/fa';
 
 export default function UrlBar({
@@ -15,7 +15,8 @@ export default function UrlBar({
   onClear,
   userPlan = { id: 'free', name: 'Starter Free', maxLimit: 20 },
   onOpenPricing,
-  onUpgradeClick
+  onUpgradeClick,
+  onOpenCsvImport
 }) {
   const triggerPricing = onUpgradeClick || onOpenPricing;
 
@@ -178,13 +179,13 @@ export default function UrlBar({
           </button>
         </div>
 
-        {/* Smart & Compact Single-Line Options Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        {/* Smart & Compact Single-Line Options Toolbar: Limit -> Engine -> Upload */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3 px-1 pt-1">
           
-          {/* Left: Product Limit Dropdown with Plan Tier Locks */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="limit-select" className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
-              Product Limit:
+          {/* 1. Left: Product Limit Dropdown with Plan Tier Locks */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <label htmlFor="limit-select" className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold whitespace-nowrap">
+              Limit:
             </label>
             <div className="relative">
               <select
@@ -193,38 +194,38 @@ export default function UrlBar({
                 value={limit}
                 onChange={handleLimitChange}
                 disabled={isLoading}
-                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl pl-3 pr-7 py-1.5 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-xs transition-colors"
+                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs font-semibold rounded-xl pl-2.5 pr-6 py-1.5 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-xs transition-colors"
               >
-                <option value={20}>20 Products (Free)</option>
+                <option value={20}>20 Prods (Free)</option>
                 <option value={50}>
-                  {userPlan.maxLimit >= 50 ? '50 Products' : '🔒 50 Products (Popular)'}
+                  {userPlan.maxLimit >= 50 ? '50 Products' : '🔒 50 (Popular)'}
                 </option>
                 <option value={100}>
-                  {userPlan.maxLimit >= 100 ? '100 Products' : '🔒 100 Products (Popular)'}
+                  {userPlan.maxLimit >= 100 ? '100 Products' : '🔒 100 (Popular)'}
                 </option>
                 <option value={200}>
-                  {userPlan.maxLimit >= 200 ? '200 Products' : '🔒 200 Products (Popular)'}
+                  {userPlan.maxLimit >= 200 ? '200 Products' : '🔒 200 (Popular)'}
                 </option>
                 <option value={500}>
-                  {userPlan.maxLimit >= 500 ? '500 Products' : '🔒 500 Products (Popular)'}
+                  {userPlan.maxLimit >= 500 ? '500 Products' : '🔒 500 (Popular)'}
                 </option>
                 <option value={1000}>
-                  {userPlan.maxLimit >= 1000 ? '1,000 Products' : '🔒 1,000 Products (Plus)'}
+                  {userPlan.maxLimit >= 1000 ? '1,000 Products' : '🔒 1,000 (Plus)'}
                 </option>
                 <option value={5000}>
                   {userPlan.maxLimit >= 5000 ? 'Unlimited' : '🔒 Unlimited (Advance)'}
                 </option>
               </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[10px]">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[9px]">
                 ▼
               </div>
             </div>
           </div>
 
-          {/* Right: Engine Dropdown */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="engine-select" className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-medium whitespace-nowrap">
-              Scraper Engine:
+          {/* 2. Middle: Scraper Engine Dropdown */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <label htmlFor="engine-select" className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold whitespace-nowrap">
+              Engine:
             </label>
             <div className="relative">
               <select
@@ -233,20 +234,33 @@ export default function UrlBar({
                 value={engine}
                 onChange={(e) => setEngine(e.target.value)}
                 disabled={isLoading}
-                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs sm:text-sm font-semibold rounded-xl pl-3 pr-7 py-1.5 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-xs transition-colors"
+                className="appearance-none bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]/70 text-neutral-900 dark:text-neutral-200 text-xs font-semibold rounded-xl pl-2.5 pr-6 py-1.5 outline-none focus:border-[#F1FF0A] cursor-pointer shadow-xs transition-colors"
               >
                 <option value="auto">Auto Detect</option>
-                <option value="shopify">Shopify</option>
+                <option value="shopify">Shopify Engine</option>
                 <option value="woocommerce">WooCommerce</option>
                 <option value="daraz">Daraz</option>
                 <option value="zatiq">Zatiq</option>
                 <option value="generic">Universal / HTML</option>
               </select>
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[10px]">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[9px]">
                 ▼
               </div>
             </div>
           </div>
+
+          {/* 3. Right: Upload / Import Existing CSV Button */}
+          {onOpenCsvImport && (
+            <button
+              type="button"
+              onClick={onOpenCsvImport}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black dark:hover:bg-[#F1FF0A] dark:hover:text-black text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A] text-xs font-bold transition-all shadow-xs cursor-pointer group"
+              title="Upload & bulk edit existing CSV catalog file (Shopify, WooCommerce, Wix, CSV)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] group-hover:text-black transition-colors" />
+              <span>📁 Upload / Import CSV</span>
+            </button>
+          )}
 
         </div>
 

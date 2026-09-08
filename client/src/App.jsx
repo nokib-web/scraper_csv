@@ -9,6 +9,7 @@ import ExportDrawer from './components/ExportDrawer';
 import FormatPreviewModal from './components/FormatPreviewModal';
 import FindReplaceModal from './components/FindReplaceModal';
 import BulkTagModal from './components/BulkTagModal';
+import CsvImportModal from './components/CsvImportModal';
 import PricingPage from './components/PricingPage';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
@@ -72,6 +73,7 @@ export default function App() {
   const [previewFormat, setPreviewFormat] = useState('shopify');
   const [findReplaceModalOpen, setFindReplaceModalOpen] = useState(false);
   const [bulkTagModalOpen, setBulkTagModalOpen] = useState(false);
+  const [csvImportModalOpen, setCsvImportModalOpen] = useState(false);
 
   // Customizable Default Inventory / Stock Quantity (default: 99)
   const [defaultStock, setDefaultStock] = useState(() => {
@@ -501,6 +503,181 @@ export default function App() {
     }));
   };
 
+  // Bulk Pricing & Markup Operations
+  const handleBulkSetPrice = (targetIds, { action, amount }) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      const curPrice = parseFloat(p.price) || 0;
+      const curRegular = parseFloat(p.regular_price) || curPrice;
+      let newPrice = curPrice;
+      let newRegular = curRegular;
+
+      if (action === 'percent_increase') {
+        newPrice = Number((curPrice * (1 + amount / 100)).toFixed(2));
+      } else if (action === 'percent_decrease') {
+        newPrice = Number(Math.max(0, curPrice * (1 - amount / 100)).toFixed(2));
+      } else if (action === 'fixed_increase') {
+        newPrice = Number((curPrice + amount).toFixed(2));
+      } else if (action === 'fixed_decrease') {
+        newPrice = Number(Math.max(0, curPrice - amount).toFixed(2));
+      } else if (action === 'set_price') {
+        newPrice = Number(amount.toFixed(2));
+      } else if (action === 'set_compare') {
+        newRegular = Number(amount.toFixed(2));
+      }
+
+      const updatedVariants = (p.variants && p.variants.length > 0)
+        ? p.variants.map(v => {
+            const vCur = parseFloat(v.price) || curPrice;
+            let vNew = vCur;
+            let vReg = parseFloat(v.compare_at_price) || curRegular;
+
+            if (action === 'percent_increase') vNew = Number((vCur * (1 + amount / 100)).toFixed(2));
+            else if (action === 'percent_decrease') vNew = Number(Math.max(0, vCur * (1 - amount / 100)).toFixed(2));
+            else if (action === 'fixed_increase') vNew = Number((vCur + amount).toFixed(2));
+            else if (action === 'fixed_decrease') vNew = Number(Math.max(0, vCur - amount).toFixed(2));
+            else if (action === 'set_price') vNew = Number(amount.toFixed(2));
+            else if (action === 'set_compare') vReg = Number(amount.toFixed(2));
+
+            return {
+              ...v,
+              price: vNew,
+              compare_at_price: vReg > vNew ? vReg : null
+            };
+          })
+        : [{
+            id: '1',
+            title: 'Default Title',
+            price: newPrice,
+            compare_at_price: newRegular > newPrice ? newRegular : null
+          }];
+
+      return {
+        ...p,
+        price: newPrice,
+        regular_price: newRegular > newPrice ? newRegular : newPrice,
+        variants: updatedVariants
+      };
+    }));
+  };
+
+  // Bulk Stock & Inventory Operations
+  const handleBulkSetStock = (targetIds, { action, amount, policy }) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      const activeStock = (p.variants?.[0]?.inventory_quantity !== undefined)
+        ? Number(p.variants[0].inventory_quantity)
+        : (defaultStock !== '' ? Number(defaultStock) : 99);
+      let newStock = activeStock;
+
+      if (action === 'set') newStock = Math.max(0, amount);
+      else if (action === 'add') newStock = Math.max(0, activeStock + amount);
+      else if (action === 'subtract') newStock = Math.max(0, activeStock - amount);
+
+      const updatedVariants = (p.variants && p.variants.length > 0)
+        ? p.variants.map(v => ({
+            ...v,
+            inventory_quantity: newStock,
+            _customStock: true
+          }))
+        : [{
+            id: '1',
+            title: 'Default Title',
+            price: p.price,
+            inventory_quantity: newStock,
+            _customStock: true
+          }];
+
+      return {
+        ...p,
+        inventory_policy: policy || p.inventory_policy || 'continue',
+        variants: updatedVariants
+      };
+    }));
+  };
+
+  // Bulk SKU & Barcode Generation
+  const handleBulkSetSku = (targetIds, { prefix, startNum, suffix }) => {
+    const targetSet = new Set(targetIds);
+    let counter = startNum || 1;
+
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      const currentCounter = counter++;
+      const paddedNum = String(currentCounter).padStart(3, '0');
+      const baseSku = `${prefix || ''}${paddedNum}${suffix || ''}`;
+
+      const updatedVariants = (p.variants && p.variants.length > 0)
+        ? p.variants.map((v, idx) => ({
+            ...v,
+            sku: p.variants.length > 1 ? `${baseSku}-${idx + 1}` : baseSku
+          }))
+        : [{
+            id: '1',
+            title: 'Default Title',
+            price: p.price,
+            sku: baseSku
+          }];
+
+      return {
+        ...p,
+        sku: baseSku,
+        variants: updatedVariants
+      };
+    }));
+  };
+
+  // Bulk Status & Vendor Override
+  const handleBulkSetStatus = (targetIds, statusVal) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      return {
+        ...p,
+        status: statusVal
+      };
+    }));
+  };
+
+  const handleBulkSetVendor = (targetIds, vendorVal) => {
+    const targetSet = new Set(targetIds);
+    setProducts(prev => prev.map(p => {
+      if (!targetSet.has(p.id)) return p;
+      return {
+        ...p,
+        vendor: vendorVal
+      };
+    }));
+  };
+
+  // CSV Import Handler (Replace or Append)
+  const handleImportProducts = (newProducts, mode = 'replace') => {
+    if (!newProducts || newProducts.length === 0) return;
+
+    if (mode === 'replace') {
+      setProducts(newProducts);
+      setSelectedProductIds([]);
+      setStatus('done');
+      setDetection({
+        platform: newProducts[0]?.source || 'CSV Import',
+        currency: newProducts[0]?.currency || 'USD'
+      });
+      setLogs([
+        `[CSV IMPORT] Successfully imported ${newProducts.length} products from CSV file.`,
+        `[READY] All ${newProducts.length} items loaded into Shopify Inventory Bulk Editor.`
+      ]);
+    } else {
+      setProducts(prev => [...prev, ...newProducts]);
+      setStatus('done');
+      setLogs(prev => [
+        ...prev,
+        `[CSV IMPORT] Appended ${newProducts.length} products. Total catalog size: ${products.length + newProducts.length}.`
+      ]);
+    }
+  };
+
   // Find & Replace Handler
   const handleFindReplace = ({ findText, replaceText, matchTitle, matchDescription, matchVendor, matchCategory, caseSensitive }) => {
     if (!findText.trim()) return;
@@ -746,6 +923,7 @@ export default function App() {
               onSubmit={handleScrape}
               onClear={() => setUrl('')}
               onUpgradeClick={() => setActiveTab('pricing')}
+              onOpenCsvImport={() => setCsvImportModalOpen(true)}
             />
 
             {/* Extraction Live Terminal Console */}
@@ -931,7 +1109,7 @@ export default function App() {
         onApplyReplace={handleFindReplace}
       />
 
-      {/* Bulk Tag, Category, Type & Template Modal for Selected Products */}
+      {/* Bulk Tag, Category, Type, Template, Price, Stock, SKU & Status Modal for Selected Products */}
       <BulkTagModal
         isOpen={bulkTagModalOpen}
         onClose={() => setBulkTagModalOpen(false)}
@@ -942,6 +1120,19 @@ export default function App() {
         onApplySetCategory={handleBulkSetCategory}
         onApplySetType={handleBulkSetType}
         onApplySetTemplate={handleBulkSetTemplate}
+        onApplySetPrice={handleBulkSetPrice}
+        onApplySetStock={handleBulkSetStock}
+        onApplySetSku={handleBulkSetSku}
+        onApplySetStatus={handleBulkSetStatus}
+        onApplySetVendor={handleBulkSetVendor}
+      />
+
+      {/* CSV Import Modal (Shopify, WooCommerce, Wix, Universal CSV) */}
+      <CsvImportModal
+        isOpen={csvImportModalOpen}
+        onClose={() => setCsvImportModalOpen(false)}
+        onImportProducts={handleImportProducts}
+        currentProductsCount={products.length}
       />
 
       {/* Fixed Bottom Docked Footer */}

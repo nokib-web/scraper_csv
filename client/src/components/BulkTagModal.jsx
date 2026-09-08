@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { X, Tag, FolderTree, Layers, LayoutTemplate, Plus, Check, Sparkles } from 'lucide-react';
+import { 
+  X, Tag, FolderTree, Layers, LayoutTemplate, Plus, Check, Sparkles, 
+  DollarSign, Package, Barcode, ShieldCheck, ArrowRight, Percent, RefreshCw,
+  Hash, Truck, CheckCircle2
+} from 'lucide-react';
 
 export default function BulkTagModal({ 
   isOpen, 
@@ -10,13 +14,40 @@ export default function BulkTagModal({
   onApplyRemoveTag,
   onApplySetCategory,
   onApplySetType,
-  onApplySetTemplate
+  onApplySetTemplate,
+  onApplySetPrice,
+  onApplySetStock,
+  onApplySetSku,
+  onApplySetStatus,
+  onApplySetVendor
 }) {
-  const [activeTab, setActiveTab] = useState('category'); // 'category' | 'type' | 'template' | 'tags'
+  // Tabs: 'category' | 'type' | 'template' | 'price' | 'inventory' | 'sku' | 'status' | 'tags'
+  const [activeTab, setActiveTab] = useState('category');
+  
+  // Tab Inputs
   const [newTagInput, setNewTagInput] = useState('');
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [newTypeInput, setNewTypeInput] = useState('');
   const [newTemplateInput, setNewTemplateInput] = useState('');
+  const [newVendorInput, setNewVendorInput] = useState('');
+  
+  // Pricing state
+  const [priceAction, setPriceAction] = useState('percent_increase'); // 'percent_increase' | 'percent_decrease' | 'fixed_increase' | 'fixed_decrease' | 'set_price' | 'set_compare'
+  const [priceAmount, setPriceAmount] = useState('');
+  
+  // Inventory state
+  const [stockAction, setStockAction] = useState('set'); // 'set' | 'add' | 'subtract'
+  const [stockAmount, setStockAmount] = useState('99');
+  const [inventoryPolicy, setInventoryPolicy] = useState('continue'); // 'continue' | 'deny'
+  
+  // SKU & Barcode state
+  const [skuPrefix, setSkuPrefix] = useState('SKU-');
+  const [skuStartNum, setSkuStartNum] = useState(1);
+  const [skuSuffix, setSkuSuffix] = useState('');
+
+  // Status & Visibility state
+  const [productStatus, setProductStatus] = useState('active');
+
   const [feedback, setFeedback] = useState('');
 
   // Selected products list
@@ -63,340 +94,286 @@ export default function BulkTagModal({
 
   if (!isOpen || selectedProducts.length === 0) return null;
 
+  const showFeedbackMsg = (msg) => {
+    setFeedback(msg);
+    setTimeout(() => setFeedback(''), 2500);
+  };
+
+  // Handlers
   const handleSetCategorySubmit = (e) => {
     if (e) e.preventDefault();
     if (!newCategoryInput.trim() || !onApplySetCategory) return;
-
     onApplySetCategory(selectedProductIds, newCategoryInput.trim());
-    setFeedback(`Updated category to "${newCategoryInput.trim()}" for ${selectedProducts.length} product(s)!`);
+    showFeedbackMsg(`Updated category to "${newCategoryInput.trim()}" for ${selectedProducts.length} product(s)!`);
     setNewCategoryInput('');
-    setTimeout(() => setFeedback(''), 2500);
   };
 
   const handleApplyPresetCategory = (cat) => {
     if (!onApplySetCategory) return;
     onApplySetCategory(selectedProductIds, cat);
-    setFeedback(`Updated category to "${cat}" for ${selectedProducts.length} product(s)!`);
-    setTimeout(() => setFeedback(''), 2500);
+    showFeedbackMsg(`Updated category to "${cat}" for ${selectedProducts.length} product(s)!`);
   };
 
   const handleSetTypeSubmit = (e) => {
     if (e) e.preventDefault();
     if (!newTypeInput.trim() || !onApplySetType) return;
-
     onApplySetType(selectedProductIds, newTypeInput.trim());
-    setFeedback(`Updated product type to "${newTypeInput.trim()}" for ${selectedProducts.length} product(s)!`);
+    showFeedbackMsg(`Updated product type to "${newTypeInput.trim()}" for ${selectedProducts.length} product(s)!`);
     setNewTypeInput('');
-    setTimeout(() => setFeedback(''), 2500);
   };
 
   const handleApplyPresetType = (typeVal) => {
     if (!onApplySetType) return;
     onApplySetType(selectedProductIds, typeVal);
-    setFeedback(`Updated product type to "${typeVal}" for ${selectedProducts.length} product(s)!`);
-    setTimeout(() => setFeedback(''), 2500);
+    showFeedbackMsg(`Updated product type to "${typeVal}" for ${selectedProducts.length} product(s)!`);
   };
 
   const handleSetTemplateSubmit = (e) => {
     if (e) e.preventDefault();
     if (!onApplySetTemplate) return;
-
-    // Automatically strip 'product.' prefix if user entered 'product.book'
-    const cleaned = newTemplateInput.replace(/^product\./i, '').trim();
-
-    onApplySetTemplate(selectedProductIds, cleaned);
-    setFeedback(cleaned 
-      ? `Updated template suffix to "${cleaned}" (product.${cleaned}) for ${selectedProducts.length} product(s)!`
-      : `Reset template to default (product) for ${selectedProducts.length} product(s)!`);
+    const cleanTemplate = newTemplateInput.trim().replace(/^product\./i, '');
+    onApplySetTemplate(selectedProductIds, cleanTemplate);
+    showFeedbackMsg(`Set template suffix to "${cleanTemplate || 'default'}" for ${selectedProducts.length} product(s)!`);
     setNewTemplateInput('');
-    setTimeout(() => setFeedback(''), 2500);
   };
 
   const handleApplyPresetTemplate = (tmplVal) => {
     if (!onApplySetTemplate) return;
-    const cleaned = String(tmplVal || '').replace(/^product\./i, '').trim();
-    onApplySetTemplate(selectedProductIds, cleaned);
-    setFeedback(cleaned 
-      ? `Updated template suffix to "${cleaned}" (product.${cleaned}) for ${selectedProducts.length} product(s)!`
-      : `Reset template to default (product) for ${selectedProducts.length} product(s)!`);
-    setTimeout(() => setFeedback(''), 2500);
+    const clean = tmplVal.replace(/^product\./i, '');
+    onApplySetTemplate(selectedProductIds, clean);
+    showFeedbackMsg(`Set template suffix to "${clean || 'default'}" for ${selectedProducts.length} product(s)!`);
   };
 
-  const handleAddTagsSubmit = (e) => {
+  const handleSetVendorSubmit = (e) => {
     if (e) e.preventDefault();
-    if (!newTagInput.trim()) return;
-
-    const tagsToAdd = newTagInput
-      .split(/[,;]+/)
-      .map(t => t.trim())
-      .filter(Boolean);
-
-    if (tagsToAdd.length === 0) return;
-
-    onApplyAddTags(selectedProductIds, tagsToAdd);
-    setNewTagInput('');
-    setFeedback(`Added ${tagsToAdd.length} tag(s) to ${selectedProducts.length} product(s)!`);
-    setTimeout(() => setFeedback(''), 2000);
+    if (!newVendorInput.trim() || !onApplySetVendor) return;
+    onApplySetVendor(selectedProductIds, newVendorInput.trim());
+    showFeedbackMsg(`Updated vendor to "${newVendorInput.trim()}" for ${selectedProducts.length} product(s)!`);
+    setNewVendorInput('');
   };
 
-  const handleAddQuickTag = (tag) => {
+  const handleApplyPriceSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!priceAmount || isNaN(Number(priceAmount)) || !onApplySetPrice) return;
+    onApplySetPrice(selectedProductIds, { action: priceAction, amount: Number(priceAmount) });
+    showFeedbackMsg(`Applied price adjustment for ${selectedProducts.length} product(s)!`);
+  };
+
+  const handleApplyStockSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!onApplySetStock) return;
+    onApplySetStock(selectedProductIds, { action: stockAction, amount: Number(stockAmount) || 0, policy: inventoryPolicy });
+    showFeedbackMsg(`Updated inventory stock for ${selectedProducts.length} product(s)!`);
+  };
+
+  const handleApplySkuSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!onApplySetSku) return;
+    onApplySetSku(selectedProductIds, { prefix: skuPrefix, startNum: parseInt(skuStartNum, 10) || 1, suffix: skuSuffix });
+    showFeedbackMsg(`Generated sequential SKUs for ${selectedProducts.length} product(s)!`);
+  };
+
+  const handleApplyStatusSubmit = (statusVal) => {
+    if (!onApplySetStatus) return;
+    setProductStatus(statusVal);
+    onApplySetStatus(selectedProductIds, statusVal);
+    showFeedbackMsg(`Set status to "${statusVal.toUpperCase()}" for ${selectedProducts.length} product(s)!`);
+  };
+
+  const handleAddTagSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!newTagInput.trim() || !onApplyAddTags) return;
+    const parsedTags = newTagInput.split(',').map(t => t.trim()).filter(Boolean);
+    if (parsedTags.length === 0) return;
+    onApplyAddTags(selectedProductIds, parsedTags);
+    showFeedbackMsg(`Added tag(s) to ${selectedProducts.length} product(s)!`);
+    setNewTagInput('');
+  };
+
+  const handleApplyPresetTag = (tag) => {
+    if (!onApplyAddTags) return;
     onApplyAddTags(selectedProductIds, [tag]);
-    setFeedback(`Added tag "${tag}" to ${selectedProducts.length} product(s)!`);
-    setTimeout(() => setFeedback(''), 2000);
+    showFeedbackMsg(`Added tag "#${tag}" to ${selectedProducts.length} product(s)!`);
   };
 
   const handleRemoveTag = (tag) => {
+    if (!onApplyRemoveTag) return;
     onApplyRemoveTag(selectedProductIds, tag);
-    setFeedback(`Removed tag "${tag}" from selected products!`);
-    setTimeout(() => setFeedback(''), 2000);
+    showFeedbackMsg(`Removed tag "#${tag}" from selected products!`);
   };
 
+  const navTabs = [
+    { id: 'category', label: 'Category & Type', icon: <FolderTree className="w-3.5 h-3.5" /> },
+    { id: 'price', label: 'Pricing & Markup', icon: <DollarSign className="w-3.5 h-3.5" /> },
+    { id: 'inventory', label: 'Stock & Inventory', icon: <Package className="w-3.5 h-3.5" /> },
+    { id: 'sku', label: 'SKU & Barcodes', icon: <Barcode className="w-3.5 h-3.5" /> },
+    { id: 'status', label: 'Status & Vendor', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+    { id: 'tags', label: 'Tags Manager', icon: <Tag className="w-3.5 h-3.5" /> }
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121216] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/80">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-[#F1FF0A]/10 border border-[#F1FF0A]/30 text-[#8b9900] dark:text-[#F1FF0A]">
-              <FolderTree className="w-4 h-4" />
+            <div className="p-2 rounded-xl bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 text-[#8b9900] dark:text-[#F1FF0A]">
+              <Sparkles className="w-4 h-4 stroke-[2.5]" />
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white">
-                Bulk Manage Category & Tags
+              <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                <span>Shopify Inventory Bulk Editor</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#F1FF0A] text-black text-[10px] font-black uppercase tracking-wider">
+                  {selectedProducts.length} Selected
+                </span>
               </h3>
-              <p className="text-[11px] text-neutral-500">
-                Applying to <strong className="text-neutral-900 dark:text-white font-bold">{selectedProducts.length}</strong> selected product(s)
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                Bulk modify categories, types, template suffixes, prices, stocks, and SKUs
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/50 p-1.5 gap-1 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('category')}
-            className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'category'
-                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-[#F1FF0A] shadow-sm border border-neutral-200 dark:border-neutral-700'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-            }`}
-          >
-            <FolderTree className="w-3.5 h-3.5" />
-            <span>Category</span>
-          </button>
-          
-          <button
-            type="button"
-            onClick={() => setActiveTab('type')}
-            className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'type'
-                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-[#F1FF0A] shadow-sm border border-neutral-200 dark:border-neutral-700'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Product Type</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('template')}
-            className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'template'
-                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-[#F1FF0A] shadow-sm border border-neutral-200 dark:border-neutral-700'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-            }`}
-          >
-            <LayoutTemplate className="w-3.5 h-3.5" />
-            <span>Template Suffix</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('tags')}
-            className={`flex-1 min-w-[90px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'tags'
-                ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-[#F1FF0A] shadow-sm border border-neutral-200 dark:border-neutral-700'
-                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
-            }`}
-          >
-            <Tag className="w-3.5 h-3.5" />
-            <span>Tags</span>
-          </button>
+        {/* Tab Switcher Bar */}
+        <div className="flex items-center gap-1 px-5 pt-3 pb-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/40 overflow-x-auto scrollbar-none">
+          {navTabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === t.id
+                  ? 'bg-neutral-900 text-white dark:bg-[#F1FF0A] dark:text-black shadow-sm'
+                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-800'
+              }`}
+            >
+              {t.icon}
+              <span>{t.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-4 text-xs">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           
-          {/* TAB 1: Set Category */}
+          {/* Feedback message banner */}
+          {feedback && (
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{feedback}</span>
+            </div>
+          )}
+
+          {/* TAB 1: CATEGORY & TYPE */}
           {activeTab === 'category' && (
-            <div className="space-y-4">
-              <form onSubmit={handleSetCategorySubmit} className="space-y-2">
-                <label className="font-bold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
-                  <span>Assign New Category:</span>
-                  <span className="text-[10px] text-neutral-400 font-normal">Replaces category for selected</span>
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Category */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
+                  <span>Set Product Category (Taxonomy)</span>
+                  <span className="text-[10px] text-neutral-400">Maps to Product Category column</span>
                 </label>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <FolderTree className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={newCategoryInput}
-                      onChange={(e) => setNewCategoryInput(e.target.value)}
-                      placeholder="e.g. Men's Fashion, Electronics, Shoes"
-                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A] text-xs font-semibold"
-                      autoFocus
-                    />
-                  </div>
-
+                <form onSubmit={handleSetCategorySubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCategoryInput}
+                    onChange={(e) => setNewCategoryInput(e.target.value)}
+                    placeholder="e.g. Fashion & Clothing, Electronics..."
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A]"
+                  />
                   <button
                     type="submit"
-                    disabled={!newCategoryInput.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#F1FF0A] hover:bg-[#D4FF00] disabled:opacity-40 text-black font-extrabold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs cursor-pointer"
                   >
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Apply</span>
+                    Apply Category
                   </button>
-                </div>
-              </form>
-
-              {/* Category Presets */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3 text-[#8b9900] dark:text-[#F1FF0A]" />
-                  <span>Popular Category Presets:</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {quickCategoryPresets.map((cat) => (
+                </form>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {quickCategoryPresets.slice(0, 6).map((cat) => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => handleApplyPresetCategory(cat)}
-                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 transition-all cursor-pointer flex items-center gap-1"
+                      className="px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 hover:border-[#F1FF0A] transition-colors cursor-pointer"
                     >
-                      <span>{cat}</span>
+                      + {cat}
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* TAB 2: Set Product Type */}
-          {activeTab === 'type' && (
-            <div className="space-y-4">
-              <form onSubmit={handleSetTypeSubmit} className="space-y-2">
-                <label className="font-bold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
-                  <span>Assign Custom Product Type:</span>
-                  <span className="text-[10px] text-neutral-400 font-normal">Custom store classification</span>
+              {/* Product Type */}
+              <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
+                  <span>Set Custom Product Type</span>
+                  <span className="text-[10px] text-neutral-400">Maps to Type column in Shopify CSV</span>
                 </label>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Layers className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={newTypeInput}
-                      onChange={(e) => setNewTypeInput(e.target.value)}
-                      placeholder="e.g. T-Shirt, Sneaker, Smartphone, Book"
-                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A] text-xs font-semibold"
-                      autoFocus
-                    />
-                  </div>
-
+                <form onSubmit={handleSetTypeSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTypeInput}
+                    onChange={(e) => setNewTypeInput(e.target.value)}
+                    placeholder="e.g. T-Shirt, Sneaker, Smart Watch..."
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A]"
+                  />
                   <button
                     type="submit"
-                    disabled={!newTypeInput.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#F1FF0A] hover:bg-[#D4FF00] disabled:opacity-40 text-black font-extrabold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs cursor-pointer"
                   >
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Apply</span>
+                    Apply Type
                   </button>
-                </div>
-              </form>
-
-              {/* Type Presets */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3 text-[#8b9900] dark:text-[#F1FF0A]" />
-                  <span>Popular Type Presets:</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {quickTypePresets.map((t) => (
+                </form>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {quickTypePresets.slice(0, 6).map((tp) => (
                     <button
-                      key={t}
+                      key={tp}
                       type="button"
-                      onClick={() => handleApplyPresetType(t)}
-                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 transition-all cursor-pointer flex items-center gap-1"
+                      onClick={() => handleApplyPresetType(tp)}
+                      className="px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 hover:border-blue-500 transition-colors cursor-pointer"
                     >
-                      <span>{t}</span>
+                      + {tp}
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* TAB 3: Set Template Suffix */}
-          {activeTab === 'template' && (
-            <div className="space-y-4">
-              <form onSubmit={handleSetTemplateSubmit} className="space-y-2">
-                <label className="font-bold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
-                  <span>Assign Theme Template Suffix:</span>
-                  <span className="text-[10px] text-neutral-400 font-normal">Shopify Liquid/JSON template</span>
+              {/* Template Suffix */}
+              <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between">
+                  <span>Set Shopify Theme Template Suffix</span>
+                  <span className="text-[10px] text-neutral-400">e.g. "book" -&gt; product.book</span>
                 </label>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <LayoutTemplate className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={newTemplateInput}
-                      onChange={(e) => setNewTemplateInput(e.target.value)}
-                      placeholder="e.g. pre-order, custom-layout, bundle"
-                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A] text-xs font-mono"
-                      autoFocus
-                    />
-                  </div>
-
+                <form onSubmit={handleSetTemplateSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTemplateInput}
+                    onChange={(e) => setNewTemplateInput(e.target.value)}
+                    placeholder="e.g. pre-order, custom-layout, book..."
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white font-mono outline-none focus:border-[#F1FF0A]"
+                  />
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs cursor-pointer"
                   >
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>Apply</span>
+                    Apply Suffix
                   </button>
-                </div>
-                <p className="text-[10px] text-neutral-500 font-mono">
-                  Specifies custom theme template (e.g. `pre-order` maps to `product.pre-order.json`). Leave blank for default template.
-                </p>
-              </form>
-
-              {/* Template Presets */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3 text-[#8b9900] dark:text-[#F1FF0A]" />
-                  <span>Popular Template Presets:</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
+                </form>
+                <div className="flex flex-wrap gap-1.5 pt-1">
                   {quickTemplatePresets.map((tmpl) => (
                     <button
                       key={tmpl.label}
                       type="button"
                       onClick={() => handleApplyPresetTemplate(tmpl.val)}
-                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 transition-all cursor-pointer font-mono"
+                      className="px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] font-mono font-semibold text-neutral-700 dark:text-neutral-300 hover:border-amber-500 transition-colors cursor-pointer"
                     >
-                      <span>{tmpl.label}</span>
+                      {tmpl.label}
                     </button>
                   ))}
                 </div>
@@ -404,114 +381,409 @@ export default function BulkTagModal({
             </div>
           )}
 
-          {/* TAB 2: Manage Tags */}
-          {activeTab === 'tags' && (
-            <div className="space-y-4">
-              {/* Add New Tags Input */}
-              <form onSubmit={handleAddTagsSubmit} className="space-y-2">
-                <label className="font-bold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
-                  <span>Add New Tag(s):</span>
-                  <span className="text-[10px] text-neutral-400 font-normal">Separate multiple tags with comma</span>
+          {/* TAB 2: PRICING & MARKUP */}
+          {activeTab === 'price' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  Bulk Price Adjustment for {selectedProducts.length} Product(s)
                 </label>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Tag className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={newTagInput}
-                      onChange={(e) => setNewTagInput(e.target.value)}
-                      placeholder="e.g. Summer-Sale, Trending, New-Arrival"
-                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-xl text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A] text-xs font-semibold"
-                      autoFocus
-                    />
-                  </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPriceAction('percent_increase')}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      priceAction === 'percent_increase'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <div className="font-bold">+ Increase by %</div>
+                    <div className="text-[10px] opacity-80">e.g. +15% profit markup</div>
+                  </button>
 
                   <button
-                    type="submit"
-                    disabled={!newTagInput.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#F1FF0A] hover:bg-[#D4FF00] disabled:opacity-40 text-black font-extrabold rounded-xl transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    type="button"
+                    onClick={() => setPriceAction('percent_decrease')}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      priceAction === 'percent_decrease'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
                   >
-                    <Plus className="w-4 h-4 stroke-[3]" />
-                    <span>Add Tags</span>
+                    <div className="font-bold">- Discount by %</div>
+                    <div className="text-[10px] opacity-80">e.g. -20% seasonal sale</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPriceAction('fixed_increase')}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      priceAction === 'fixed_increase'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <div className="font-bold">+ Fixed Amount</div>
+                    <div className="text-[10px] opacity-80">e.g. Add +$10 to all items</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPriceAction('set_price')}
+                    className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
+                      priceAction === 'set_price'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <div className="font-bold">Set Exact Price</div>
+                    <div className="text-[10px] opacity-80">Set all prices to fixed value</div>
                   </button>
                 </div>
-              </form>
 
-              {/* Quick Preset Tag Suggestions */}
+                <form onSubmit={handleApplyPriceSubmit} className="flex gap-2 pt-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={priceAmount}
+                      onChange={(e) => setPriceAmount(e.target.value)}
+                      placeholder={priceAction.includes('percent') ? "Enter percentage (e.g. 15)" : "Enter amount (e.g. 10.00)"}
+                      className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A]"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-bold">
+                      {priceAction.includes('percent') ? '%' : '$'}
+                    </span>
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs cursor-pointer shadow-sm"
+                  >
+                    Apply Price Change
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: STOCK & INVENTORY */}
+          {activeTab === 'inventory' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  Manage Inventory Quantity for {selectedProducts.length} Product(s)
+                </label>
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setStockAction('set')}
+                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                      stockAction === 'set'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <div className="font-bold">Set Quantity</div>
+                    <div className="text-[10px] opacity-80">e.g. 100 in stock</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStockAction('add')}
+                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                      stockAction === 'add'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <div className="font-bold">+ Add Stock</div>
+                    <div className="text-[10px] opacity-80">Add to existing quantity</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStockAction('subtract')}
+                    className={`p-2.5 rounded-xl border text-center cursor-pointer transition-all ${
+                      stockAction === 'subtract'
+                        ? 'bg-[#F1FF0A] text-black font-extrabold border-[#F1FF0A]'
+                        : 'bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    <div className="font-bold">- Deduct Stock</div>
+                    <div className="text-[10px] opacity-80">Subtract from existing</div>
+                  </button>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="number"
+                    min="0"
+                    value={stockAmount}
+                    onChange={(e) => setStockAmount(e.target.value)}
+                    placeholder="Enter stock quantity (e.g. 99)"
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyStockSubmit}
+                    className="px-5 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs cursor-pointer shadow-sm"
+                  >
+                    Apply Stock
+                  </button>
+                </div>
+
+                {/* Inventory Policy */}
+                <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 space-y-2 mt-3">
+                  <div className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200">
+                    When Out of Stock (Inventory Policy):
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setInventoryPolicy('continue')}
+                      className={`p-2 rounded-lg border font-bold cursor-pointer transition-all ${
+                        inventoryPolicy === 'continue'
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-300 dark:border-neutral-800'
+                      }`}
+                    >
+                      Continue Selling
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInventoryPolicy('deny')}
+                      className={`p-2 rounded-lg border font-bold cursor-pointer transition-all ${
+                        inventoryPolicy === 'deny'
+                          ? 'bg-red-500 text-white border-red-500'
+                          : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-300 dark:border-neutral-800'
+                      }`}
+                    >
+                      Stop Selling (Deny)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: SKU & BARCODES */}
+          {activeTab === 'sku' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  Auto-Generate Sequential SKUs for {selectedProducts.length} Product(s)
+                </label>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-400 block mb-1">Prefix</label>
+                    <input
+                      type="text"
+                      value={skuPrefix}
+                      onChange={(e) => setSkuPrefix(e.target.value)}
+                      placeholder="e.g. STORE-"
+                      className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white font-mono outline-none focus:border-[#F1FF0A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-400 block mb-1">Start Number</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={skuStartNum}
+                      onChange={(e) => setSkuStartNum(e.target.value)}
+                      placeholder="1"
+                      className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white font-mono outline-none focus:border-[#F1FF0A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-400 block mb-1">Suffix (Optional)</label>
+                    <input
+                      type="text"
+                      value={skuSuffix}
+                      onChange={(e) => setSkuSuffix(e.target.value)}
+                      placeholder="e.g. -2026"
+                      className="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white font-mono outline-none focus:border-[#F1FF0A]"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs flex items-center justify-between">
+                  <span className="text-neutral-500">Preview First SKU:</span>
+                  <span className="font-mono font-bold text-[#8b9900] dark:text-[#F1FF0A]">
+                    {skuPrefix}{String(skuStartNum).padStart(3, '0')}{skuSuffix}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleApplySkuSubmit}
+                  className="w-full py-2.5 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs cursor-pointer shadow-sm"
+                >
+                  Generate Sequential SKUs Across All Selected Items
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: STATUS & VENDOR */}
+          {activeTab === 'status' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Product Status */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  Set Product Status (Shopify / E-Commerce Status)
+                </label>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyStatusSubmit('active')}
+                    className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold text-center transition-all cursor-pointer"
+                  >
+                    <div className="text-sm font-black">ACTIVE</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">Live on storefront</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyStatusSubmit('draft')}
+                    className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-extrabold text-center transition-all cursor-pointer"
+                  >
+                    <div className="text-sm font-black">DRAFT</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">Hidden from store</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyStatusSubmit('archived')}
+                    className="p-3 rounded-xl border border-neutral-500/30 bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-600 dark:text-neutral-400 font-extrabold text-center transition-all cursor-pointer"
+                  >
+                    <div className="text-sm font-black">ARCHIVED</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">Archived catalog</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Vendor Override */}
+              <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  Bulk Set Vendor / Brand Name
+                </label>
+                <form onSubmit={handleSetVendorSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newVendorInput}
+                    onChange={(e) => setNewVendorInput(e.target.value)}
+                    placeholder="Enter Brand / Vendor Name..."
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A]"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs cursor-pointer"
+                  >
+                    Set Vendor
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: TAGS MANAGER */}
+          {activeTab === 'tags' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Add Tags Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                  Add Tags to Selected Products (Comma-separated)
+                </label>
+                <form onSubmit={handleAddTagSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    placeholder="e.g. Summer-Sale, Featured, Bestseller..."
+                    className="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 outline-none focus:border-[#F1FF0A] transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs transition-all shadow-sm cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Add Tags</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Quick Preset Tags */}
               <div className="space-y-1.5">
-                <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3 text-[#8b9900] dark:text-[#F1FF0A]" />
-                  <span>Quick Tag Presets:</span>
+                <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                  Quick Preset Tags
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {quickTagPresets.map((tag) => (
                     <button
                       key={tag}
                       type="button"
-                      onClick={() => handleAddQuickTag(tag)}
-                      className="px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black border border-neutral-200 dark:border-neutral-800 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 transition-all cursor-pointer flex items-center gap-1"
+                      onClick={() => handleApplyPresetTag(tag)}
+                      className="px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 hover:border-[#F1FF0A]/60 text-[11px] font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-[#F1FF0A] transition-colors cursor-pointer"
                     >
-                      <Plus className="w-3 h-3" />
-                      <span>{tag}</span>
+                      + {tag}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Existing Tags on Selected Products with Remove option */}
-              <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
-                <span className="font-bold text-neutral-700 dark:text-neutral-300 block text-xs">
-                  Existing Tags on Selected Products:
-                </span>
+              {/* Currently Shared Tags with Removal */}
+              <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
+                  <span>Current Tags on Selected Products</span>
+                  <span className="text-neutral-400 font-normal">Click &times; to remove from all selected</span>
+                </div>
 
-                {currentTagsSummary.length === 0 ? (
-                  <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 text-center text-[11px]">
-                    No tags currently attached to selected products. Add some above!
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1">
+                {currentTagsSummary.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
                     {currentTagsSummary.map(({ tag, count }) => (
-                      <div
+                      <span
                         key={tag}
-                        className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200 shadow-sm group"
                       >
-                        <span>{tag}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-neutral-200 dark:bg-neutral-900 text-neutral-500 font-mono">
-                          {count}
+                        <span>#{tag}</span>
+                        <span className="px-1 py-0.2 rounded bg-neutral-200 dark:bg-neutral-800 text-[9px] font-mono text-neutral-500">
+                          {count}/{selectedProducts.length}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(tag)}
-                          className="p-1 text-neutral-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-colors cursor-pointer"
-                          title={`Remove tag "${tag}" from selected products`}
+                          className="text-neutral-400 hover:text-red-500 transition-colors cursor-pointer p-0.5"
+                          title={`Remove #${tag} from all selected items`}
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3 h-3 stroke-[2.5]" />
                         </button>
-                      </div>
+                      </span>
                     ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-neutral-500 italic p-3 text-center bg-neutral-50 dark:bg-neutral-900/30 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800">
+                    No tags currently assigned to these selected items.
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Feedback Toast */}
-          {feedback && (
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2 text-xs animate-in fade-in duration-150">
-              <Check className="w-4 h-4" />
-              <span>{feedback}</span>
-            </div>
-          )}
-
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end px-5 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/80">
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/80">
+          <div className="text-xs text-neutral-500 dark:text-neutral-400">
+            Selected: <span className="font-bold text-neutral-900 dark:text-white">{selectedProducts.length} items</span>
+          </div>
+
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black font-extrabold text-xs transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-neutral-900 text-white dark:bg-[#F1FF0A] dark:text-black font-extrabold text-xs transition-all shadow-sm cursor-pointer"
           >
             Done
           </button>
