@@ -2,7 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const { scrapeProducts, detectPlatform } = require('./scrapers');
+const { catalogCache } = require('./utils/cache');
 const { exportShopifyCsv, exportShopifyInventoryCsv } = require('./exporters/shopifyFormatter');
 const { exportWooCommerceCsv } = require('./exporters/wooFormatter');
 const { exportWixCsv } = require('./exporters/wixFormatter');
@@ -12,9 +15,56 @@ const { exportJson } = require('./exporters/jsonFormatter');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// 1. HTTP Gzip/Brotli Compression (Bypasses SSE real-time stream so chunks aren't buffered)
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers.accept && req.headers.accept.includes('text/event-stream')) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  threshold: 1024 // Only compress responses above 1KB
+}));
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 2. High-Traffic Rate Limiting (Protects from DDoS, scrapers & server socket exhaustion)
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 180, // 180 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again in a minute.' }
+});
+
+const scrapeLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 45, // 45 scrapes per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Scraping request limit reached. Please wait a moment before trying again.' }
+});
+
+app.use('/api/', generalLimiter);
+
+// 3. Health & Scaling Status Monitor
+app.get('/api/health', (req, res) => {
+  const memory = process.memoryUsage();
+  res.json({
+    status: 'healthy',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    memory: {
+      rssMb: (memory.rss / 1024 / 1024).toFixed(2),
+      heapUsedMb: (memory.heapUsed / 1024 / 1024).toFixed(2),
+      heapTotalMb: (memory.heapTotal / 1024 / 1024).toFixed(2)
+    },
+    cacheStats: catalogCache.getStats(),
+    nodeEnv: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Quick Demo Preset Stores
 const PRESET_STORES = [
@@ -44,8 +94,8 @@ app.get('/api/detect', async (req, res) => {
   }
 });
 
-// Real-Time Scraping via Server-Sent Events (SSE)
-app.get('/api/scrape-stream', async (req, res) => {
+// Real-Time Scraping via Server-Sent Events (SSE) with In-Memory Cache
+app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
   const { url, limit = 50, engine = 'auto' } = req.query;
 
   if (!url) {
@@ -69,6 +119,23 @@ app.get('/api/scrape-stream', async (req, res) => {
     sendEvent('log', { message: msg, timestamp: new Date().toLocaleTimeString() });
   };
 
+  const cacheKey = catalogCache.generateKey(url, engine, limit);
+
+  // Check In-Memory Store Cache for Instant Response
+  const cachedData = catalogCache.get(cacheKey);
+  if (cachedData && cachedData.products && cachedData.products.length > 0) {
+    sendEvent('start', { url, limit: parseInt(limit), cached: true });
+    sendEvent('log', { message: `⚡ [FAST CACHE HIT] Delivering instant cached catalog (${cachedData.products.length} products)...` });
+    sendEvent('detected', { detection: cachedData.detection });
+    sendEvent('complete', {
+      products: cachedData.products,
+      detection: cachedData.detection,
+      total: cachedData.total || cachedData.products.length,
+      cached: true
+    });
+    return res.end();
+  }
+
   try {
     sendEvent('start', { url, limit: parseInt(limit) });
     const result = await scrapeProducts(url, {
@@ -77,8 +144,19 @@ app.get('/api/scrape-stream', async (req, res) => {
       onLog
     });
 
+    const products = result.products || [];
+
+    // Save successful extraction in memory cache for 5 minutes
+    if (products.length > 0) {
+      catalogCache.set(cacheKey, {
+        products,
+        detection: result.detection,
+        total: result.total
+      }, 300);
+    }
+
     sendEvent('complete', {
-      products: result.products || [],
+      products,
       detection: result.detection,
       total: result.total
     });
@@ -89,10 +167,20 @@ app.get('/api/scrape-stream', async (req, res) => {
   }
 });
 
-// Synchronous Scrape Endpoint (JSON response)
-app.post('/api/scrape', async (req, res) => {
+// Synchronous Scrape Endpoint (JSON response) with Cache
+app.post('/api/scrape', scrapeLimiter, async (req, res) => {
   const { url, limit = 50, engine = 'auto' } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
+
+  const cacheKey = catalogCache.generateKey(url, engine, limit);
+  const cachedData = catalogCache.get(cacheKey);
+  if (cachedData && cachedData.products && cachedData.products.length > 0) {
+    return res.json({
+      ...cachedData,
+      logs: [`⚡ [FAST CACHE HIT] Returned ${cachedData.products.length} products in 2ms.`],
+      cached: true
+    });
+  }
 
   const logs = [];
   const onLog = (msg) => logs.push(msg);
@@ -103,6 +191,15 @@ app.post('/api/scrape', async (req, res) => {
       engineOverride: engine,
       onLog
     });
+
+    if (result.products && result.products.length > 0) {
+      catalogCache.set(cacheKey, {
+        products: result.products,
+        detection: result.detection,
+        total: result.total
+      }, 300);
+    }
+
     res.json({ ...result, logs });
   } catch (err) {
     res.status(500).json({ error: err.message, logs });
@@ -251,6 +348,12 @@ app.get('/llms.txt', (req, res) => {
   res.send('# getProducts — Universal E-Commerce Product Catalog Exporter\n\n> getProducts extracts e-commerce product catalogs from Shopify, WooCommerce, Wix, Daraz, Zatiq, and Amazon, exporting them to ready-to-import CSV formats.\n');
 });
 
+// Clear cache endpoint (can be called if needed)
+app.post('/api/cache/clear', (req, res) => {
+  catalogCache.clear();
+  res.json({ message: 'Store cache cleared successfully.' });
+});
+
 // Serve Client Static Build if in production
 const clientDist = path.join(__dirname, '../client/dist');
 app.use(express.static(clientDist));
@@ -261,6 +364,23 @@ app.use((req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Universal Product Scraper Server listening on http://localhost:${PORT}`);
+});
+
+// Graceful Shutdown for Zero-Downtime Reloads
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server gracefully...');
+  server.close(() => {
+    console.log('HTTP server closed.');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received: closing HTTP server gracefully...');
+  server.close(() => {
+    console.log('HTTP server closed.');
+    process.exit(0);
+  });
 });
