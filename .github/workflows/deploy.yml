@@ -1,33 +1,54 @@
-name: Deploy to VPS
+name: Deploy Scraper CSV to VPS
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Build & Deploy Container on VPS
+    name: Deploy to VPS
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script_stop: true
-          script: |
-            echo "🚀 Starting deployment on PXL-M VPS..."
-            cd /opt/scraper_csv || exit 1
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY || secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.SSH_HOST || secrets.VPS_HOST || '165.101.215.46' }}
+          USER: ${{ secrets.SSH_USERNAME || secrets.VPS_USER || 'root' }}
+          PORT: ${{ secrets.SSH_PORT || secrets.VPS_PORT || '22' }}
+          DEPLOY_PATH: '/opt/scraper_csv'
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::SSH_KEY secret is not set in GitHub repository secrets!"
+            exit 1
+          fi
+
+          echo "=========================================="
+          echo "🚀 Deploying Scraper CSV to VPS"
+          echo "=========================================="
+
+          # Setup SSH Key
+          mkdir -p ~/.ssh
+          printf "%s\n" "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+
+          # Execute git pull and docker compose rebuild on VPS
+          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=no "$USER@$HOST" "
+            set -e
+            echo '📂 Updating code in $DEPLOY_PATH...'
+            cd $DEPLOY_PATH
             git pull origin main
+            echo '🐳 Rebuilding and starting container...'
             docker compose up -d --build
             docker image prune -f
-            echo "✅ Deployment completed successfully! Container status:"
-            docker ps --filter "name=scraper-csv-app"
+            echo '✅ Container status:'
+            docker ps --filter name=scraper-csv-app
+          "
+
+          echo "=========================================="
+          echo "✅ Scraper CSV deployment completed!"
+          echo "=========================================="
