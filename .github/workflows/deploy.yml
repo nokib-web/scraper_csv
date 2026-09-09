@@ -11,33 +11,34 @@ jobs:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Deploy to VPS via SSH
+      - name: Deploy via SSH
         env:
-          SSH_KEY: ${{ secrets.SSH_KEY || secrets.VPS_SSH_KEY }}
-          HOST: ${{ secrets.SSH_HOST || secrets.VPS_HOST || '165.101.215.46' }}
-          USER: ${{ secrets.SSH_USERNAME || secrets.VPS_USER || 'root' }}
-          PORT: ${{ secrets.SSH_PORT || secrets.VPS_PORT || '22' }}
-          DEPLOY_PATH: '/opt/scraper_csv'
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          ALT_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USERNAME }}
+          PORT: ${{ secrets.SSH_PORT }}
         run: |
-          if [ -z "$SSH_KEY" ]; then
+          KEY_TO_USE="${SSH_KEY:-$ALT_SSH_KEY}"
+          TARGET_HOST="${HOST:-165.101.215.46}"
+          TARGET_USER="${USER:-root}"
+          TARGET_PORT="${PORT:-22}"
+          DEPLOY_PATH="/opt/scraper_csv"
+
+          if [ -z "$KEY_TO_USE" ]; then
             echo "::error::SSH_KEY secret is not set in GitHub repository secrets!"
             exit 1
           fi
 
           echo "=========================================="
-          echo "🚀 Deploying Scraper CSV to VPS"
+          echo "🚀 Connecting to VPS ($TARGET_USER@$TARGET_HOST:$TARGET_PORT)..."
           echo "=========================================="
 
-          # Setup SSH Key
           mkdir -p ~/.ssh
-          printf "%s\n" "$SSH_KEY" > ~/.ssh/id_deploy
+          printf "%s\n" "$KEY_TO_USE" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
 
-          # Execute git pull and docker compose rebuild on VPS
-          ssh -i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=no "$USER@$HOST" "
+          ssh -i ~/.ssh/id_deploy -p "$TARGET_PORT" -o StrictHostKeyChecking=no "$TARGET_USER@$TARGET_HOST" "
             set -e
             echo '📂 Updating code in $DEPLOY_PATH...'
             cd $DEPLOY_PATH
@@ -50,5 +51,5 @@ jobs:
           "
 
           echo "=========================================="
-          echo "✅ Scraper CSV deployment completed!"
+          echo "✅ Scraper CSV deployment completed successfully!"
           echo "=========================================="
