@@ -79,7 +79,7 @@ export default function BulkTagModal({
     'Media > Books > E-Books',
     'Electronics > Audio',
     'Home & Garden > Decor',
-    'Luggage & Bags > Bags',
+    'Apparel & Accessories > Handbags, Wallets & Cases > Handbags',
     'Sporting Goods',
     'Animals & Pet Supplies > Pet Supplies'
   ];
