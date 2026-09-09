@@ -1,0 +1,20 @@
+services:
+  scraper-csv:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scraper-csv-app
+    restart: always
+    ports:
+      - '3008:4000'
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+    networks:
+      - default
+      - proxy-net
+
+networks:
+  default:
+  proxy-net:
+    external: true
