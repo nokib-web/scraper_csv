@@ -133,7 +133,16 @@ function resolveUniversalImage($el, $, origin) {
 }
 
 /**
- * Universal Price Extractor
+ * Converts Bengali digits (০-৯) to standard English numerals (0-9)
+ */
+function convertBengaliNumerals(str) {
+  if (!str || typeof str !== 'string') return '';
+  const bnToEn = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+  return str.replace(/[০-৯]/g, d => bnToEn[d] || d);
+}
+
+/**
+ * Universal Price Extractor with International & Bengali Currency / Digit Support
  */
 function extractUniversalPrice($el) {
   const priceSelectors = [
@@ -147,9 +156,11 @@ function extractUniversalPrice($el) {
 
   const priceEl = $el.find(priceSelectors.join(', ')).first();
   let text = priceEl.length > 0 ? priceEl.text() : $el.text();
+  text = convertBengaliNumerals(text);
 
   if ($el.find('.price-old, del, .old-price, .strike').length > 0) {
-    regPrice = $el.find('.price-old, del, .old-price, .strike').text().replace(/[^0-9.]/g, '');
+    const rawOld = convertBengaliNumerals($el.find('.price-old, del, .old-price, .strike').text());
+    regPrice = rawOld.replace(/[^0-9.]/g, '');
   }
 
   const match = text.match(/(?:Tk|৳|TK\.|\$|£|€|₹|Rs\.?|USD|EUR|BDT)?\s*([0-9,]+(?:\.[0-9]{2})?)/i) ||

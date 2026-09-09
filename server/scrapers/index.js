@@ -4,6 +4,7 @@ const { scrapeWooCommerce } = require('./wooScraper');
 const { scrapeZatiqStore } = require('./zatiqScraper');
 const { scrapeDarazCatalog } = require('./darazScraper');
 const { scrapeAmazon } = require('./amazonScraper');
+const { scrapeGuardianCatalog } = require('./guardianScraper');
 const { scrapeGenericSite } = require('./genericScraper');
 
 /**
@@ -71,6 +72,11 @@ async function scrapeProducts(url, options = {}) {
     case 'amazon':
       onLog('Executing Amazon Marketplace & Catalog Extractor...');
       rawProducts = await scrapeAmazon(formattedUrl, options, onLog);
+      break;
+
+    case 'guardianpubs':
+      onLog('Executing Guardian Publications High-Speed Catalog Extractor...');
+      rawProducts = await scrapeGuardianCatalog(formattedUrl, options, onLog);
       break;
 
     case 'wix':

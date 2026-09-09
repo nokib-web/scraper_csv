@@ -97,6 +97,17 @@ async function detectPlatform(url) {
       };
     }
 
+    if (hostname.includes('guardianpubs.com') || hostname.includes('guardianpublication')) {
+      return {
+        platform: 'guardianpubs',
+        confidence: 1.0,
+        origin,
+        path: pathname,
+        isSingleProduct: pathname.includes('/product-details/'),
+        details: 'Guardian Publications Catalog API'
+      };
+    }
+
     // 1. Quick probe for Shopify products.json
     try {
       const probeShopify = await axios.get(`${origin}/products.json?limit=1`, {
