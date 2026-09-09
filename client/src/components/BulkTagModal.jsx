@@ -10,6 +10,7 @@ export default function BulkTagModal({
   onClose, 
   selectedProductIds = [], 
   products = [], 
+  initialTab = 'category',
   onApplyAddTags, 
   onApplyRemoveTag,
   onApplySetCategory,
@@ -22,7 +23,13 @@ export default function BulkTagModal({
   onApplySetVendor
 }) {
   // Tabs: 'category' | 'type' | 'template' | 'price' | 'inventory' | 'sku' | 'status' | 'tags'
-  const [activeTab, setActiveTab] = useState('category');
+  const [activeTab, setActiveTab] = useState(initialTab || 'category');
+
+  React.useEffect(() => {
+    if (initialTab && isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
   
   // Tab Inputs
   const [newTagInput, setNewTagInput] = useState('');
@@ -213,18 +220,18 @@ export default function BulkTagModal({
   const navTabs = [
     { id: 'category', label: 'Category & Type', icon: <FolderTree className="w-3.5 h-3.5" /> },
     { id: 'price', label: 'Pricing & Markup', icon: <DollarSign className="w-3.5 h-3.5" /> },
-    { id: 'inventory', label: 'Stock & Inventory', icon: <Package className="w-3.5 h-3.5" /> },
-    { id: 'sku', label: 'SKU & Barcodes', icon: <Barcode className="w-3.5 h-3.5" /> },
+    { id: 'inventory', label: 'Stock & Qty', icon: <Package className="w-3.5 h-3.5" /> },
+    { id: 'sku', label: 'SKU & Barcode', icon: <Barcode className="w-3.5 h-3.5" /> },
     { id: 'status', label: 'Status & Vendor', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
-    { id: 'tags', label: 'Tags Manager', icon: <Tag className="w-3.5 h-3.5" /> }
+    { id: 'tags', label: '🏷️ Tags Manager', icon: <Tag className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" /> }
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-4xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[#F1FF0A]/10 border border-[#F1FF0A]/20 text-[#8b9900] dark:text-[#F1FF0A]">
               <Sparkles className="w-4 h-4 stroke-[2.5]" />
@@ -237,7 +244,7 @@ export default function BulkTagModal({
                 </span>
               </h3>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Bulk modify categories, types, template suffixes, prices, stocks, and SKUs
+                Bulk modify tags, categories, types, template suffixes, prices, stocks, and SKUs
               </p>
             </div>
           </div>
@@ -249,21 +256,21 @@ export default function BulkTagModal({
           </button>
         </div>
 
-        {/* Tab Switcher Bar */}
-        <div className="flex items-center gap-1 px-5 pt-3 pb-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/40 overflow-x-auto scrollbar-none">
+        {/* Tab Switcher Bar: 6 Clean Visible Tabs in Responsive Grid */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 p-2.5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/40">
           {navTabs.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                 activeTab === t.id
-                  ? 'bg-neutral-900 text-white dark:bg-[#F1FF0A] dark:text-black shadow-sm'
-                  : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-800'
+                  ? 'bg-neutral-900 text-white dark:bg-[#F1FF0A] dark:text-black shadow-md scale-[1.02]'
+                  : 'bg-white dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-neutral-700/60 hover:border-[#F1FF0A]/40'
               }`}
             >
               {t.icon}
-              <span>{t.label}</span>
+              <span className="truncate">{t.label}</span>
             </button>
           ))}
         </div>

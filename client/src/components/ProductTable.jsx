@@ -245,14 +245,26 @@ export default function ProductTable({
           </div>
 
           <div className="flex items-center flex-wrap gap-2 text-xs">
+            {/* Direct Bulk Tag Manager Button */}
+            <button
+              type="button"
+              onClick={() => onOpenBulkTags && onOpenBulkTags('tags')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-[#F1FF0A] font-bold border border-[#F1FF0A]/40 hover:border-[#F1FF0A] transition-all cursor-pointer shadow-sm"
+              title="Add or remove tags in bulk across selected items"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>🏷️ Manage Tags ({selectedProductIds.length})</span>
+            </button>
+
             {/* Bulk Inventory Editor Button */}
             <button
               type="button"
-              onClick={onOpenBulkTags}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-[#F1FF0A] font-bold border border-neutral-700 hover:border-[#F1FF0A]/40 transition-all cursor-pointer shadow-sm"
+              onClick={() => onOpenBulkTags && onOpenBulkTags('category')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white hover:text-[#F1FF0A] font-bold border border-neutral-700 hover:border-[#F1FF0A]/40 transition-all cursor-pointer shadow-sm"
+              title="Bulk edit categories, types, template suffixes, prices, stocks, and SKUs"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Shopify Bulk Editor ({selectedProductIds.length})</span>
+              <span>Shopify Bulk Editor</span>
             </button>
 
             {/* Export Selected Dropdown Button & Popover */}

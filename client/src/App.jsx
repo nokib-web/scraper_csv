@@ -73,6 +73,7 @@ export default function App() {
   const [previewFormat, setPreviewFormat] = useState('shopify');
   const [findReplaceModalOpen, setFindReplaceModalOpen] = useState(false);
   const [bulkTagModalOpen, setBulkTagModalOpen] = useState(false);
+  const [bulkTagModalTab, setBulkTagModalTab] = useState('tags');
   const [csvImportModalOpen, setCsvImportModalOpen] = useState(false);
 
   // Customizable Default Inventory / Stock Quantity (default: 99)
@@ -1046,7 +1047,10 @@ export default function App() {
                     selectedProductIds={selectedProductIds}
                     onToggleSelect={handleToggleSelect}
                     onToggleSelectAll={handleToggleSelectAll}
-                    onOpenBulkTags={() => setBulkTagModalOpen(true)}
+                    onOpenBulkTags={(tab = 'category') => {
+                      setBulkTagModalTab(typeof tab === 'string' ? tab : 'category');
+                      setBulkTagModalOpen(true);
+                    }}
                     onBulkDelete={() => handleBulkDelete(selectedProductIds)}
                     onBulkExport={(format) => handleExport(format || 'shopify')}
                     onOpenPreview={(format) => handleOpenPreview(format || 'shopify')}
@@ -1115,6 +1119,7 @@ export default function App() {
         onClose={() => setBulkTagModalOpen(false)}
         selectedProductIds={selectedProductIds}
         products={products}
+        initialTab={bulkTagModalTab}
         onApplyAddTags={handleBulkAddTags}
         onApplyRemoveTag={handleBulkRemoveTag}
         onApplySetCategory={handleBulkSetCategory}
