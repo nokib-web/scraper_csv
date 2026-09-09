@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Universal E-Commerce Product Scraper & CSV Exporter
 
-# Stage 1: Build Frontend
+# Stage 1: Build Frontend Bundle
 FROM node:22-alpine AS builder
 WORKDIR /app
 
@@ -8,8 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY client/package*.json ./client/
 
-# Install all dependencies (including devDependencies for build)
-RUN npm install
+# Install dependencies
+RUN npm install --ignore-scripts
 RUN npm --prefix client install
 
 # Copy application source
@@ -27,7 +27,7 @@ ENV PORT=4000
 
 # Copy root package files & install production dependencies only
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev --ignore-scripts
 
 # Copy backend server code
 COPY server/ ./server/
