@@ -389,6 +389,140 @@ export function parseGenericCsv(rows = []) {
 }
 
 /**
+ * Parses Wix Store Product CSV format (supporting both Multi-Row Variation and Simple Product formats)
+ */
+export function parseWixCsv(rows = []) {
+  const productsMap = new Map();
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const handleId = getField(row, ['handleId', 'HandleID', 'handle', 'id']) || `wix-${i + 1}`;
+    const fieldType = (getField(row, ['fieldType', 'FieldType', 'type']) || 'Product').toLowerCase();
+    const name = getField(row, ['name', 'Name', 'title', 'Title']);
+    const desc = getField(row, ['description', 'Description', 'details']);
+    const rawImages = getField(row, ['productImageUrl', 'ProductImageUrl', 'images', 'image']);
+    const collection = getField(row, ['collection', 'Collection', 'category', 'Category']);
+    const sku = getField(row, ['sku', 'SKU']) || `SKU-${handleId}`;
+    const ribbon = getField(row, ['ribbon', 'Ribbon']);
+    const price = parseFloat(getField(row, ['price', 'Price']) || 0) || 0;
+    const discountMode = getField(row, ['discountMode', 'DiscountMode']);
+    const discountVal = parseFloat(getField(row, ['discountValue', 'DiscountValue']) || 0) || 0;
+    const rawInventory = getField(row, ['inventory', 'Inventory']);
+    const stock = rawInventory === 'InStock' ? 99 : (parseInt(rawInventory, 10) || 99);
+    const weight = parseFloat(getField(row, ['weight', 'Weight']) || 0) || 0;
+    const brand = getField(row, ['brand', 'Brand', 'vendor', 'Vendor']) || 'Wix Store';
+
+    // Option fields
+    const opt1Name = getField(row, ['productOptionName1', 'ProductOptionName1']);
+    const opt1Val = getField(row, ['productOptionDescription1', 'ProductOptionDescription1']);
+    const opt2Name = getField(row, ['productOptionName2', 'ProductOptionName2']);
+    const opt2Val = getField(row, ['productOptionDescription2', 'ProductOptionDescription2']);
+    const opt3Name = getField(row, ['productOptionName3', 'ProductOptionName3']);
+    const opt3Val = getField(row, ['productOptionDescription3', 'ProductOptionDescription3']);
+
+    let regPrice = price;
+    let salePrice = price;
+    if (discountMode.toLowerCase() === 'amount' && discountVal > 0) {
+      salePrice = Math.max(0, price - discountVal);
+      regPrice = price;
+    }
+
+    if (fieldType === 'product' || !productsMap.has(handleId)) {
+      const images = [];
+      if (rawImages) {
+        const urls = rawImages.split(';').map(u => u.trim()).filter(Boolean);
+        urls.forEach((src, idx) => {
+          images.push({ id: idx + 1, src, alt: name || handleId, position: idx + 1 });
+        });
+      }
+
+      const tags = [];
+      if (collection) tags.push(collection);
+      if (ribbon) tags.push(ribbon);
+
+      const options = [];
+      if (opt1Name && opt1Val) options.push({ name: opt1Name, values: opt1Val.split(';').map(v => v.trim()).filter(Boolean) });
+      if (opt2Name && opt2Val) options.push({ name: opt2Name, values: opt2Val.split(';').map(v => v.trim()).filter(Boolean) });
+      if (opt3Name && opt3Val) options.push({ name: opt3Name, values: opt3Val.split(';').map(v => v.trim()).filter(Boolean) });
+
+      const initialVariant = {
+        id: `v-${handleId}-1`,
+        title: 'Default Title',
+        price: salePrice,
+        compare_at_price: (regPrice > salePrice) ? regPrice : null,
+        sku: sku,
+        inventory_quantity: stock,
+        inventory_policy: 'continue',
+        requires_shipping: true,
+        taxable: true,
+        weight: weight,
+        option1: null
+      };
+
+      productsMap.set(handleId, {
+        id: `imp-wix-${handleId}-${Date.now()}`,
+        handle: handleId.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        title: name || handleId,
+        description: desc || '',
+        vendor: brand,
+        product_type: collection || 'General',
+        category: collection || 'General',
+        type: collection || 'General',
+        template_suffix: '',
+        template: '',
+        tags: tags,
+        status: 'active',
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        price: salePrice,
+        regular_price: regPrice,
+        currency: 'USD',
+        variants: [initialVariant],
+        images: images,
+        options: options,
+        url: '',
+        source: 'imported_wix'
+      });
+    } else if (fieldType === 'variant') {
+      const product = productsMap.get(handleId);
+      if (product) {
+        const varTitleParts = [opt1Val, opt2Val, opt3Val].filter(Boolean);
+        const varTitle = varTitleParts.length > 0 ? varTitleParts.join(' / ') : `Variant ${product.variants.length + 1}`;
+
+        if (product.variants.length === 1 && product.variants[0].title === 'Default Title' && varTitle !== 'Default Title') {
+          product.variants[0].title = varTitle;
+          product.variants[0].sku = sku;
+          product.variants[0].price = price || product.price;
+          product.variants[0].inventory_quantity = stock;
+          product.variants[0].weight = weight;
+          product.variants[0].option1 = opt1Val || null;
+          product.variants[0].option2 = opt2Val || null;
+          product.variants[0].option3 = opt3Val || null;
+        } else {
+          product.variants.push({
+            id: `v-${handleId}-${product.variants.length + 1}`,
+            title: varTitle,
+            price: price || product.price,
+            compare_at_price: null,
+            sku: sku || `SKU-${handleId}-${product.variants.length + 1}`,
+            inventory_quantity: stock,
+            inventory_policy: 'continue',
+            requires_shipping: true,
+            taxable: true,
+            weight: weight,
+            option1: opt1Val || null,
+            option2: opt2Val || null,
+            option3: opt3Val || null
+          });
+        }
+      }
+    }
+  }
+
+  return Array.from(productsMap.values());
+}
+
+/**
  * Main CSV Import Function
  * Takes a File object or raw CSV string, parses it, auto-detects format, and returns normalized products.
  */
@@ -412,6 +546,8 @@ export function importCsvFile(fileOrString) {
             parsedProducts = parseShopifyCsv(rows);
           } else if (formatInfo.type === 'woocommerce') {
             parsedProducts = parseWooCommerceCsv(rows);
+          } else if (formatInfo.type === 'wix') {
+            parsedProducts = parseWixCsv(rows);
           } else {
             parsedProducts = parseGenericCsv(rows);
           }

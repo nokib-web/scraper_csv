@@ -8,7 +8,7 @@ const { scrapeProducts, detectPlatform } = require('./scrapers');
 const { catalogCache } = require('./utils/cache');
 const { exportShopifyCsv, exportShopifyInventoryCsv } = require('./exporters/shopifyFormatter');
 const { exportWooCommerceCsv } = require('./exporters/wooFormatter');
-const { exportWixCsv } = require('./exporters/wixFormatter');
+const { exportWixCsv, exportWixSimpleCsv } = require('./exporters/wixFormatter');
 const { exportUniversalCsv } = require('./exporters/universalFormatter');
 const { exportJson } = require('./exporters/jsonFormatter');
 
@@ -304,6 +304,12 @@ app.post('/api/export', (req, res) => {
     case 'wix_csv':
       output = exportWixCsv(products, exportOptions);
       fileExt = 'wix.csv';
+      break;
+
+    case 'wix_simple':
+    case 'wix_simple_csv':
+      output = exportWixSimpleCsv(products, exportOptions);
+      fileExt = 'wix_simple.csv';
       break;
 
     case 'universal':
