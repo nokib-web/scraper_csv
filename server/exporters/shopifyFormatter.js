@@ -1,42 +1,68 @@
 const { stringify } = require('csv-stringify/sync');
+const { resolveShopifyTaxonomy, resolveCustomProductType } = require('./taxonomyHelper');
 
+/**
+ * Official Shopify 2024+ Matrix / Standard Product CSV Headers
+ * Fully compatible with Shopify Standard Product Taxonomy & Matrix importer.
+ */
 const SHOPIFY_HEADERS = [
-  'Handle',
   'Title',
-  'Body (HTML)',
+  'URL handle',
+  'Description',
   'Vendor',
-  'Product Category',
+  'Product category',
   'Type',
   'Tags',
-  'Published',
-  'Option1 Name',
-  'Option1 Value',
-  'Option2 Name',
-  'Option2 Value',
-  'Option3 Name',
-  'Option3 Value',
-  'Variant SKU',
-  'Variant Grams',
-  'Variant Inventory Tracker',
-  'Variant Inventory Qty',
-  'Variant Inventory Policy',
-  'Variant Fulfillment Service',
-  'Variant Price',
-  'Variant Compare At Price',
-  'Variant Requires Shipping',
-  'Variant Taxable',
-  'Variant Barcode',
-  'Image Src',
-  'Image Position',
-  'Image Alt Text',
-  'Gift Card',
-  'SEO Title',
-  'SEO Description',
-  'Variant Image',
-  'Variant Weight Unit',
-  'Cost per item',
+  'Published on online store',
   'Status',
-  'Template Suffix'
+  'SKU',
+  'Barcode',
+  'Option1 name',
+  'Option1 value',
+  'Option1 Linked To',
+  'Option2 name',
+  'Option2 value',
+  'Option2 Linked To',
+  'Option3 name',
+  'Option3 value',
+  'Option3 Linked To',
+  'Price',
+  'Compare-at price',
+  'Cost per item',
+  'Charge tax',
+  'Tax code',
+  'Unit price total measure',
+  'Unit price total measure unit',
+  'Unit price base measure',
+  'Unit price base measure unit',
+  'Inventory tracker',
+  'Inventory quantity',
+  'Continue selling when out of stock',
+  'Weight value (grams)',
+  'Weight unit for display',
+  'Requires shipping',
+  'Fulfillment service',
+  'Product image URL',
+  'Image position',
+  'Image alt text',
+  'Variant image URL',
+  'Gift card',
+  'SEO title',
+  'SEO description',
+  'Color (product.metafields.shopify.color-pattern)',
+  'Google Shopping / Google product category',
+  'Google Shopping / Gender',
+  'Google Shopping / Age group',
+  'Google Shopping / Manufacturer part number (MPN)',
+  'Google Shopping / Ad group name',
+  'Google Shopping / Ads labels',
+  'Google Shopping / Condition',
+  'Google Shopping / Custom product',
+  'Google Shopping / Custom label 0',
+  'Google Shopping / Custom label 1',
+  'Google Shopping / Custom label 2',
+  'Google Shopping / Custom label 3',
+  'Google Shopping / Custom label 4'
 ];
 
 const SHOPIFY_INVENTORY_HEADERS = [
@@ -119,14 +145,13 @@ function exportShopifyCsv(products, options = {}) {
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const customType = options.customType && options.customType.trim() ? options.customType.trim() : null;
-  const customTemplate = options.customTemplate && options.customTemplate.trim() ? options.customTemplate.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
   
   // Inventory Policy: 'continue' (default, prevents 0 stock purchase block on new Shopify stores) or 'deny'
   const isUntracked = options.inventoryPolicy === 'untracked' || options.inventoryTracker === 'none' || options.inventoryTracker === '';
   const effectiveTracker = isUntracked ? '' : 'shopify';
-  const effectivePolicy = options.inventoryPolicy === 'deny' ? 'deny' : 'continue';
+  const effectivePolicy = options.inventoryPolicy === 'deny' ? 'DENY' : 'CONTINUE';
 
   const rows = [];
 
@@ -134,10 +159,24 @@ function exportShopifyCsv(products, options = {}) {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}`);
     const tags = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
     const effectiveVendor = customVendor || p.vendor || '';
-    const effectiveCat = customCategory || p.category || p.product_type || '';
-    const effectiveType = customType || p.type || p.product_type || p.category || '';
-    const rawTemplate = customTemplate || p.template_suffix || p.template || '';
-    const effectiveTemplate = String(rawTemplate || '').replace(/^product\./i, '').trim();
+
+    // Smart Shopify Taxonomy Resolution:
+    // Only outputs valid Shopify Standard Product Taxonomy paths (or '' if unmapped to prevent import error)
+    const standardizedTaxonomy = resolveShopifyTaxonomy(
+      customCategory || p.product_category || p.category || '',
+      customType || p.product_type || p.type || '',
+      p.title || '',
+      p.tags || []
+    );
+
+    // Custom Product Type (merchant-defined)
+    const effectiveType = resolveCustomProductType(
+      customType,
+      p.product_type || p.type || '',
+      customCategory || p.category || '',
+      ''
+    );
+
     const markedPrice = applyPriceMarkup(p.price || 0, priceMarkup);
     const markedRegPrice = p.regular_price ? applyPriceMarkup(p.regular_price, priceMarkup) : '';
 
@@ -190,9 +229,30 @@ function exportShopifyCsv(products, options = {}) {
     };
 
     const hasOptions = p.options && Array.isArray(p.options) && p.options.length > 0;
-    const opt1Name = hasOptions ? cleanOptName(p.options[0]?.name || p.options[0], 'Title') : 'Title';
+    const opt1Name = hasOptions ? cleanOptName(p.options[0]?.name || p.options[0], 'Title') : (variants.some(v => v && v.option1 && v.option1 !== 'Default Title') ? 'Size' : 'Title');
     const opt2Name = hasOptions && p.options[1] ? cleanOptName(p.options[1]?.name || p.options[1], 'Color') : (variants.some(v => v && v.option2) ? 'Color' : '');
     const opt3Name = hasOptions && p.options[2] ? cleanOptName(p.options[2]?.name || p.options[2], 'Style') : (variants.some(v => v && v.option3) ? 'Style' : '');
+
+    // Extract color patterns for metafield
+    const colorsList = variants
+      .map(v => {
+        if (opt2Name.toLowerCase().includes('color') && v.option2) return v.option2;
+        if (opt1Name.toLowerCase().includes('color') && v.option1) return v.option1;
+        return null;
+      })
+      .filter(Boolean);
+    const uniqueColors = Array.from(new Set(colorsList)).join('; ');
+
+    // Normalize product status
+    let normalizedStatus = 'Active';
+    if (p.status) {
+      const st = String(p.status).toLowerCase();
+      if (st === 'draft') normalizedStatus = 'Draft';
+      else if (st === 'archived') normalizedStatus = 'Archived';
+      else normalizedStatus = 'Active';
+    }
+
+    const isDigital = Boolean(p.is_digital || p.type === 'Digital book' || effectiveType.toLowerCase().includes('digital') || p.requires_shipping === false);
 
     for (let i = 0; i < maxRows; i++) {
       const isFirstRow = i === 0;
@@ -210,43 +270,68 @@ function exportShopifyCsv(products, options = {}) {
         }
       }
 
+      const variantGrams = v 
+        ? (v.weight ? Math.round(Number(v.weight) * 1000) : (v.grams ? Math.round(Number(v.grams)) : 0))
+        : '';
+
       const row = {
-        'Handle': handle,
         'Title': isFirstRow ? p.title : '',
-        'Body (HTML)': isFirstRow ? bodyHtml : '',
+        'URL handle': handle,
+        'Description': isFirstRow ? bodyHtml : '',
         'Vendor': isFirstRow ? effectiveVendor : '',
-        'Product Category': isFirstRow ? effectiveCat : '',
+        'Product category': isFirstRow ? standardizedTaxonomy : '',
         'Type': isFirstRow ? effectiveType : '',
         'Tags': isFirstRow ? tags : '',
-        'Published': isFirstRow ? 'TRUE' : '',
-        'Option1 Name': isFirstRow ? opt1Name : '',
-        'Option1 Value': v ? (v.option1 || v.title || 'Default Title') : '',
-        'Option2 Name': isFirstRow && (opt2Name || (v && v.option2)) ? (opt2Name || 'Color') : '',
-        'Option2 Value': v ? (v.option2 || '') : '',
-        'Option3 Name': isFirstRow && (opt3Name || (v && v.option3)) ? (opt3Name || 'Style') : '',
-        'Option3 Value': v ? (v.option3 || '') : '',
-        'Variant SKU': v ? (v.sku || `SKU-${handle}`) : '',
-        'Variant Grams': v ? (Math.round((v.weight || 0) * 1000) || 0) : '',
-        'Variant Inventory Tracker': v ? effectiveTracker : '',
-        'Variant Inventory Qty': variantQty,
-        'Variant Inventory Policy': v ? effectivePolicy : '',
-        'Variant Fulfillment Service': v ? 'manual' : '',
-        'Variant Price': v ? (v.price !== undefined ? Number(v.price).toFixed(2) : Number(markedPrice).toFixed(2)) : '',
-        'Variant Compare At Price': v && v.compare_at_price ? Number(v.compare_at_price).toFixed(2) : '',
-        'Variant Requires Shipping': v ? 'TRUE' : '',
-        'Variant Taxable': v ? 'TRUE' : '',
-        'Variant Barcode': v ? (v.barcode || '') : '',
-        'Image Src': img ? img.src : '',
-        'Image Position': img ? img.position : '',
-        'Image Alt Text': img ? (img.alt || p.title) : '',
-        'Gift Card': isFirstRow ? 'FALSE' : '',
-        'SEO Title': isFirstRow ? p.title : '',
-        'SEO Description': isFirstRow ? bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 160) : '',
-        'Variant Image': v && isFirstRow && img ? img.src : '',
-        'Variant Weight Unit': v ? 'kg' : '',
-        'Cost per item': '',
-        'Status': isFirstRow ? (p.status || 'active') : '',
-        'Template Suffix': isFirstRow ? effectiveTemplate : ''
+        'Published on online store': isFirstRow ? 'TRUE' : '',
+        'Status': isFirstRow ? normalizedStatus : '',
+        'SKU': v ? (v.sku || `SKU-${handle}`) : '',
+        'Barcode': v ? (v.barcode || '') : '',
+        'Option1 name': isFirstRow ? opt1Name : '',
+        'Option1 value': v ? (v.option1 || v.title || 'Default Title') : '',
+        'Option1 Linked To': isFirstRow && opt1Name.toLowerCase().includes('color') ? 'product.metafields.shopify.color-pattern' : '',
+        'Option2 name': isFirstRow && (opt2Name || (v && v.option2)) ? (opt2Name || 'Color') : '',
+        'Option2 value': v ? (v.option2 || '') : '',
+        'Option2 Linked To': isFirstRow && opt2Name.toLowerCase().includes('color') ? 'product.metafields.shopify.color-pattern' : '',
+        'Option3 name': isFirstRow && (opt3Name || (v && v.option3)) ? (opt3Name || 'Style') : '',
+        'Option3 value': v ? (v.option3 || '') : '',
+        'Option3 Linked To': '',
+        'Price': v ? (v.price !== undefined ? Number(v.price).toFixed(2) : Number(markedPrice).toFixed(2)) : '',
+        'Compare-at price': v && v.compare_at_price ? Number(v.compare_at_price).toFixed(2) : '',
+        'Cost per item': v && v.cost_per_item ? Number(v.cost_per_item).toFixed(2) : '',
+        'Charge tax': v ? 'TRUE' : '',
+        'Tax code': '',
+        'Unit price total measure': '',
+        'Unit price total measure unit': '',
+        'Unit price base measure': '',
+        'Unit price base measure unit': '',
+        'Inventory tracker': v ? effectiveTracker : '',
+        'Inventory quantity': variantQty,
+        'Continue selling when out of stock': v ? effectivePolicy : '',
+        'Weight value (grams)': variantGrams !== '' ? variantGrams : '',
+        'Weight unit for display': v ? 'g' : '',
+        'Requires shipping': v ? (isDigital ? 'FALSE' : 'TRUE') : '',
+        'Fulfillment service': v ? (isDigital ? 'manual' : 'manual') : '',
+        'Product image URL': img ? img.src : '',
+        'Image position': img ? img.position : '',
+        'Image alt text': img ? (img.alt || p.title) : '',
+        'Variant image URL': v && isFirstRow && img ? img.src : (v && v.image ? v.image : ''),
+        'Gift card': isFirstRow ? 'FALSE' : '',
+        'SEO title': isFirstRow ? (p.seo_title || p.title || '') : '',
+        'SEO description': isFirstRow ? (p.seo_description || bodyHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 160)) : '',
+        'Color (product.metafields.shopify.color-pattern)': isFirstRow ? uniqueColors : '',
+        'Google Shopping / Google product category': isFirstRow ? standardizedTaxonomy : '',
+        'Google Shopping / Gender': isFirstRow ? (p.gender || (tags.toLowerCase().includes('women') ? 'Female' : (tags.toLowerCase().includes('men') ? 'Male' : (tags.toLowerCase().includes('unisex') ? 'Unisex' : '')))) : '',
+        'Google Shopping / Age group': isFirstRow ? (p.age_group || (tags.toLowerCase().includes('baby') || tags.toLowerCase().includes('infant') ? 'Infant' : (tags.toLowerCase().includes('kids') ? 'Kids' : 'Adult (13+ years old)'))) : '',
+        'Google Shopping / Manufacturer part number (MPN)': v ? (v.mpn || v.sku || '') : '',
+        'Google Shopping / Ad group name': '',
+        'Google Shopping / Ads labels': isFirstRow && tags ? tags.split(',')[0]?.trim() : '',
+        'Google Shopping / Condition': isFirstRow ? 'New' : '',
+        'Google Shopping / Custom product': isFirstRow ? 'FALSE' : '',
+        'Google Shopping / Custom label 0': isFirstRow && tags.toLowerCase().includes('best-seller') ? 'Top Seller' : '',
+        'Google Shopping / Custom label 1': '',
+        'Google Shopping / Custom label 2': '',
+        'Google Shopping / Custom label 3': '',
+        'Google Shopping / Custom label 4': ''
       };
 
       rows.push(row);

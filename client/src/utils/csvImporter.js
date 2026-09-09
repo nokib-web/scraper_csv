@@ -14,7 +14,8 @@ export function detectCsvFormat(headers = []) {
   const lowerHeaders = headers.map(h => (h || '').trim().toLowerCase());
 
   // 1. Shopify Product CSV
-  if (lowerHeaders.includes('handle') && (lowerHeaders.includes('title') || lowerHeaders.includes('body (html)') || lowerHeaders.includes('variant price'))) {
+  if ((lowerHeaders.includes('handle') || lowerHeaders.includes('url handle')) && 
+      (lowerHeaders.includes('title') || lowerHeaders.includes('description') || lowerHeaders.includes('body (html)') || lowerHeaders.includes('variant price') || lowerHeaders.includes('price') || lowerHeaders.includes('product category') || lowerHeaders.includes('published on online store'))) {
     return {
       type: 'shopify',
       name: 'Shopify Product Catalog',
@@ -78,39 +79,39 @@ export function parseShopifyCsv(rows = []) {
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const handle = getField(row, ['Handle', 'handle']) || `prod-${i + 1}`;
+    const handle = getField(row, ['URL handle', 'URL Handle', 'Handle', 'handle', 'HandleID']) || `prod-${i + 1}`;
     const title = getField(row, ['Title', 'title', 'Name', 'name']);
-    const bodyHtml = getField(row, ['Body (HTML)', 'body_html', 'Description', 'description', 'Body']);
+    const bodyHtml = getField(row, ['Description', 'description', 'Body (HTML)', 'body_html', 'Body']);
     const vendor = getField(row, ['Vendor', 'vendor', 'Brand', 'brand']);
-    const productCategory = getField(row, ['Product Category', 'Category', 'category']);
+    const productCategory = getField(row, ['Product category', 'Product Category', 'Category', 'category', 'Google Shopping / Google product category']);
     const type = getField(row, ['Type', 'Product Type', 'type', 'product_type']);
     const tagsStr = getField(row, ['Tags', 'tags']);
     const status = (getField(row, ['Status', 'status']) || 'active').toLowerCase();
     const templateSuffix = getField(row, ['Template Suffix', 'template_suffix', 'Template', 'template']).replace(/^product\./i, '');
 
     // Variant fields
-    const opt1Name = getField(row, ['Option1 Name', 'Option 1 Name']);
-    const opt1Val = getField(row, ['Option1 Value', 'Option 1 Value']);
-    const opt2Name = getField(row, ['Option2 Name', 'Option 2 Name']);
-    const opt2Val = getField(row, ['Option2 Value', 'Option 2 Value']);
-    const opt3Name = getField(row, ['Option3 Name', 'Option 3 Name']);
-    const opt3Val = getField(row, ['Option3 Value', 'Option 3 Value']);
+    const opt1Name = getField(row, ['Option1 name', 'Option1 Name', 'Option 1 Name']);
+    const opt1Val = getField(row, ['Option1 value', 'Option1 Value', 'Option 1 Value']);
+    const opt2Name = getField(row, ['Option2 name', 'Option2 Name', 'Option 2 Name']);
+    const opt2Val = getField(row, ['Option2 value', 'Option2 Value', 'Option 2 Value']);
+    const opt3Name = getField(row, ['Option3 name', 'Option3 Name', 'Option 3 Name']);
+    const opt3Val = getField(row, ['Option3 value', 'Option3 Value', 'Option 3 Value']);
 
-    const varPrice = parseFloat(getField(row, ['Variant Price', 'Price', 'price']) || 0) || 0;
-    const varComparePrice = parseFloat(getField(row, ['Variant Compare At Price', 'Compare At Price', 'compare_at_price']) || 0) || null;
+    const varPrice = parseFloat(getField(row, ['Price', 'price', 'Variant Price', 'variant_price']) || 0) || 0;
+    const varComparePrice = parseFloat(getField(row, ['Compare-at price', 'Compare At Price', 'Variant Compare At Price', 'compare_at_price']) || 0) || null;
     const varCost = parseFloat(getField(row, ['Cost per item', 'Cost', 'cost']) || 0) || 0;
-    const varSku = getField(row, ['Variant SKU', 'SKU', 'sku']) || `SKU-${handle}-${i + 1}`;
-    const varBarcode = getField(row, ['Variant Barcode', 'Barcode', 'barcode']);
-    const varStock = parseInt(getField(row, ['Variant Inventory Qty', 'Inventory Qty', 'Stock', 'stock']) || '99', 10);
-    const varPolicy = (getField(row, ['Variant Inventory Policy', 'Inventory Policy']) || 'continue').toLowerCase();
-    const varShipping = getField(row, ['Variant Requires Shipping']) !== 'FALSE';
-    const varTaxable = getField(row, ['Variant Taxable']) !== 'FALSE';
-    const varWeight = parseFloat(getField(row, ['Variant Grams', 'Weight', 'weight']) || 0) || 0;
+    const varSku = getField(row, ['SKU', 'sku', 'Variant SKU']) || `SKU-${handle}-${i + 1}`;
+    const varBarcode = getField(row, ['Barcode', 'barcode', 'Variant Barcode']);
+    const varStock = parseInt(getField(row, ['Inventory quantity', 'Inventory Qty', 'Variant Inventory Qty', 'Stock', 'stock']) || '99', 10);
+    const varPolicy = (getField(row, ['Continue selling when out of stock', 'Variant Inventory Policy', 'Inventory Policy']) || 'continue').toLowerCase();
+    const varShipping = getField(row, ['Requires shipping', 'Variant Requires Shipping']) !== 'FALSE';
+    const varTaxable = getField(row, ['Charge tax', 'Variant Taxable']) !== 'FALSE';
+    const varWeight = parseFloat(getField(row, ['Weight value (grams)', 'Variant Grams', 'Weight', 'weight']) || 0) || 0;
 
     // Image fields
-    const imageSrc = getField(row, ['Image Src', 'Image URL', 'Image', 'image']);
-    const imageAlt = getField(row, ['Image Alt Text', 'Image Alt', 'alt']) || title;
-    const imagePos = parseInt(getField(row, ['Image Position']) || '1', 10);
+    const imageSrc = getField(row, ['Product image URL', 'Variant image URL', 'Image Src', 'Image URL', 'Image', 'image']);
+    const imageAlt = getField(row, ['Image alt text', 'Image Alt Text', 'Image Alt', 'alt']) || title;
+    const imagePos = parseInt(getField(row, ['Image position', 'Image Position']) || '1', 10);
 
     const variantTitleParts = [opt1Val, opt2Val, opt3Val].filter(v => v && v !== 'Default Title');
     const variantTitle = variantTitleParts.length > 0 ? variantTitleParts.join(' / ') : 'Default Title';

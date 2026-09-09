@@ -73,7 +73,15 @@ export default function BulkTagModal({
   ];
 
   const quickCategoryPresets = [
-    'Electronics', 'Fashion & Clothing', 'Shoes & Footwear', 'Home & Living', 'Beauty & Cosmetics', 'Books & Stationery', 'Sports & Outdoors', 'Groceries & Food', 'Jewelry & Watches', 'Health & Wellness'
+    'Apparel & Accessories > Clothing',
+    'Baby & Toddler > Baby Toys & Activity Equipment',
+    'Health & Beauty > Personal Care > Cosmetics',
+    'Media > Books > E-Books',
+    'Electronics > Audio',
+    'Home & Garden > Decor',
+    'Luggage & Bags > Bags',
+    'Sporting Goods',
+    'Animals & Pet Supplies > Pet Supplies'
   ];
 
   const quickTypePresets = [
