@@ -73,10 +73,29 @@ export default function FormatPreviewModal({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(previewContent);
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(previewContent);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      }
+    } catch (e) {
+      console.warn('Clipboard writeText fallback:', e);
+    }
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = previewContent;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (e) {}
+    } catch (err) {}
   };
 
   const tabs = [

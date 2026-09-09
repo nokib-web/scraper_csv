@@ -57,11 +57,32 @@ export default function UrlBar({
     return () => clearTimeout(timeout);
   }, [charIndex, isDeleting, phraseIndex]);
 
+  const [pastePrompt, setPastePrompt] = useState(false);
+
   const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) setUrl(text.trim());
-    } catch (e) {}
+    // 1. Try modern Async Clipboard API (works on HTTPS or localhost)
+    if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.trim()) {
+          setUrl(text.trim());
+          return;
+        }
+      } catch (e) {
+        console.warn('Clipboard readText restricted or denied:', e.message);
+      }
+    }
+
+    // 2. HTTP / Insecure Context Fallback:
+    // Browsers block programmatic clipboard read on HTTP (non-HTTPS).
+    // Focus the input, select it, and show an instant visual prompt to press Ctrl+V.
+    const inputEl = document.getElementById('store-url-input');
+    if (inputEl) {
+      inputEl.focus();
+      inputEl.select();
+    }
+    setPastePrompt(true);
+    setTimeout(() => setPastePrompt(false), 2500);
   };
 
   const handleClearUrl = () => {
@@ -150,11 +171,15 @@ export default function UrlBar({
               type="button"
               onClick={handlePaste}
               aria-label="Paste store URL from clipboard"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black dark:hover:bg-[#F1FF0A] dark:hover:text-black text-neutral-900 dark:text-neutral-100 text-xs sm:text-sm font-semibold transition-all border border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A] flex-shrink-0 cursor-pointer shadow-sm"
-              title="Paste URL from clipboard"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border flex-shrink-0 cursor-pointer shadow-sm ${
+                pastePrompt
+                  ? 'bg-[#F1FF0A] text-black border-[#F1FF0A] animate-pulse font-bold'
+                  : 'bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black dark:hover:bg-[#F1FF0A] dark:hover:text-black text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]'
+              }`}
+              title="Paste URL from clipboard (or press Ctrl+V)"
             >
               <ClipboardPaste className="w-3.5 h-3.5" />
-              <span>Paste</span>
+              <span>{pastePrompt ? 'Press Ctrl+V' : 'Paste'}</span>
             </button>
           )}
 
