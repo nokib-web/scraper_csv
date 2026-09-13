@@ -47,7 +47,7 @@ async function scrapeProducts(url, options = {}) {
     case 'shopify':
       if (detection.isSingleProduct) {
         onLog('Executing Shopify Single Product Extractor...');
-        rawProducts = await scrapeShopifySingleProduct(formattedUrl, onLog);
+        rawProducts = await scrapeShopifySingleProduct(formattedUrl, options, onLog);
       } else {
         onLog('Executing Shopify Full Catalog Extractor...');
         rawProducts = await scrapeShopifyCatalog(formattedUrl, options, onLog);

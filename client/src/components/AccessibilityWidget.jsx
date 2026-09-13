@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   RotateCcw, 
@@ -37,8 +38,12 @@ const DEFAULT_SETTINGS = {
 
 const STORAGE_KEY = 'getproducts_a11y_settings';
 
-export default function AccessibilityWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function AccessibilityWidget({ isOpen: externalIsOpen, onClose: externalOnClose }) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isControlled = externalIsOpen !== undefined;
+  const isOpen = isControlled ? externalIsOpen : internalIsOpen;
+  const handleClose = isControlled ? externalOnClose : () => setInternalIsOpen(false);
+
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -148,7 +153,7 @@ export default function AccessibilityWidget() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+        handleClose && handleClose();
       }
     };
 
@@ -159,7 +164,7 @@ export default function AccessibilityWidget() {
         !drawerRef.current.contains(e.target) && 
         !e.target.closest('.a11y-trigger-btn')
       ) {
-        setIsOpen(false);
+        handleClose && handleClose();
       }
     };
 
@@ -169,7 +174,7 @@ export default function AccessibilityWidget() {
       window.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -186,34 +191,24 @@ export default function AccessibilityWidget() {
     return false;
   }).length;
 
-  return (
-    <div className="a11y-widget-portal font-sans relative z-[999999]">
-      {/* Floating Trigger Button on the Left Edge */}
-      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-[999990]">
-        <button
-          type="button"
-          onClick={() => setIsOpen(prev => !prev)}
-          aria-label="Open Accessibility Options"
-          aria-expanded={isOpen}
-          title="Accessibility Options"
-          className="a11y-trigger-btn group relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-r-2xl bg-[#F1FF0A] hover:bg-[#D4FF00] text-black shadow-[0_0_20px_rgba(241,255,10,0.35)] border-y border-r border-black/20 transition-all duration-300 hover:w-14 cursor-pointer focus:outline-none focus:ring-4 focus:ring-[#F1FF0A]/40 active:scale-95"
-        >
-          <div className="p-1 rounded-full bg-black/10 group-hover:scale-110 transition-transform">
-            <FaUniversalAccess className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
-          </div>
-          {activeCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-black text-[#F1FF0A] font-extrabold text-[11px] shadow-md border-2 border-[#F1FF0A]">
-              {activeCount}
-            </span>
-          )}
-        </button>
-      </div>
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="a11y-widget-portal font-sans relative">
+      {/* Backdrop overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[999998] animate-in fade-in duration-200" 
+          onClick={handleClose}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Accessibility Side Drawer (Right Sliding Panel) */}
       <div 
         ref={drawerRef}
         className={`fixed top-0 right-0 z-[999999] h-full w-full sm:w-[420px] max-w-full bg-[#09090b] text-neutral-100 shadow-2xl border-l border-neutral-800 flex flex-col transform transition-transform duration-300 ease-out overflow-hidden ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+          isOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
         role="dialog"
         aria-modal="true"
@@ -240,7 +235,7 @@ export default function AccessibilityWidget() {
             </div>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
               aria-label="Close Accessibility Options"
             >
@@ -552,6 +547,7 @@ export default function AccessibilityWidget() {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

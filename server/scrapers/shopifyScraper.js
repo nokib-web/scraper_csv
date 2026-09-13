@@ -40,28 +40,37 @@ function normalizeShopifyProduct(item, origin, defaultCurrency = 'USD') {
   }
 
   const variants = (item.variants && item.variants.length > 0)
-    ? item.variants.map((v, idx) => ({
-        id: v.id || `${item.id}-${idx}`,
-        title: v.title || 'Default Title',
-        price: parseFloat(v.price || 0) || 0,
-        compare_at_price: v.compare_at_price ? parseFloat(v.compare_at_price) : null,
-        sku: v.sku || `SKU-${item.id}-${idx + 1}`,
-        inventory_quantity: v.inventory_quantity !== undefined ? v.inventory_quantity : 99,
-        available: v.available !== undefined ? v.available : true,
-        option1: v.option1 || (v.title !== 'Default Title' ? v.title : null),
-        option2: v.option2 || null,
-        option3: v.option3 || null,
-        weight: v.grams ? (v.grams / 1000) : (v.weight || 0),
-        barcode: v.barcode || ''
-      }))
+    ? item.variants.map((v, idx) => {
+        let stock = 99;
+        if (v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+          stock = Number(v.inventory_quantity);
+        } else if (v.available === false || item.available === false) {
+          stock = 0;
+        }
+
+        return {
+          id: v.id || `${item.id}-${idx}`,
+          title: v.title || 'Default Title',
+          price: parseFloat(v.price || 0) || 0,
+          compare_at_price: v.compare_at_price ? parseFloat(v.compare_at_price) : null,
+          sku: v.sku || `SKU-${item.id}-${idx + 1}`,
+          inventory_quantity: stock,
+          available: v.available !== undefined ? Boolean(v.available) : (stock > 0),
+          option1: v.option1 || (v.title !== 'Default Title' ? v.title : null),
+          option2: v.option2 || null,
+          option3: v.option3 || null,
+          weight: v.grams ? (v.grams / 1000) : (v.weight || 0),
+          barcode: v.barcode || ''
+        };
+      })
     : [{
         id: `${item.id}-1`,
         title: 'Default Title',
         price: parseFloat(item.price || 0) || 0,
         compare_at_price: null,
         sku: `SKU-${item.id}`,
-        inventory_quantity: 99,
-        available: true,
+        inventory_quantity: item.available === false ? 0 : 99,
+        available: item.available !== false,
         option1: null,
         option2: null,
         option3: null,
@@ -95,33 +104,162 @@ function normalizeShopifyProduct(item, origin, defaultCurrency = 'USD') {
 }
 
 /**
+ * Authenticates against Shopify storefront password page and returns session Cookie header
+ */
+async function authenticateShopifyPassword(origin, password, onLog) {
+  if (!password || !password.trim()) {
+    const err = new Error('This store is password protected. Please enter the storefront password.');
+    err.isPasswordProtected = true;
+    err.platform = 'shopify';
+    throw err;
+  }
+
+  if (onLog) onLog(`Attempting storefront password authentication for ${origin}...`);
+
+  const passwordEndpoint = `${origin}/password`;
+  const postData = new URLSearchParams({
+    form_type: 'storefront_password',
+    utf8: '✓',
+    password: password.trim()
+  }).toString();
+
+  try {
+    const res = await axios.post(passwordEndpoint, postData, {
+      headers: {
+        ...DEFAULT_HEADERS,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': origin,
+        'Referer': passwordEndpoint
+      },
+      maxRedirects: 0,
+      validateStatus: (status) => status >= 200 && status < 400
+    });
+
+    // Check Set-Cookie headers
+    const setCookie = res.headers['set-cookie'];
+    let cookieHeader = '';
+    if (Array.isArray(setCookie)) {
+      cookieHeader = setCookie.map(c => c.split(';')[0]).join('; ');
+    } else if (typeof setCookie === 'string') {
+      cookieHeader = setCookie.split(';')[0];
+    }
+
+    const hasDigest = cookieHeader.includes('storefront_digest');
+    const isRedirectOk = (res.status === 302 || res.status === 303 || res.status === 301) && !res.headers['location']?.includes('/password');
+
+    if (hasDigest || isRedirectOk) {
+      if (onLog) onLog(`Storefront authentication successful! Session unlocked.`);
+      return cookieHeader;
+    }
+
+    // Secondary verification: probe /products.json with cookie
+    if (cookieHeader) {
+      try {
+        const testRes = await axios.get(`${origin}/products.json?limit=1`, {
+          headers: { ...DEFAULT_HEADERS, Cookie: cookieHeader },
+          timeout: 5000,
+          validateStatus: (s) => s === 200
+        });
+        if (testRes.data && Array.isArray(testRes.data.products)) {
+          if (onLog) onLog(`Storefront authentication verified! Catalog accessible.`);
+          return cookieHeader;
+        }
+      } catch (e) {}
+    }
+
+    const err = new Error('Invalid store password. Please check the password and try again.');
+    err.isPasswordProtected = true;
+    err.invalidPassword = true;
+    err.platform = 'shopify';
+    throw err;
+  } catch (err) {
+    if (err.isPasswordProtected) throw err;
+    const authErr = new Error(`Storefront authentication failed: ${err.message}`);
+    authErr.isPasswordProtected = true;
+    authErr.platform = 'shopify';
+    throw authErr;
+  }
+}
+
+/**
+ * Checks whether an Axios response or HTML indicates a password-protected storefront
+ */
+function isPasswordPageResponse(res) {
+  if (!res) return false;
+  const finalUrl = res.request?.res?.responseUrl || res.config?.url || '';
+  if (finalUrl.includes('/password')) return true;
+
+  if (typeof res.data === 'string') {
+    const html = res.data;
+    if (
+      html.includes('storefront_password') ||
+      html.includes('action="/password"') ||
+      html.includes('name="password"') && html.includes('shopify') ||
+      html.includes('password-page') ||
+      html.includes('template-password')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Scrapes a single Shopify product page
  */
-async function scrapeShopifySingleProduct(url, onLog) {
+async function scrapeShopifySingleProduct(url, options = {}, onLog) {
+  if (typeof options === 'function') {
+    onLog = options;
+    options = {};
+  }
   const parsedUrl = new URL(url);
   const origin = parsedUrl.origin;
   const pathname = parsedUrl.pathname;
   const handleMatch = pathname.match(/\/products\/([^\/\?#]+)/);
   const handle = handleMatch ? handleMatch[1] : null;
 
+  let sessionCookie = options.sessionCookie || '';
+  if (options.password && !sessionCookie) {
+    sessionCookie = await authenticateShopifyPassword(origin, options.password, onLog);
+  }
+
+  const reqHeaders = {
+    ...DEFAULT_HEADERS,
+    ...(sessionCookie ? { Cookie: sessionCookie } : {})
+  };
+
   if (handle) {
     // Try hitting .json endpoint for the product
     try {
       if (onLog) onLog(`Fetching Shopify single product metadata from /products/${handle}.json...`);
       const res = await axios.get(`${origin}/products/${handle}.json`, {
-        headers: DEFAULT_HEADERS,
+        headers: reqHeaders,
         timeout: 6000
       });
+      if (isPasswordPageResponse(res)) {
+        const err = new Error('This store is password protected. Please enter the storefront password to extract products.');
+        err.isPasswordProtected = true;
+        err.platform = 'shopify';
+        throw err;
+      }
       if (res.data && res.data.product) {
         return [normalizeShopifyProduct(res.data.product, origin)];
       }
     } catch (e) {
+      if (e.isPasswordProtected) throw e;
       if (onLog) onLog(`Could not fetch .json directly, parsing HTML...`);
     }
   }
 
   // Fallback to HTML parsing
-  const res = await axios.get(url, { headers: DEFAULT_HEADERS, timeout: 8000 });
+  const res = await axios.get(url, { headers: reqHeaders, timeout: 8000 });
+  if (isPasswordPageResponse(res)) {
+    const err = new Error('This store is password protected. Please enter the storefront password to extract products.');
+    err.isPasswordProtected = true;
+    err.platform = 'shopify';
+    throw err;
+  }
+
   const $ = cheerio.load(res.data);
 
   // Look for JSON-LD Product or Product JSON script
@@ -204,10 +342,24 @@ async function scrapeShopifySingleProduct(url, onLog) {
  * Scrapes entire Shopify catalog via /products.json with pagination
  */
 async function scrapeShopifyCatalog(url, options = {}, onLog) {
+  if (typeof options === 'function') {
+    onLog = options;
+    options = {};
+  }
   const parsedUrl = new URL(url);
   const origin = parsedUrl.origin;
   const maxProducts = options.limit || 50;
   const products = [];
+
+  let sessionCookie = options.sessionCookie || '';
+  if (options.password && !sessionCookie) {
+    sessionCookie = await authenticateShopifyPassword(origin, options.password, onLog);
+  }
+
+  const reqHeaders = {
+    ...DEFAULT_HEADERS,
+    ...(sessionCookie ? { Cookie: sessionCookie } : {})
+  };
 
   // Determine collection base path if specified in URL
   let endpoint = `${origin}/products.json`;
@@ -225,7 +377,7 @@ async function scrapeShopifyCatalog(url, options = {}, onLog) {
   let storeCurrency = 'USD';
   try {
     const cartRes = await axios.get(`${origin}/cart.js`, {
-      headers: DEFAULT_HEADERS,
+      headers: reqHeaders,
       timeout: 3500,
       validateStatus: (s) => s === 200
     });
@@ -247,9 +399,16 @@ async function scrapeShopifyCatalog(url, options = {}, onLog) {
 
     try {
       const res = await axios.get(pageUrl, {
-        headers: DEFAULT_HEADERS,
+        headers: reqHeaders,
         timeout: 10000
       });
+
+      if (isPasswordPageResponse(res)) {
+        const err = new Error('This store is password protected. Please enter the storefront password to extract products.');
+        err.isPasswordProtected = true;
+        err.platform = 'shopify';
+        throw err;
+      }
 
       const batch = res.data && res.data.products;
       if (!batch || !Array.isArray(batch) || batch.length === 0) {
@@ -272,6 +431,7 @@ async function scrapeShopifyCatalog(url, options = {}, onLog) {
       // Polite slight delay
       await new Promise(r => setTimeout(r, 200));
     } catch (err) {
+      if (err.isPasswordProtected) throw err;
       if (onLog) onLog(`Shopify API page ${page} returned error: ${err.message}. Trying collection fallback...`);
       break;
     }
@@ -283,5 +443,7 @@ async function scrapeShopifyCatalog(url, options = {}, onLog) {
 module.exports = {
   scrapeShopifyCatalog,
   scrapeShopifySingleProduct,
-  normalizeShopifyProduct
+  normalizeShopifyProduct,
+  authenticateShopifyPassword,
+  isPasswordPageResponse
 };

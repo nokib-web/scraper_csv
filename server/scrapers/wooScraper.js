@@ -92,30 +92,50 @@ function normalizeWooProduct(item, origin, defaultCurrency = 'USD') {
     regularPrice = parseFloat(item.regular_price || item.price || 0);
   }
 
-  const variations = (item.variations || []).map((v, idx) => ({
-    id: String(v.id || `${item.id}-${idx}`),
-    title: v.attributes?.map(a => `${a.name}: ${a.value}`).join(', ') || 'Variant',
-    price: v.price ? parseFloat(v.price) : price,
-    compare_at_price: v.regular_price ? parseFloat(v.regular_price) : regularPrice,
-    sku: v.sku || `${item.sku || 'SKU'}-${idx + 1}`,
-    inventory_quantity: 99,
-    available: item.is_in_stock !== false,
-    option1: v.attributes?.[0]?.value || null,
-    option2: v.attributes?.[1]?.value || null,
-    option3: v.attributes?.[2]?.value || null,
-    weight: 0,
-    barcode: ''
-  }));
+  const variations = (item.variations || []).map((v, idx) => {
+    let vStock = 99;
+    if (v.stock_quantity !== undefined && v.stock_quantity !== null && v.stock_quantity !== '' && !isNaN(Number(v.stock_quantity))) {
+      vStock = Number(v.stock_quantity);
+    } else if (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity !== '' && !isNaN(Number(item.stock_quantity))) {
+      vStock = Number(item.stock_quantity);
+    } else if (v.is_in_stock === false || item.is_in_stock === false) {
+      vStock = 0;
+    }
+    const isAvail = v.is_in_stock !== undefined ? Boolean(v.is_in_stock) : (item.is_in_stock !== false && vStock > 0);
+
+    return {
+      id: String(v.id || `${item.id}-${idx}`),
+      title: v.attributes?.map(a => `${a.name}: ${a.value}`).join(', ') || 'Variant',
+      price: v.price ? parseFloat(v.price) : price,
+      compare_at_price: v.regular_price ? parseFloat(v.regular_price) : regularPrice,
+      sku: v.sku || `${item.sku || 'SKU'}-${idx + 1}`,
+      inventory_quantity: vStock,
+      available: isAvail,
+      option1: v.attributes?.[0]?.value || null,
+      option2: v.attributes?.[1]?.value || null,
+      option3: v.attributes?.[2]?.value || null,
+      weight: 0,
+      barcode: ''
+    };
+  });
 
   if (variations.length === 0) {
+    let singleStock = 99;
+    if (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity !== '' && !isNaN(Number(item.stock_quantity))) {
+      singleStock = Number(item.stock_quantity);
+    } else if (item.is_in_stock === false) {
+      singleStock = 0;
+    }
+    const isAvail = item.is_in_stock !== false && singleStock > 0;
+
     variations.push({
       id: `${item.id}-1`,
       title: 'Default Title',
       price: price,
       compare_at_price: regularPrice > price ? regularPrice : null,
       sku: item.sku || `SKU-${item.id}`,
-      inventory_quantity: 99,
-      available: item.is_in_stock !== false,
+      inventory_quantity: singleStock,
+      available: isAvail,
       option1: null,
       option2: null,
       option3: null,
@@ -261,16 +281,16 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
           images.push({ id: idx + 1, src, alt: title, position: idx + 1 });
         }
       });
-
+      const inStock = offer.availability ? !offer.availability.includes('OutOfStock') : true;
       return [{
         id: String(ldProduct.sku || Date.now()),
-        title: title,
-        handle: title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
-        description: (ldProduct.description || title).trim(),
+        title: ldProduct.name || 'WooCommerce Product',
+        handle: (ldProduct.name || 'product').toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
+        description: (ldProduct.description || '').trim(),
         vendor: origin.replace(/^https?:\/\//, ''),
         product_type: ldProduct.category || 'General',
         tags: [ldProduct.category].filter(Boolean),
-        status: 'active',
+        status: inStock ? 'active' : 'draft',
         published_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         price: price,
@@ -282,8 +302,8 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
           price: price,
           compare_at_price: null,
           sku: ldProduct.sku || `SKU-${Date.now()}`,
-          inventory_quantity: 99,
-          available: offer.availability ? !offer.availability.includes('OutOfStock') : true,
+          inventory_quantity: inStock ? 99 : 0,
+          available: inStock,
           weight: 0,
           barcode: ''
         }],
@@ -302,6 +322,11 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
     const sku = $('.sku').first().text().trim() || `SKU-${Date.now()}`;
     const category = $('.posted_in a, .product_meta a').first().text().trim() || 'General';
 
+    const stockText = $('.stock, .inventory, .in-stock, .out-of-stock').text().trim();
+    const isOutOfStock = $('.out-of-stock, .stock.out-of-stock').length > 0 || /out\s*of\s*stock|স্টকে\s*নেই/i.test(stockText);
+    const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে)/i);
+    const parsedStock = qtyMatch ? parseInt(qtyMatch[1], 10) : (isOutOfStock ? 0 : 99);
+
     const images = [];
     $('.woocommerce-product-gallery img, .product-images img, .wd-gallery-thumb img').each((idx, el) => {
       const src = $(el).attr('data-large_image') || $(el).attr('data-wood-src') || $(el).attr('data-lazy-src') || $(el).attr('data-src') || $(el).attr('src');
@@ -319,7 +344,7 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
       vendor: origin.replace(/^https?:\/\//, ''),
       product_type: category,
       tags: [category],
-      status: 'active',
+      status: isOutOfStock ? 'draft' : 'active',
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       price: price,
@@ -331,8 +356,8 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
         price: price,
         compare_at_price: regularPrice > price ? regularPrice : null,
         sku: sku,
-        inventory_quantity: 99,
-        available: true,
+        inventory_quantity: parsedStock,
+        available: !isOutOfStock && parsedStock > 0,
         weight: 0,
         barcode: ''
       }],
@@ -445,6 +470,11 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
 
         const category = $card.find('.wd-product-cats a, .posted_in a').first().text().trim() || 'General';
 
+        const isOutOfStock = $card.find('.out-of-stock, .stock.out-of-stock, .sold-out, [class*="soldout"], [class*="out-of-stock"]').length > 0;
+        const stockText = $card.find('.stock, .inventory, .in-stock').text().trim();
+        const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে)/i);
+        const cardStock = qtyMatch ? parseInt(qtyMatch[1], 10) : (isOutOfStock ? 0 : 99);
+
         products.push({
           id: String(Date.now() + products.length),
           title: title,
@@ -453,7 +483,7 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
           vendor: origin.replace(/^https?:\/\//, ''),
           product_type: category,
           tags: [category, 'WooCommerce'].filter(Boolean),
-          status: 'active',
+          status: isOutOfStock ? 'draft' : 'active',
           published_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           price: price,
@@ -465,8 +495,8 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
             price: price,
             compare_at_price: regularPrice > price ? regularPrice : null,
             sku: `SKU-${products.length + 1}`,
-            inventory_quantity: 99,
-            available: true,
+            inventory_quantity: cardStock,
+            available: !isOutOfStock && cardStock > 0,
             weight: 0,
             barcode: ''
           }],

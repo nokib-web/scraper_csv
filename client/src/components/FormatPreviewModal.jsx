@@ -11,7 +11,7 @@ export default function FormatPreviewModal({
   products, 
   defaultFormat = 'shopify', 
   onExport, 
-  defaultStock = 99, 
+  defaultStock = '', 
   onDefaultStockChange, 
   inventoryPolicy = 'continue',
   customVendor = '',
@@ -170,6 +170,11 @@ export default function FormatPreviewModal({
           </div>
 
           <div className="flex items-center gap-2 text-[11px] text-neutral-500 font-mono flex-wrap">
+            {defaultStock !== '' && defaultStock !== null && defaultStock !== undefined && (
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                Stock: {defaultStock}
+              </span>
+            )}
             {customType && (
               <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20">
                 Type: {customType}

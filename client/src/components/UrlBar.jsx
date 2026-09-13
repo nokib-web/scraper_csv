@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Loader2, X, ClipboardPaste, Sparkles, Lock, FileSpreadsheet } from 'lucide-react';
+import { ArrowRight, Loader2, X, ClipboardPaste, FileSpreadsheet } from 'lucide-react';
 import { FaLink } from 'react-icons/fa';
 
 export default function UrlBar({
@@ -74,8 +74,6 @@ export default function UrlBar({
     }
 
     // 2. HTTP / Insecure Context Fallback:
-    // Browsers block programmatic clipboard read on HTTP (non-HTTPS).
-    // Focus the input, select it, and show an instant visual prompt to press Ctrl+V.
     const inputEl = document.getElementById('store-url-input');
     if (inputEl) {
       inputEl.focus();
@@ -103,7 +101,6 @@ export default function UrlBar({
     const userMax = userPlan?.maxLimit || 20;
 
     if (chosenVal > userMax) {
-      // Prompt user to upgrade/activate 7-day free trial on Pricing tab
       if (triggerPricing) {
         triggerPricing();
       }
@@ -135,11 +132,11 @@ export default function UrlBar({
       <form onSubmit={handleFormSubmit} className="relative max-w-3xl mx-auto space-y-3">
         
         {/* Main Clean Search Bar */}
-        <div className="flex items-center gap-2.5 p-2 rounded-2xl bg-white dark:bg-[#121216] border-2 border-[#F1FF0A]/70 dark:border-[#F1FF0A]/40 hover:border-[#F1FF0A] focus-within:border-[#F1FF0A] focus-within:ring-4 focus-within:ring-[#F1FF0A]/25 dark:focus-within:ring-[#F1FF0A]/15 shadow-xl shadow-[#F1FF0A]/10 dark:shadow-black/70 transition-all">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2 rounded-2xl bg-white dark:bg-[#121216] border-2 border-[#F1FF0A]/70 dark:border-[#F1FF0A]/40 hover:border-[#F1FF0A] focus-within:border-[#F1FF0A] focus-within:ring-4 focus-within:ring-[#F1FF0A]/25 dark:focus-within:ring-[#F1FF0A]/15 shadow-xl shadow-[#F1FF0A]/10 dark:shadow-black/70 transition-all">
           
           {/* Link Icon */}
-          <div className="w-10 h-10 rounded-xl bg-[#F1FF0A] flex items-center justify-center flex-shrink-0 text-black shadow-md ml-1">
-            <FaLink className="w-4 h-4" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#F1FF0A] flex items-center justify-center flex-shrink-0 text-black shadow-md ml-0.5 sm:ml-1">
+            <FaLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
 
           {/* Main URL Input */}
@@ -151,7 +148,7 @@ export default function UrlBar({
             onChange={(e) => setUrl(e.target.value)}
             placeholder={placeholderText || 'Paste store URL (e.g. https://store.com)...'}
             disabled={isLoading}
-            className="flex-1 bg-transparent text-sm sm:text-base font-medium text-neutral-950 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none px-2"
+            className="flex-1 bg-transparent text-xs sm:text-base font-medium text-neutral-950 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none px-1.5 sm:px-2 min-w-0"
           />
 
           {/* Clear or Paste Button */}
@@ -161,25 +158,25 @@ export default function UrlBar({
               onClick={handleClearUrl}
               disabled={isLoading}
               aria-label="Clear store URL input"
-              className="p-2 rounded-lg text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex-shrink-0 cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex-shrink-0 cursor-pointer"
               title="Clear input"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handlePaste}
               aria-label="Paste store URL from clipboard"
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border flex-shrink-0 cursor-pointer shadow-sm ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border flex-shrink-0 cursor-pointer shadow-sm ${
                 pastePrompt
                   ? 'bg-[#F1FF0A] text-black border-[#F1FF0A] animate-pulse font-bold'
                   : 'bg-neutral-100 dark:bg-neutral-900 hover:bg-[#F1FF0A] hover:text-black dark:hover:bg-[#F1FF0A] dark:hover:text-black text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-800 hover:border-[#F1FF0A]'
               }`}
               title="Paste URL from clipboard (or press Ctrl+V)"
             >
-              <ClipboardPaste className="w-3.5 h-3.5" />
-              <span>{pastePrompt ? 'Press Ctrl+V' : 'Paste'}</span>
+              <ClipboardPaste className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span>{pastePrompt ? 'Ctrl+V' : 'Paste'}</span>
             </button>
           )}
 
@@ -188,17 +185,18 @@ export default function UrlBar({
             type="submit"
             disabled={isLoading || !url.trim()}
             aria-label="Extract products from store URL"
-            className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] active:scale-[0.98] text-black text-xs sm:text-sm font-bold tracking-wide uppercase shadow-lg shadow-[#F1FF0A]/20 disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] active:scale-[0.98] text-black text-xs sm:text-sm font-bold tracking-wide uppercase shadow-lg shadow-[#F1FF0A]/20 disabled:opacity-50 disabled:pointer-events-none transition-all cursor-pointer whitespace-nowrap flex-shrink-0"
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-black" />
-                <span>Extracting...</span>
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-black" />
+                <span className="hidden xs:inline">Extracting...</span>
+                <span className="xs:hidden">...</span>
               </>
             ) : (
               <>
                 <span>Extract</span>
-                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               </>
             )}
           </button>
@@ -223,22 +221,22 @@ export default function UrlBar({
               >
                 <option value={20}>20 Prods (Free)</option>
                 <option value={50}>
-                  {userPlan.maxLimit >= 50 ? '50 Products' : '🔒 50 (Popular)'}
+                  {userPlan.maxLimit >= 50 ? '50 Products' : '50 Prods [Popular]'}
                 </option>
                 <option value={100}>
-                  {userPlan.maxLimit >= 100 ? '100 Products' : '🔒 100 (Popular)'}
+                  {userPlan.maxLimit >= 100 ? '100 Products' : '100 Prods [Popular]'}
                 </option>
                 <option value={200}>
-                  {userPlan.maxLimit >= 200 ? '200 Products' : '🔒 200 (Popular)'}
+                  {userPlan.maxLimit >= 200 ? '200 Products' : '200 Prods [Popular]'}
                 </option>
                 <option value={500}>
-                  {userPlan.maxLimit >= 500 ? '500 Products' : '🔒 500 (Popular)'}
+                  {userPlan.maxLimit >= 500 ? '500 Products' : '500 Prods [Popular]'}
                 </option>
                 <option value={1000}>
-                  {userPlan.maxLimit >= 1000 ? '1,000 Products' : '🔒 1,000 (Plus)'}
+                  {userPlan.maxLimit >= 1000 ? '1,000 Products' : '1,000 Prods [Plus]'}
                 </option>
                 <option value={5000}>
-                  {userPlan.maxLimit >= 5000 ? 'Unlimited' : '🔒 Unlimited (Advance)'}
+                  {userPlan.maxLimit >= 5000 ? 'Unlimited' : 'Unlimited [Advance]'}
                 </option>
               </select>
               <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-neutral-400 text-[9px]">
@@ -283,7 +281,7 @@ export default function UrlBar({
               title="Upload & bulk edit existing CSV catalog file (Shopify, WooCommerce, Wix, CSV)"
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] group-hover:text-black transition-colors" />
-              <span>📁 Upload / Import CSV</span>
+              <span>Upload / Import CSV</span>
             </button>
           )}
 

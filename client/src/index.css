@@ -196,47 +196,58 @@ html.a11y-stop-animations *::after {
   transition: none !important;
 }
 
-/* 9. Invert Colors (High Contrast Darkening) */
-html.a11y-invert-colors {
-  filter: invert(100%) hue-rotate(180deg) !important;
-}
-html.a11y-invert-colors .a11y-widget-portal,
-html.a11y-invert-colors img,
-html.a11y-invert-colors video,
-html.a11y-invert-colors picture {
-  filter: invert(100%) hue-rotate(180deg) !important;
+/* 9-13. Accessibility Filters (Combined non-conflicting CSS Variables on #root) */
+:root {
+  --a11y-invert: 0%;
+  --a11y-hue-rotate: 0deg;
+  --a11y-brightness: 100%;
+  --a11y-contrast: 100%;
+  --a11y-saturate: 100%;
+  --a11y-grayscale: 0%;
+  --a11y-sepia: 0%;
 }
 
-/* 10. Brightness Adjustments */
+html.a11y-invert-colors {
+  --a11y-invert: 100%;
+  --a11y-hue-rotate: 180deg;
+}
 html.a11y-bright-high {
-  filter: brightness(125%) !important;
+  --a11y-brightness: 125%;
 }
 html.a11y-bright-low {
-  filter: brightness(80%) !important;
+  --a11y-brightness: 80%;
 }
-
-/* 11. High Contrast Mode */
 html.a11y-contrast-high {
-  filter: contrast(140%) !important;
+  --a11y-contrast: 140%;
 }
-
-/* 12. Saturation Modes */
 html.a11y-sat-low {
-  filter: saturate(35%) !important;
+  --a11y-saturate: 35%;
 }
 html.a11y-sat-high {
-  filter: saturate(180%) !important;
+  --a11y-saturate: 180%;
 }
-
-/* 13. Color Filters */
 html.a11y-filter-grayscale {
-  filter: grayscale(100%) !important;
+  --a11y-grayscale: 100%;
 }
 html.a11y-filter-colorblind {
-  filter: sepia(50%) hue-rotate(190deg) !important;
+  --a11y-sepia: 50%;
+  --a11y-hue-rotate: 190deg;
 }
 
-/* Keep Accessibility Portal Clean from global filters and always above all page layers */
+/* Composite filter applied strictly to the page application container */
+#root {
+  filter: invert(var(--a11y-invert)) hue-rotate(var(--a11y-hue-rotate)) brightness(var(--a11y-brightness)) contrast(var(--a11y-contrast)) saturate(var(--a11y-saturate)) grayscale(var(--a11y-grayscale)) sepia(var(--a11y-sepia));
+  transition: filter 0.15s ease;
+}
+
+/* Re-invert media inside #root so product pictures remain natural */
+html.a11y-invert-colors #root img,
+html.a11y-invert-colors #root video,
+html.a11y-invert-colors #root picture {
+  filter: invert(100%) hue-rotate(180deg);
+}
+
+/* Keep Accessibility Portal completely isolated outside #root and clean */
 .a11y-widget-portal {
   position: relative;
   z-index: 999999 !important;

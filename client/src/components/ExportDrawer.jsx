@@ -9,7 +9,7 @@ export default function ExportDrawer({
   onExport, 
   onOpenPreview, 
   stats, 
-  defaultStock = 99, 
+  defaultStock = '', 
   onDefaultStockChange,
   customVendor = '',
   onCustomVendorChange,
@@ -238,36 +238,51 @@ export default function ExportDrawer({
         </div>
 
         {/* 3. Default Stock */}
-        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
+        <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-neutral-900/90 px-2 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-h-[38px]">
           <Package className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
           <span className="font-bold text-[11px] text-neutral-600 dark:text-neutral-400 whitespace-nowrap">Stock:</span>
-          <input
-            type="number"
-            min="0"
-            max="999999"
-            value={defaultStock}
-            onChange={(e) => onDefaultStockChange && onDefaultStockChange(e.target.value)}
-            onBlur={() => {
-              if (defaultStock === '' || isNaN(Number(defaultStock))) {
-                onDefaultStockChange && onDefaultStockChange(99);
-              }
-            }}
-            placeholder="99"
-            className="w-12 px-1 py-0.5 text-center font-bold text-xs rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none focus:border-[#F1FF0A]"
-          />
+          <div className="relative flex-1 flex items-center min-w-0">
+            <input
+              type="text"
+              value={defaultStock}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                if (val === '') {
+                  onDefaultStockChange && onDefaultStockChange('');
+                } else if (!isNaN(Number(val))) {
+                  onDefaultStockChange && onDefaultStockChange(Math.max(0, parseInt(val, 10) || 0));
+                }
+              }}
+              placeholder="Original"
+              className="w-full px-2 py-0.5 text-xs font-semibold rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-[#F1FF0A]"
+            />
+            {defaultStock !== '' && defaultStock !== null && defaultStock !== undefined && (
+              <button
+                type="button"
+                onClick={() => onDefaultStockChange && onDefaultStockChange('')}
+                className="absolute right-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-white p-0.5 cursor-pointer"
+                title="Reset to store default stock"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
           <select
-            value={[10, 50, 99, 100, 500].includes(Number(defaultStock)) ? Number(defaultStock) : 'custom'}
+            value={defaultStock === '' || defaultStock === null || defaultStock === undefined ? '' : ([10, 50, 99, 100, 500].includes(Number(defaultStock)) ? Number(defaultStock) : 'custom')}
             onChange={(e) => {
-              if (e.target.value !== 'custom') {
+              if (e.target.value === '') {
+                onDefaultStockChange && onDefaultStockChange('');
+              } else if (e.target.value !== 'custom') {
                 onDefaultStockChange && onDefaultStockChange(Number(e.target.value));
               }
             }}
-            className="flex-1 min-w-0 px-1.5 py-0.5 text-[11px] font-semibold rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer truncate"
+            className="w-20 px-1 py-0.5 text-[10px] font-semibold rounded-lg bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer truncate"
           >
+            <option value="">Original</option>
             <option value={99}>Preset: 99</option>
-            <option value={10}>Preset: 10</option>
-            <option value={50}>Preset: 50</option>
             <option value={100}>Preset: 100</option>
+            <option value={50}>Preset: 50</option>
+            <option value={10}>Preset: 10</option>
             <option value={500}>Preset: 500</option>
             <option value="custom">Custom</option>
           </select>

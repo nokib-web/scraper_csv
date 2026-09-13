@@ -10,6 +10,7 @@ import FormatPreviewModal from './components/FormatPreviewModal';
 import FindReplaceModal from './components/FindReplaceModal';
 import BulkTagModal from './components/BulkTagModal';
 import CsvImportModal from './components/CsvImportModal';
+import PasswordModal from './components/PasswordModal';
 import PricingPage from './components/PricingPage';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
@@ -26,6 +27,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('app'); // 'app' | 'about' | 'pricing' | 'contact'
   const [url, setUrl] = useState('');
   const [engine, setEngine] = useState('auto');
+  const [storePassword, setStorePassword] = useState('');
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordModalError, setPasswordModalError] = useState('');
+  const [pendingPasswordUrl, setPendingPasswordUrl] = useState('');
+  const [a11yOpen, setA11yOpen] = useState(false);
 
   // User Plan State (Free 20 by default, or trial plan from localStorage)
   const [userPlan, setUserPlan] = useState(() => {
@@ -76,13 +82,13 @@ export default function App() {
   const [bulkTagModalTab, setBulkTagModalTab] = useState('tags');
   const [csvImportModalOpen, setCsvImportModalOpen] = useState(false);
 
-  // Customizable Default Inventory / Stock Quantity (default: 99)
+  // Customizable Default Inventory / Stock Override (default: '' = Original Store Stock)
   const [defaultStock, setDefaultStock] = useState(() => {
     try {
       const saved = localStorage.getItem('getproducts_default_stock');
-      if (saved !== null && saved !== '') return Number(saved);
+      if (saved !== null && saved !== undefined && saved !== '' && !isNaN(Number(saved))) return Number(saved);
     } catch (e) {}
-    return 99;
+    return '';
   });
 
   // Inventory Stock Policy: 'continue' (Active & buyable) | 'deny' | 'untracked'
@@ -149,8 +155,11 @@ export default function App() {
   });
 
   const handleSetDefaultStock = (val) => {
-    if (val === '' || val === null) {
+    if (val === '' || val === null || val === undefined || val === 'original') {
       setDefaultStock('');
+      try {
+        localStorage.removeItem('getproducts_default_stock');
+      } catch (e) {}
       return;
     }
     const cleanVal = String(val).replace(/^0+(?=\d)/, '');
@@ -323,7 +332,8 @@ export default function App() {
 
   // Effective products list reflecting active custom vendor override, category override, type, template, price markup, and stock
   const effectiveProducts = useMemo(() => {
-    const activeStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
+    const hasGlobalStockOverride = defaultStock !== '' && defaultStock !== null && defaultStock !== undefined && !isNaN(Number(defaultStock));
+    const globalStock = hasGlobalStockOverride ? Number(defaultStock) : null;
 
     return products.map(p => {
       const vName = customVendor && customVendor.trim() ? customVendor.trim() : p.vendor;
@@ -342,15 +352,30 @@ export default function App() {
         id: '1',
         title: 'Default Title',
         price: markedPrice,
-        inventory_quantity: activeStock
+        inventory_quantity: (p.inventory_quantity !== undefined) ? p.inventory_quantity : (p.available === false ? 0 : 99)
       }];
 
-      const variants = rawVariants.map(v => ({
-        ...v,
-        inventory_quantity: (v._customStock && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '')
-          ? Number(v.inventory_quantity)
-          : activeStock
-      }));
+      const variants = rawVariants.map(v => {
+        let vStock;
+        if (v._customStock && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '') {
+          vStock = Number(v.inventory_quantity);
+        } else if (globalStock !== null) {
+          vStock = globalStock;
+        } else {
+          if (v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+            vStock = Number(v.inventory_quantity);
+          } else if (v.available === false || p.available === false) {
+            vStock = 0;
+          } else {
+            vStock = 99;
+          }
+        }
+
+        return {
+          ...v,
+          inventory_quantity: vStock
+        };
+      });
 
       // Preserve or auto-resolve accurate currency
       const isBdSite = Boolean(
@@ -733,8 +758,11 @@ export default function App() {
   };
 
   // Scrape Submission via Server-Sent Events (SSE)
-  const handleScrape = async () => {
-    if (!url.trim()) return;
+  const handleScrape = async (options = {}) => {
+    const targetUrl = (options.targetUrl || url).trim();
+    if (!targetUrl) return;
+
+    const pwd = (options.passwordOverride !== undefined) ? options.passwordOverride : storePassword;
 
     setIsLoading(true);
     setStatus('loading');
@@ -746,7 +774,8 @@ export default function App() {
 
     try {
       const apiBase = getApiBaseUrl();
-      const sseUrl = `${apiBase}/api/scrape-stream?url=${encodeURIComponent(url.trim())}&engine=${engine}&limit=${limit}`;
+      const pwdParam = pwd ? `&password=${encodeURIComponent(pwd)}` : '';
+      const sseUrl = `${apiBase}/api/scrape-stream?url=${encodeURIComponent(targetUrl)}&engine=${engine}&limit=${limit}${pwdParam}`;
       const eventSource = new EventSource(sseUrl);
 
       eventSource.onmessage = (event) => {
@@ -757,11 +786,21 @@ export default function App() {
             setLogs(prev => [...prev, data.message]);
           } else if (data.type === 'detected') {
             setDetection(data.detection);
+          } else if (data.type === 'password_required') {
+            setPasswordModalError(data.invalidPassword ? 'Incorrect storefront password. Please verify and try again.' : '');
+            setPendingPasswordUrl(data.url || targetUrl);
+            setPasswordModalOpen(true);
+            setIsLoading(false);
+            setStatus('idle');
+            setLogs(prev => [...prev, `[PASSWORD REQUIRED] ${data.message || 'Store is password protected.'}`]);
+            eventSource.close();
           } else if (data.type === 'complete') {
             setProducts(data.products || []);
             setDetection(data.detection);
             setStatus('done');
             setIsLoading(false);
+            setPasswordModalOpen(false);
+            setPasswordModalError('');
             eventSource.close();
           } else if (data.type === 'error') {
             setLogs(prev => [...prev, `[ERROR] ${data.error}`]);
@@ -782,14 +821,25 @@ export default function App() {
           const res = await fetch(`${apiBase}/api/scrape`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: url.trim(), engine, limit })
+            body: JSON.stringify({ url: targetUrl, engine, limit, password: pwd || undefined })
           });
           const json = await res.json();
+
+          if (res.status === 401 || json.isPasswordProtected) {
+            setPasswordModalError(json.invalidPassword ? 'Incorrect storefront password. Please verify and try again.' : '');
+            setPendingPasswordUrl(targetUrl);
+            setPasswordModalOpen(true);
+            setStatus('idle');
+            setLogs(prev => [...prev, `[PASSWORD REQUIRED] ${json.error || 'Store is password protected.'}`]);
+            return;
+          }
 
           if (res.ok && json.products) {
             setProducts(json.products);
             setDetection(json.detection);
             setStatus('done');
+            setPasswordModalOpen(false);
+            setPasswordModalError('');
             setLogs(prev => [...prev, `[SUCCESS] Extracted ${json.products.length} products.`]);
           } else {
             setStatus('error');
@@ -809,6 +859,12 @@ export default function App() {
     }
   };
 
+  const handlePasswordModalSubmit = (pwd) => {
+    setStorePassword(pwd);
+    setPasswordModalError('');
+    handleScrape({ passwordOverride: pwd, targetUrl: pendingPasswordUrl || url });
+  };
+
   // Export Trigger
   const handleExport = async (format, customStock, overrideVendor, overrideCategory, overrideType, overrideTemplate) => {
     // Export selected items if any are checked, otherwise all effective products
@@ -825,9 +881,9 @@ export default function App() {
         json: 'json'
       };
       const normalizedFormat = formatMap[format] || format;
-      const effectiveStock = (customStock !== undefined && customStock !== '') 
+      const effectiveStock = (customStock !== undefined && customStock !== '' && !isNaN(Number(customStock))) 
         ? Number(customStock) 
-        : (defaultStock !== '' ? Number(defaultStock) : 99);
+        : (defaultStock !== '' && !isNaN(Number(defaultStock)) ? Number(defaultStock) : '');
       const effectiveVendor = overrideVendor !== undefined ? overrideVendor : customVendor;
       const effectiveCategory = overrideCategory !== undefined ? overrideCategory : customCategory;
       const effectiveType = overrideType !== undefined ? overrideType : customType;
@@ -898,6 +954,7 @@ export default function App() {
         isDark={isDark}
         toggleTheme={toggleTheme}
         productsCount={products.length}
+        onOpenA11y={() => setA11yOpen(true)}
       />
 
       {/* Main App Content */}
@@ -1140,11 +1197,24 @@ export default function App() {
         currentProductsCount={products.length}
       />
 
+      {/* Password-Protected Store Authentication Modal */}
+      <PasswordModal
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        onSubmit={handlePasswordModalSubmit}
+        url={pendingPasswordUrl || url}
+        isLoading={isLoading}
+        errorMessage={passwordModalError}
+      />
+
       {/* Fixed Bottom Docked Footer */}
       <Footer />
 
-      {/* ADA & WCAG Accessibility Drawer & Floating Trigger */}
-      <AccessibilityWidget />
+      {/* ADA & WCAG Accessibility Drawer */}
+      <AccessibilityWidget 
+        isOpen={a11yOpen} 
+        onClose={() => setA11yOpen(false)} 
+      />
 
     </div>
   );

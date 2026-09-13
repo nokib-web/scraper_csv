@@ -96,7 +96,7 @@ app.get('/api/detect', async (req, res) => {
 
 // Real-Time Scraping via Server-Sent Events (SSE) with In-Memory Cache
 app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
-  const { url, limit = 50, engine = 'auto' } = req.query;
+  const { url, limit = 50, engine = 'auto', password } = req.query;
 
   if (!url) {
     res.writeHead(400, { 'Content-Type': 'text/plain' });
@@ -119,21 +119,23 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
     sendEvent('log', { message: msg, timestamp: new Date().toLocaleTimeString() });
   };
 
-  const cacheKey = catalogCache.generateKey(url, engine, limit);
+  const cacheKey = catalogCache.generateKey(url, `${engine}-${password ? 'auth' : 'anon'}`, limit);
 
-  // Check In-Memory Store Cache for Instant Response
-  const cachedData = catalogCache.get(cacheKey);
-  if (cachedData && cachedData.products && cachedData.products.length > 0) {
-    sendEvent('start', { url, limit: parseInt(limit), cached: true });
-    sendEvent('log', { message: `⚡ [FAST CACHE HIT] Delivering instant cached catalog (${cachedData.products.length} products)...` });
-    sendEvent('detected', { detection: cachedData.detection });
-    sendEvent('complete', {
-      products: cachedData.products,
-      detection: cachedData.detection,
-      total: cachedData.total || cachedData.products.length,
-      cached: true
-    });
-    return res.end();
+  // Check In-Memory Store Cache for Instant Response (only if not a password-specific attempt that might need fresh auth)
+  if (!password) {
+    const cachedData = catalogCache.get(cacheKey);
+    if (cachedData && cachedData.products && cachedData.products.length > 0) {
+      sendEvent('start', { url, limit: parseInt(limit), cached: true });
+      sendEvent('log', { message: `⚡ [FAST CACHE HIT] Delivering instant cached catalog (${cachedData.products.length} products)...` });
+      sendEvent('detected', { detection: cachedData.detection });
+      sendEvent('complete', {
+        products: cachedData.products,
+        detection: cachedData.detection,
+        total: cachedData.total || cachedData.products.length,
+        cached: true
+      });
+      return res.end();
+    }
   }
 
   try {
@@ -141,6 +143,7 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
     const result = await scrapeProducts(url, {
       limit: parseInt(limit) || 50,
       engineOverride: engine,
+      password: password || undefined,
       onLog
     });
 
@@ -161,7 +164,17 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
       total: result.total
     });
   } catch (error) {
-    sendEvent('error', { error: error.message || 'Scraping failed.' });
+    if (error.isPasswordProtected) {
+      sendEvent('password_required', {
+        url,
+        message: error.message || 'This store is password protected.',
+        platform: error.platform || 'shopify',
+        invalidPassword: Boolean(error.invalidPassword),
+        isPasswordProtected: true
+      });
+    } else {
+      sendEvent('error', { error: error.message || 'Scraping failed.' });
+    }
   } finally {
     res.end();
   }
@@ -169,17 +182,19 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
 
 // Synchronous Scrape Endpoint (JSON response) with Cache
 app.post('/api/scrape', scrapeLimiter, async (req, res) => {
-  const { url, limit = 50, engine = 'auto' } = req.body;
+  const { url, limit = 50, engine = 'auto', password } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
-  const cacheKey = catalogCache.generateKey(url, engine, limit);
-  const cachedData = catalogCache.get(cacheKey);
-  if (cachedData && cachedData.products && cachedData.products.length > 0) {
-    return res.json({
-      ...cachedData,
-      logs: [`⚡ [FAST CACHE HIT] Returned ${cachedData.products.length} products in 2ms.`],
-      cached: true
-    });
+  const cacheKey = catalogCache.generateKey(url, `${engine}-${password ? 'auth' : 'anon'}`, limit);
+  if (!password) {
+    const cachedData = catalogCache.get(cacheKey);
+    if (cachedData && cachedData.products && cachedData.products.length > 0) {
+      return res.json({
+        ...cachedData,
+        logs: [`⚡ [FAST CACHE HIT] Returned ${cachedData.products.length} products in 2ms.`],
+        cached: true
+      });
+    }
   }
 
   const logs = [];
@@ -189,6 +204,7 @@ app.post('/api/scrape', scrapeLimiter, async (req, res) => {
     const result = await scrapeProducts(url, {
       limit: parseInt(limit) || 50,
       engineOverride: engine,
+      password: password || undefined,
       onLog
     });
 
@@ -202,6 +218,15 @@ app.post('/api/scrape', scrapeLimiter, async (req, res) => {
 
     res.json({ ...result, logs });
   } catch (err) {
+    if (err.isPasswordProtected) {
+      return res.status(401).json({
+        error: err.message,
+        isPasswordProtected: true,
+        invalidPassword: Boolean(err.invalidPassword),
+        platform: err.platform || 'shopify',
+        logs
+      });
+    }
     res.status(500).json({ error: err.message, logs });
   }
 });
@@ -257,7 +282,7 @@ app.post('/api/export', (req, res) => {
   }
 
   const exportOptions = {
-    defaultStock: defaultStock !== undefined ? defaultStock : 99,
+    defaultStock: (defaultStock !== undefined && defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99,
     customVendor: customVendor && typeof customVendor === 'string' ? customVendor.trim() : '',
     customCategory: customCategory && typeof customCategory === 'string' ? customCategory.trim() : '',
     customType: customType && typeof customType === 'string' ? customType.trim() : '',

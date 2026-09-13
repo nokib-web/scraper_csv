@@ -198,6 +198,7 @@ function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') 
   let currency = defaultCurrency || 'USD';
   let sku = item.sku || item.productID || item.mpn || `SKU-${Date.now()}`;
   let inStock = true;
+  let parsedQty = null;
 
   if (item.offers) {
     const offer = Array.isArray(item.offers) ? item.offers[0] : item.offers;
@@ -206,6 +207,11 @@ function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') 
     currency = normalizeCurrencyCode(offer.priceCurrency) || defaultCurrency || 'USD';
     if (offer.availability) {
       inStock = !offer.availability.includes('OutOfStock');
+    }
+    if (offer.inventoryLevel?.value !== undefined && !isNaN(Number(offer.inventoryLevel.value))) {
+      parsedQty = Number(offer.inventoryLevel.value);
+    } else if (offer.eligibleQuantity?.value !== undefined && !isNaN(Number(offer.eligibleQuantity.value))) {
+      parsedQty = Number(offer.eligibleQuantity.value);
     }
   }
 
@@ -223,6 +229,7 @@ function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') 
   const handle = title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') || `prod-${Date.now()}`;
   const brand = typeof item.brand === 'string' ? item.brand : (item.brand?.name || origin.replace(/^https?:\/\//, ''));
   const category = item.category || 'General';
+  const effectiveStock = parsedQty !== null ? parsedQty : (inStock ? 99 : 0);
 
   return {
     id: String(item.sku || Date.now() + Math.random()),
@@ -232,7 +239,7 @@ function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') 
     vendor: brand,
     product_type: category,
     tags: [category].filter(Boolean),
-    status: 'active',
+    status: inStock ? 'active' : 'draft',
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     price: price,
@@ -244,8 +251,8 @@ function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') 
       price: price,
       compare_at_price: regularPrice > price ? regularPrice : null,
       sku: String(sku),
-      inventory_quantity: inStock ? 99 : 0,
-      available: inStock,
+      inventory_quantity: effectiveStock,
+      available: inStock && effectiveStock > 0,
       weight: 0,
       barcode: item.gtin || item.gtin13 || item.isbn || ''
     }],
@@ -450,6 +457,11 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defau
         if (title && (price > 0 || img)) {
           const handle = title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}-${idx}`;
 
+          const isOutOfStock = $card.find('.out-of-stock, .stock.out-of-stock, .sold-out, [class*="soldout"], [class*="out-of-stock"]').length > 0;
+          const stockText = $card.find('.stock, .inventory, .in-stock').text().trim();
+          const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে)/i);
+          const cardStock = qtyMatch ? parseInt(qtyMatch[1], 10) : (isOutOfStock ? 0 : 99);
+
           if (!products.some(p => p.title === title) && title.length < 150) {
             products.push({
               id: String(Date.now() + idx),
@@ -459,7 +471,7 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defau
               vendor,
               product_type: category,
               tags: [category, author].filter(Boolean),
-              status: 'active',
+              status: isOutOfStock ? 'draft' : 'active',
               published_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               price,
@@ -471,8 +483,8 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defau
                 price,
                 compare_at_price: regularPrice > price ? regularPrice : null,
                 sku: `SKU-${idx + 1}`,
-                inventory_quantity: 99,
-                available: true,
+                inventory_quantity: cardStock,
+                available: !isOutOfStock && cardStock > 0,
                 weight: 0,
                 barcode: ''
               }],

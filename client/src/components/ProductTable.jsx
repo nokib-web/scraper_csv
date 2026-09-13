@@ -23,7 +23,7 @@ export default function ProductTable({
   onBulkExport, 
   onOpenPreview,
   currencySymbol = '$',
-  defaultStock = 99
+  defaultStock = ''
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -53,7 +53,7 @@ export default function ProductTable({
   const isAllSelected = products.length > 0 && products.every(p => selectedProductIds.includes(p.id));
   const isSomeSelected = selectedProductIds.length > 0 && !isAllSelected;
 
-  const activeDefaultStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
+  const activeDefaultStock = (defaultStock !== '' && defaultStock !== null && defaultStock !== undefined && !isNaN(Number(defaultStock))) ? Number(defaultStock) : null;
 
   const exportPlatforms = [
     {
@@ -113,7 +113,7 @@ export default function ProductTable({
     const tagsStr = Array.isArray(prod.tags) ? prod.tags.join(', ') : (prod.tags || '');
     const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined 
       ? prod.variants[0].inventory_quantity 
-      : activeDefaultStock;
+      : (activeDefaultStock !== null ? activeDefaultStock : (prod.available === false ? 0 : 99));
     const currentSku = prod.variants?.[0]?.sku || '';
     const currentBarcode = prod.variants?.[0]?.barcode || '';
     const currentComparePrice = prod.regular_price > prod.price ? prod.regular_price : '';
@@ -560,7 +560,9 @@ export default function ProductTable({
                 const isExpanded = expandedProductIds.includes(prod.id);
                 const mainImg = prod.images?.[0]?.src;
                 const tagsList = Array.isArray(prod.tags) ? prod.tags : (typeof prod.tags === 'string' ? prod.tags.split(',').map(t => t.trim()).filter(Boolean) : []);
-                const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock;
+                const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined 
+                  ? prod.variants[0].inventory_quantity 
+                  : (activeDefaultStock !== null ? activeDefaultStock : (prod.available === false ? 0 : 99));
                 const currentSku = prod.variants?.[0]?.sku || '-';
                 const displayType = prod.type || prod.product_type || prod.category || 'General';
                 const displayTemplate = prod.template_suffix || prod.template || '';
@@ -974,7 +976,7 @@ export default function ProductTable({
                                         <input
                                           type="number"
                                           min="0"
-                                          defaultValue={v.inventory_quantity !== undefined ? v.inventory_quantity : activeDefaultStock}
+                                          defaultValue={v.inventory_quantity !== undefined ? v.inventory_quantity : (activeDefaultStock !== null ? activeDefaultStock : (v.available === false ? 0 : 99))}
                                           onBlur={(e) => handleUpdateVariantField(prod.id, vIdx, 'inventory_quantity', e.target.value)}
                                           className="w-14 px-1.5 py-0.5 text-center bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded text-xs font-bold outline-none focus:border-[#F1FF0A]"
                                         />

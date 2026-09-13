@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, ExternalLink, Sun, Moon } from 'lucide-react';
+import { Package, ExternalLink, Sun, Moon, Settings } from 'lucide-react';
 
 export default function Header({ 
   productsCount, 
@@ -10,6 +10,7 @@ export default function Header({
   activeTab = 'app', 
   setActiveTab, 
   onSelectTab, 
+  onOpenA11y,
   userPlan 
 }) {
   const handleToggle = onToggleTheme || toggleTheme;
@@ -94,6 +95,18 @@ export default function Header({
               </div>
             )}
 
+            {/* Desktop Settings / Accessibility Button */}
+            <button
+              type="button"
+              onClick={onOpenA11y}
+              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:text-[#8b9900] dark:hover:text-[#F1FF0A] text-xs font-bold transition-colors cursor-pointer shadow-sm"
+              title="Display & Accessibility Settings"
+              aria-label="Open Display & Accessibility Settings"
+            >
+              <Settings className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" />
+              <span>Settings</span>
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               type="button"
@@ -122,25 +135,41 @@ export default function Header({
 
         </div>
 
-        {/* Mobile Navigation Tabs (Scrollable Bar on Small Screens) */}
-        <div className="md:hidden pb-2.5 pt-0.5 overflow-x-auto no-scrollbar flex items-center gap-1.5">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectTab && onSelectTab(item.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
-                  isActive
-                    ? 'bg-neutral-950 text-white dark:bg-[#F1FF0A] dark:text-black shadow-sm'
-                    : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-400'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+        {/* Mobile Navigation Tabs + Settings Icon Button on Right */}
+        <div className="md:hidden pb-2.5 pt-0.5 flex items-center justify-between gap-1.5">
+          
+          {/* Scrollable Tabs */}
+          <div className="overflow-x-auto no-scrollbar flex items-center gap-1 flex-1 min-w-0">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTabChange && handleTabChange(item.id)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex-shrink-0 ${
+                    isActive
+                      ? 'bg-neutral-950 text-white dark:bg-[#F1FF0A] dark:text-black shadow-sm'
+                      : 'bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-400'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Settings Icon Button in Mobile Sub-Header (Right Corner - Icon Only) */}
+          <button
+            type="button"
+            onClick={onOpenA11y}
+            className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 hover:text-[#8b9900] dark:hover:text-[#F1FF0A] transition-all shadow-xs cursor-pointer flex-shrink-0 flex items-center justify-center"
+            title="Display & Accessibility Settings"
+            aria-label="Open Display and Accessibility Settings"
+          >
+            <Settings className="w-4 h-4 text-[#8b9900] dark:text-[#F1FF0A]" />
+          </button>
+
         </div>
 
       </div>

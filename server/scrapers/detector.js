@@ -137,7 +137,16 @@ async function detectPlatform(url) {
     const $ = cheerio.load(html);
 
     // Shopify HTML indicators
+    const isPasswordProtected = (
+      html.includes('storefront_password') ||
+      html.includes('action="/password"') ||
+      html.includes('template-password') ||
+      html.includes('password-page') ||
+      response.request?.res?.responseUrl?.includes('/password')
+    );
+
     const isShopify = (
+      isPasswordProtected ||
       html.includes('Shopify.shop') ||
       html.includes('cdn.shopify.com') ||
       $('script[src*="shopify"]').length > 0 ||
@@ -147,7 +156,15 @@ async function detectPlatform(url) {
     );
 
     if (isShopify) {
-      return { platform: 'shopify', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Shopify Storefront Assets' };
+      return {
+        platform: 'shopify',
+        confidence: 0.95,
+        origin,
+        path: pathname,
+        isSingleProduct,
+        isPasswordProtected: Boolean(isPasswordProtected),
+        details: isPasswordProtected ? 'Password-Protected Shopify Store' : 'Shopify Storefront Assets'
+      };
     }
 
     // WooCommerce HTML indicators

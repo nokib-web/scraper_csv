@@ -9,9 +9,9 @@ export default function ProductGrid({
   selectedProductIds = [], 
   onToggleSelect, 
   currencySymbol = '$',
-  defaultStock = 99
+  defaultStock = ''
 }) {
-  const activeDefaultStock = (defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99;
+  const activeDefaultStock = (defaultStock !== '' && defaultStock !== null && defaultStock !== undefined && !isNaN(Number(defaultStock))) ? Number(defaultStock) : null;
   if (!products || products.length === 0) return null;
 
   return (
@@ -134,9 +134,18 @@ export default function ProductGrid({
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {prod.variants?.[0]?.inventory_quantity !== undefined ? prod.variants[0].inventory_quantity : activeDefaultStock} in stock
-                    </div>
+                    {(() => {
+                      const currentStock = prod.variants?.[0]?.inventory_quantity !== undefined 
+                        ? prod.variants[0].inventory_quantity 
+                        : (activeDefaultStock !== null ? activeDefaultStock : (prod.available === false ? 0 : 99));
+                      return (
+                        <div className={`text-[10px] font-bold mt-0.5 ${
+                          currentStock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                        }`}>
+                          {currentStock > 0 ? `${currentStock} in stock` : 'Out of stock'}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {prod.url && (
