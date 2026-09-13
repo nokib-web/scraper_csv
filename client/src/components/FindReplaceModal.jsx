@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Search, Replace, Check } from 'lucide-react';
 
 export default function FindReplaceModal({ isOpen, onClose, products, onApplyReplace }) {
@@ -80,9 +81,11 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
     }, 1200);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121216] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative my-auto w-full max-w-lg rounded-2xl bg-white dark:bg-[#121216] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/80">
@@ -237,6 +240,7 @@ export default function FindReplaceModal({ isOpen, onClose, products, onApplyRep
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
