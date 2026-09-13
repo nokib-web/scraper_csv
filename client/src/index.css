@@ -234,8 +234,15 @@ html.a11y-filter-colorblind {
   --a11y-hue-rotate: 190deg;
 }
 
-/* Composite filter applied strictly to the page application container */
-#root {
+/* Composite filter applied strictly when accessibility mode is enabled */
+html.a11y-invert-colors #root,
+html.a11y-bright-high #root,
+html.a11y-bright-low #root,
+html.a11y-contrast-high #root,
+html.a11y-sat-low #root,
+html.a11y-sat-high #root,
+html.a11y-filter-grayscale #root,
+html.a11y-filter-colorblind #root {
   filter: invert(var(--a11y-invert)) hue-rotate(var(--a11y-hue-rotate)) brightness(var(--a11y-brightness)) contrast(var(--a11y-contrast)) saturate(var(--a11y-saturate)) grayscale(var(--a11y-grayscale)) sepia(var(--a11y-sepia));
   transition: filter 0.15s ease;
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Lock, KeyRound, Eye, EyeOff, ArrowRight, AlertCircle, X, Loader2, ShieldCheck, Store } from 'lucide-react';
 
 export default function PasswordModal({
@@ -28,6 +29,7 @@ export default function PasswordModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -45,10 +47,10 @@ export default function PasswordModal({
     cleanHost = url;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
       <div 
-        className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#121216] border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative my-auto w-full max-w-md rounded-2xl bg-white dark:bg-[#121216] border border-neutral-200 dark:border-neutral-800 shadow-2xl p-6 overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="password-modal-title"
@@ -170,6 +172,7 @@ export default function PasswordModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

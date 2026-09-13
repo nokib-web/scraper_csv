@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Upload, X, FileText, CheckCircle2, AlertCircle, Layers, Image as ImageIcon, Package, ArrowRight, RefreshCw, PlusCircle, Sparkles } from 'lucide-react';
 import { SiShopify, SiWoocommerce, SiWix } from 'react-icons/si';
 import { FaFileCsv } from 'react-icons/fa';
@@ -74,9 +75,11 @@ export default function CsvImportModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative my-auto w-full max-w-2xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60">
@@ -341,6 +344,7 @@ export default function CsvImportModal({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
