@@ -7,9 +7,9 @@
     "postinstall": "npm --prefix client install",
     "server": "node --watch server/index.js",
     "client": "npm --prefix client run dev",
-    "dev": "concurrently \"node --watch server/index.js\" \"npm --prefix client run dev\"",
-    "build": "npm --prefix client run build",
-    "start": "node server/index.js"
+    "dev": "node api.js && concurrently \"node --watch server/index.js\" \"npm --prefix client run dev\"",
+    "build": "node api.js && npm --prefix client run build",
+    "start": "node api.js && node server/index.js"
   },
   "keywords": [
     "scraper",

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Tag, FolderTree, Layers, LayoutTemplate, Plus, Check, Sparkles, 
   DollarSign, Package, Barcode, ShieldCheck, ArrowRight, Percent, RefreshCw,
@@ -226,9 +227,12 @@ export default function BulkTagModal({
     { id: 'tags', label: '🏷️ Tags Manager', icon: <Tag className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A]" /> }
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-4xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="relative my-auto w-full max-w-4xl rounded-2xl bg-white dark:bg-[#111114] border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60">
@@ -805,6 +809,7 @@ export default function BulkTagModal({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
