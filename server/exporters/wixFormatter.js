@@ -81,14 +81,28 @@ function applyPriceMarkup(price, markup) {
  * @returns {string} CSV string
  */
 function exportWixCsv(products, options = {}) {
-  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
-    ? Number(options.defaultStock)
-    : 99;
+  const hasStockOverride = options.defaultStock !== undefined && options.defaultStock !== '' && options.defaultStock !== null && !isNaN(Number(options.defaultStock));
+  const stockOverride = hasStockOverride ? Number(options.defaultStock) : null;
+  const defaultStock = hasStockOverride ? Number(options.defaultStock) : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
   const isUntracked = options.inventoryPolicy === 'untracked';
+
+  const resolveVariantStock = (v, p) => {
+    if (stockOverride !== null) return stockOverride;
+    if (v && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+      return Number(v.inventory_quantity);
+    }
+    if (p && p.inventory_quantity !== undefined && p.inventory_quantity !== null && p.inventory_quantity !== '' && !isNaN(Number(p.inventory_quantity))) {
+      return Number(p.inventory_quantity);
+    }
+    if ((v && (v.available === false || v.is_in_stock === false)) || (p && (p.available === false || p.is_in_stock === false))) {
+      return 0;
+    }
+    return defaultStock;
+  };
 
   const rows = [];
 
@@ -126,7 +140,7 @@ function exportWixCsv(products, options = {}) {
       price: markedPrice,
       compare_at_price: markedRegPrice > markedPrice ? markedRegPrice : '',
       sku: `SKU-${handle}`,
-      inventory_quantity: defaultStock,
+      inventory_quantity: resolveVariantStock(null, p),
       option1: null
     }];
 
@@ -144,10 +158,7 @@ function exportWixCsv(products, options = {}) {
     // 1. Parent Product Row
     let totalStock = 0;
     rawVariants.forEach(v => {
-      const q = v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))
-        ? Number(v.inventory_quantity)
-        : defaultStock;
-      totalStock += q;
+      totalStock += resolveVariantStock(v, p);
     });
 
     const parentRow = {
@@ -188,9 +199,7 @@ function exportWixCsv(products, options = {}) {
       for (let vIdx = 0; vIdx < rawVariants.length; vIdx++) {
         const v = rawVariants[vIdx];
         const vPrice = applyPriceMarkup(v.price !== undefined ? v.price : p.price || 0, priceMarkup);
-        const vStock = v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))
-          ? Number(v.inventory_quantity)
-          : defaultStock;
+        const vStock = resolveVariantStock(v, p);
         
         const priceDiff = vPrice > markedPrice ? Number(vPrice - markedPrice).toFixed(2) : '';
 
@@ -241,14 +250,28 @@ function exportWixCsv(products, options = {}) {
  * Transforms unified product list into Wix Single-Row Flat CSV format
  */
 function exportWixSimpleCsv(products, options = {}) {
-  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
-    ? Number(options.defaultStock)
-    : 99;
+  const hasStockOverride = options.defaultStock !== undefined && options.defaultStock !== '' && options.defaultStock !== null && !isNaN(Number(options.defaultStock));
+  const stockOverride = hasStockOverride ? Number(options.defaultStock) : null;
+  const defaultStock = hasStockOverride ? Number(options.defaultStock) : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
   const isUntracked = options.inventoryPolicy === 'untracked';
+
+  const resolveVariantStock = (v, p) => {
+    if (stockOverride !== null) return stockOverride;
+    if (v && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+      return Number(v.inventory_quantity);
+    }
+    if (p && p.inventory_quantity !== undefined && p.inventory_quantity !== null && p.inventory_quantity !== '' && !isNaN(Number(p.inventory_quantity))) {
+      return Number(p.inventory_quantity);
+    }
+    if ((v && (v.available === false || v.is_in_stock === false)) || (p && (p.available === false || p.is_in_stock === false))) {
+      return 0;
+    }
+    return defaultStock;
+  };
 
   const rows = products.map((p, idx) => {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}-${idx + 1}`);
@@ -266,10 +289,7 @@ function exportWixSimpleCsv(products, options = {}) {
     const hasDiscount = markedRegPrice > markedPrice;
     const discountVal = hasDiscount ? Number(markedRegPrice - markedPrice).toFixed(2) : '';
 
-    let stockQty = defaultStock;
-    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== '' && !isNaN(Number(mainVariant.inventory_quantity))) {
-      stockQty = Number(mainVariant.inventory_quantity);
-    }
+    const stockQty = resolveVariantStock(mainVariant, p);
 
     return {
       'handleId': handle,

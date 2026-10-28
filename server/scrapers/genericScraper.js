@@ -1,6 +1,6 @@
 const cheerio = require('cheerio');
 const axios = require('axios');
-const { fetchWithBrowserFallback } = require('./detector');
+const { fetchWithBrowserFallback, DEFAULT_HEADERS } = require('./detector');
 const { detectStoreCurrency, normalizeCurrencyCode } = require('./currencyHelper');
 
 /**
@@ -245,6 +245,7 @@ function parseJsonLdProduct(item, origin, fallbackUrl, defaultCurrency = 'USD') 
     price: price,
     regular_price: regularPrice >= price ? regularPrice : price,
     currency: currency,
+    inventory_quantity: effectiveStock,
     variants: [{
       id: '1',
       title: 'Default Title',
@@ -411,9 +412,9 @@ async function scanSpaBundles(html, origin, maxProducts = 5000, onLog, defaultCu
 }
 
 /**
- * Extracts products from raw Cheerio DOM (Universal Cluster Matching)
+ * Extracts products from raw Cheerio DOM (Universal Cluster Matching) with enhanced category, SKU, stock & multi-image support
  */
-function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defaultCurrency = 'USD') {
+function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defaultCurrency = 'USD', fallbackCategory = '', breadcrumbTags = []) {
   const products = [];
 
   const cardSelectors = [
@@ -451,44 +452,84 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defau
         if (link && link.startsWith('/')) link = `${origin}${link}`;
 
         const author = $card.find('.book-author, .author, [class*="author"]').first().text().trim();
-        const category = $card.find('.sp-text-link, .category, .badge, [class*="category"]').first().text().trim() || (author ? 'Books' : 'General');
+        const cardCategory = $card.find('.sp-text-link, .category, .badge, [class*="category"]').first().text().trim();
+        const category = cardCategory || fallbackCategory || (author ? 'Books' : 'General');
         const vendor = author || origin.replace(/^https?:\/\//, '');
 
         if (title && (price > 0 || img)) {
           const handle = title.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-').replace(/(^-|-$)/g, '') || `item-${Date.now()}-${idx}`;
 
-          const isOutOfStock = $card.find('.out-of-stock, .stock.out-of-stock, .sold-out, [class*="soldout"], [class*="out-of-stock"]').length > 0;
+          const isOutOfStock = $card.find('.out-of-stock, .stock.out-of-stock, .sold-out, [class*="soldout"], [class*="out-of-stock"], .disabled').length > 0;
           const stockText = $card.find('.stock, .inventory, .in-stock').text().trim();
-          const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে)/i);
+          const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|left\s*in\s*stock|items?\s*left|pieces?|pcs|টি\s*স্টকে|স্টকে\s*আছে)/i);
           const cardStock = qtyMatch ? parseInt(qtyMatch[1], 10) : (isOutOfStock ? 0 : 99);
 
-          if (!products.some(p => p.title === title) && title.length < 150) {
+          // Extract real SKU / ID from card onclick or attributes
+          const onclickAttr = $card.find('[onclick*="cart.add"]').attr('onclick') || '';
+          const onclickMatch = onclickAttr.match(/cart\.add\('(\d+)'/);
+          const domSku = onclickMatch ? onclickMatch[1] : (
+            $card.attr('data-product-id') ||
+            $card.attr('data-id') ||
+            $card.attr('data-sku') ||
+            $card.find('.sku, [itemprop="sku"]').text().trim() ||
+            `SKU-${idx + 1}`
+          );
+
+          // Extract rich short description from card
+          const shortDescEl = $card.find('.short-description, .product-short-description, .features, .summary, .p-item-details ul');
+          const description = shortDescEl.length > 0
+            ? shortDescEl.html().trim()
+            : `${title} - Available on ${origin.replace(/^https?:\/\//, '')}.`;
+
+          // Collect all images from card (including hover and data-src)
+          const cardImages = [];
+          if (img) {
+            let crispImg = img.replace(/-\d+x\d+\.(webp|jpg|jpeg|png)/i, '-500x500.$1');
+            cardImages.push({ id: 1, src: crispImg, alt: title, position: 1 });
+          }
+
+          $card.find('img').each((_, el) => {
+            let altSrc = $(el).attr('data-hover-image') || $(el).attr('data-hover') || $(el).attr('data-secondary') || $(el).attr('data-alt-image');
+            if (altSrc) {
+              if (altSrc.startsWith('//')) altSrc = `https:${altSrc}`;
+              else if (altSrc.startsWith('/') && origin) altSrc = `${origin}${altSrc}`;
+              altSrc = altSrc.replace(/\/image\/cache\/(catalog|data)\/(.+)-\d+x\d+\.(jpg|jpeg|png|webp)/i, '/image/$1/$2.$3');
+              if (altSrc.startsWith('http') && !cardImages.some(x => x.src === altSrc)) {
+                cardImages.push({ id: cardImages.length + 1, src: altSrc, alt: title, position: cardImages.length + 1 });
+              }
+            }
+          });
+
+          const tags = Array.from(new Set([category, author, ...(breadcrumbTags || [])].filter(Boolean)));
+
+          if (!products.some(p => p.title === title || p.handle === handle) && title.length < 150) {
             products.push({
-              id: String(Date.now() + idx),
+              id: String(domSku),
               title,
               handle,
-              description: `${title} - Available on ${origin.replace(/^https?:\/\//, '')}.`,
+              description,
               vendor,
               product_type: category,
-              tags: [category, author].filter(Boolean),
+              tags,
               status: isOutOfStock ? 'draft' : 'active',
               published_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               price,
               regular_price: regularPrice >= price ? regularPrice : price,
               currency: defaultCurrency || 'USD',
+              inventory_quantity: cardStock,
               variants: [{
-                id: `${Date.now()}-${idx}`,
+                id: String(domSku),
                 title: 'Default Title',
                 price,
                 compare_at_price: regularPrice > price ? regularPrice : null,
-                sku: `SKU-${idx + 1}`,
+                sku: String(domSku),
                 inventory_quantity: cardStock,
                 available: !isOutOfStock && cardStock > 0,
                 weight: 0,
                 barcode: ''
               }],
-              images: img ? [{ id: 1, src: img, alt: title, position: 1 }] : [],
+              images: cardImages,
               options: [],
               url: link || currentUrl,
               source: 'universal'
@@ -505,19 +546,143 @@ function extractProductsFromDom($, origin, currentUrl, maxProducts, onLog, defau
 }
 
 /**
+ * Hydrates full gallery images, specifications table, and variants from single product detail HTML
+ */
+async function hydrateGenericProductDetails(product, origin, headers) {
+  if (!product || !product.url || !product.url.startsWith('http')) return product;
+  try {
+    const res = await axios.get(product.url, { headers, timeout: 7000 });
+    const $ = cheerio.load(res.data);
+
+    // 1. Full Gallery Images
+    const gallery = [];
+    $('a.thumbnail, .product-thumbnails a, .product-image-slider img, .product-media img, a[data-fancybox="gallery"], .thumbnails a, .image-additional a, .gallery img, .product-gallery img').each((_, el) => {
+      let src = $(el).attr('href') || $(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-zoom-image');
+      if (src && (src.includes('/image/') || src.includes('/upload/') || src.includes('/media/') || src.includes('/product/'))) {
+        if (src.startsWith('//')) src = `https:${src}`;
+        else if (src.startsWith('/') && origin) src = `${origin}${src}`;
+        src = src.replace(/\/image\/cache\/(catalog|data)\/(.+)-\d+x\d+\.(jpg|jpeg|png|webp)/i, '/image/$1/$2.$3')
+                 .replace(/-\d+x\d+\.(webp|jpg|jpeg|png)/i, '-500x500.$1');
+        if (src.startsWith('http') && !gallery.some(g => g.src === src)) {
+          gallery.push({ id: gallery.length + 1, src, alt: product.title, position: gallery.length + 1 });
+        }
+      }
+    });
+    if (gallery.length > (product.images?.length || 0)) {
+      product.images = gallery;
+    }
+
+    // 2. Specifications Table & Full Description
+    const specTable = $('.data-table, .specification-table, #tab-specification, .specs-table');
+    if (specTable.length > 0) {
+      const specHtml = '<div class="product-specifications"><table class="data-table">' + specTable.html() + '</table></div>';
+      if (!product.description.includes('product-specifications')) {
+        product.description = `${product.description || ''}\n${specHtml}`.trim();
+      }
+    }
+
+    // 3. Exact SKU / Model
+    const codeText = $('.p-meta, .product-meta, .product-info, .product-short-info, .product-price-sku, ul.list-unstyled').text();
+    const codeMatch = codeText.match(/(?:Product Code|SKU|Item Code|Model)[:\s]+([a-zA-Z0-9_\-]+)/i);
+    if (codeMatch && codeMatch[1]) {
+      product.id = codeMatch[1];
+      if (product.variants && product.variants.length > 0) {
+        product.variants[0].sku = codeMatch[1];
+      }
+    }
+
+    // 4. Exact Stock Status
+    const stockText = $('.product-status, .stock, .in-stock, .stock-status, .stock-availability').text().trim();
+    if (stockText) {
+      const isOutOfStock = /out\s*of\s*stock|unavailable|sold\s*out|স্টকে\s*নেই/i.test(stockText);
+      if (isOutOfStock) {
+        product.inventory_quantity = 0;
+        product.status = 'draft';
+        if (product.variants) product.variants.forEach(v => { v.inventory_quantity = 0; v.available = false; });
+      }
+    }
+
+    // 5. Options & Variants
+    const options = [];
+    $('.product-options .form-group, #product .form-group, .product-options .option, [id^="input-option"]').each((_, el) => {
+      const optLabel = $(el).find('label').first().text().replace(/[*:]/g, '').trim();
+      const optVals = [];
+      $(el).find('select option, input[type="radio"], input[type="checkbox"]').each((_, vel) => {
+        let t = $(vel).text().trim() || $(vel).val();
+        if (!t && $(vel).parent().text()) t = $(vel).parent().text().trim();
+        if (t && !t.includes('Select') && !optVals.includes(t)) optVals.push(t);
+      });
+      if (optLabel && optVals.length > 0) {
+        options.push({ name: optLabel, values: optVals });
+      }
+    });
+
+    if (options.length > 0) {
+      product.options = options;
+      const newVariants = [];
+      const primaryOpt = options[0];
+      primaryOpt.values.forEach((val, vIdx) => {
+        newVariants.push({
+          id: `${product.id || Date.now()}-${vIdx + 1}`,
+          title: val,
+          price: product.price,
+          compare_at_price: product.regular_price > product.price ? product.regular_price : null,
+          sku: `${product.id || 'SKU'}-${vIdx + 1}`,
+          inventory_quantity: product.inventory_quantity,
+          available: product.status === 'active' && product.inventory_quantity > 0,
+          weight: 0,
+          barcode: ''
+        });
+      });
+      if (newVariants.length > 0) {
+        product.variants = newVariants;
+      }
+    }
+  } catch (err) {}
+  return product;
+}
+
+/**
  * Scrapes products from ANY website worldwide (100% Universal AI-grade Engine)
+ * Automatically discovers all subcategories, handles deep pagination, and extracts full multi-image galleries & variants.
  */
 async function scrapeGenericSite(url, options = {}, onLog) {
   const parsedUrl = new URL(url);
   const origin = parsedUrl.origin;
   const maxProducts = options.limit || 50;
   let products = [];
+  const seenHandles = new Set();
 
-  if (onLog) onLog(`Fetching initial page from ${url} with anti-bot protection...`);
+  let customCookie = options.cookie || options.sessionCookie || '';
+  if (!customCookie && options.password) {
+    const rawPwd = options.password.trim();
+    customCookie = rawPwd.includes('=') ? rawPwd : `cf_clearance=${rawPwd}`;
+  }
+  const extraHeaders = customCookie ? { Cookie: customCookie } : {};
 
-  const response = await fetchWithBrowserFallback(url, 12000);
+  if (onLog) {
+    if (customCookie) onLog(`Using custom session/clearance cookie authentication...`);
+    onLog(`Fetching initial page from ${url} with anti-bot protection...`);
+  }
+
+  const response = await fetchWithBrowserFallback(url, 12000, extraHeaders);
   const html = response.data;
   const $ = cheerio.load(html);
+
+  const finalUrl = response.request?.res?.responseUrl || response.config?.url || url;
+  const isPasswordProtected = response.status === 401 ||
+    /action=["']\/password["']/i.test(html) ||
+    /name=["']form_type["']\s+value=["']storefront_password["']/i.test(html) ||
+    (typeof finalUrl === 'string' && finalUrl.includes('/password') && /password/i.test(html)) ||
+    (parsedUrl.pathname.endsWith('/password') && /password/i.test(html));
+
+  if (isPasswordProtected) {
+    const err = new Error(options.password ? 'Incorrect storefront password. Please verify and try again.' : 'This store is password protected. Please enter the storefront password.');
+    err.isPasswordProtected = true;
+    err.invalidPassword = Boolean(options.password);
+    err.platform = 'generic';
+    throw err;
+  }
 
   const detectedCurrency = detectStoreCurrency(html, url, $);
   if (onLog) onLog(`Detected store currency: ${detectedCurrency}`);
@@ -558,7 +723,8 @@ async function scrapeGenericSite(url, options = {}, onLog) {
         if (products.length >= maxProducts) break;
         if (item['@type'] === 'Product' || item['@type']?.includes?.('Product')) {
           const prod = parseJsonLdProduct(item, origin, url, detectedCurrency);
-          if (prod && !products.some(p => p.title === prod.title)) {
+          if (prod && !seenHandles.has(prod.handle) && !products.some(p => p.title === prod.title)) {
+            seenHandles.add(prod.handle);
             products.push(prod);
           }
         }
@@ -566,74 +732,188 @@ async function scrapeGenericSite(url, options = {}, onLog) {
     } catch (e) {}
   });
 
-  // 4. Universal DOM Cards
+  // 4. Universal DOM Cards from initial page
   const initialDom = extractProductsFromDom($, origin, url, maxProducts, onLog, detectedCurrency);
   for (const p of initialDom) {
-    if (!products.some(x => x.title === p.title)) products.push(p);
+    if (!seenHandles.has(p.handle) && !products.some(x => x.title === p.title)) {
+      seenHandles.add(p.handle);
+      products.push(p);
+    }
   }
 
   if (onLog) onLog(`Extracted ${products.length} products from initial page.`);
 
-  // 5. Multi-Category & Deep Crawl if user requested more products or on homepage
+  // 4B. Quick Return for Dedicated Single Product Page URL
+  const isDirectProductUrl = Boolean(
+    parsedUrl.pathname.includes('/product/') ||
+    parsedUrl.pathname.includes('/item/') ||
+    parsedUrl.pathname.includes('/book/') ||
+    (initialDom.length === 1 && maxProducts === 1)
+  );
+
+  if (isDirectProductUrl && products.length > 0) {
+    if (onLog) onLog(`Hydrating full single product gallery & specifications...`);
+    await hydrateGenericProductDetails(products[0], origin, { ...DEFAULT_HEADERS, ...extraHeaders });
+    return products.slice(0, maxProducts);
+  }
+
+  // 5. Multi-Category, Subcategory & Deep Crawl with Full Pagination
   if (products.length < maxProducts) {
-    const categoryLinks = [];
-    $('a[href]').each((_, el) => {
-      let href = $(el).attr('href') || '';
-      if (href.startsWith('/')) href = `${origin}${href}`;
-      
-      const isCat = (
-        href.includes('/category') || href.includes('/collection') || href.includes('/shop') ||
-        href.includes('/product') || href.includes('/book') || href.includes('/grocery') ||
-        href.includes('/laptop') || href.includes('/component') ||
-        href.includes('/desktop') || href.includes('/monitor') || href.includes('/accessories') ||
-        href.includes('/gadget') || href.includes('/tv') || href.includes('/camera') ||
-        href.includes('/shoes') || href.includes('/men') || href.includes('/women')
-      );
+    const categoryQueue = [];
+    const seenCategoryUrls = new Set();
+
+    function enqueueCategory(rawUrl) {
+      if (!rawUrl) return;
+      let clean = rawUrl.split('#')[0].split('?')[0].trim();
+      if (clean.startsWith('//')) clean = `https:${clean}`;
+      else if (clean.startsWith('/')) clean = `${origin}${clean}`;
 
       if (
-        isCat &&
-        href.startsWith('http') &&
-        href.includes(parsedUrl.hostname) &&
-        !categoryLinks.includes(href) &&
-        href !== url &&
-        href !== `${origin}/` &&
-        !href.includes('#') &&
-        !href.includes('cart') &&
-        !href.includes('login') &&
-        !href.includes('checkout')
+        clean.startsWith(origin) &&
+        !seenCategoryUrls.has(clean) &&
+        clean !== origin &&
+        clean !== `${origin}/` &&
+        !clean.includes('/cart') &&
+        !clean.includes('/checkout') &&
+        !clean.includes('/account') &&
+        !clean.includes('/login') &&
+        !clean.includes('/register') &&
+        !clean.includes('/information') &&
+        !clean.includes('/terms') &&
+        !clean.includes('/privacy') &&
+        !clean.includes('/contact') &&
+        !clean.includes('/about') &&
+        !clean.includes('/help') &&
+        !clean.includes('/faq') &&
+        !clean.includes('/blog') &&
+        !clean.includes('/news') &&
+        !clean.includes('/wishlist') &&
+        !clean.match(/\.(jpg|jpeg|png|webp|gif|svg|pdf|zip|css|js)$/i)
       ) {
-        categoryLinks.push(href);
+        seenCategoryUrls.add(clean);
+        categoryQueue.push(clean);
       }
+    }
+
+    // Prioritize the user's specific target category URL first if provided
+    if (parsedUrl.pathname && parsedUrl.pathname !== '/' && parsedUrl.pathname !== '') {
+      enqueueCategory(url);
+    }
+
+    // 5A. Scan all Navigation Containers for Categories & Subcategories
+    $('nav a[href], .navbar a[href], .responsive-menu a[href], .main-menu a[href], .nav a[href], .menu a[href], #menu a[href], .categories a[href], .categories-menu a[href], .site-nav a[href], .sidebar a[href], .cat-menu a[href], header a[href], .megamenu a[href], .menu-item a[href], .sub-cat a[href], .child-list a[href], .ws-box a[href], a.category-card[href], a.cat-item[href]').each((_, el) => {
+      enqueueCategory($(el).attr('href'));
     });
 
-    if (categoryLinks.length > 0) {
-      if (onLog) onLog(`Discovered ${categoryLinks.length} category catalog paths. Deep-crawling store catalog...`);
-      for (const catUrl of categoryLinks.slice(0, 15)) {
-        if (products.length >= maxProducts) break;
-        try {
-          if (onLog) onLog(`Crawling category: ${catUrl}...`);
-          const catRes = await fetchWithBrowserFallback(catUrl, 9000);
-          const $cat = cheerio.load(catRes.data);
-          const catProducts = extractProductsFromDom($cat, origin, catUrl, maxProducts, onLog);
-          
-          for (const cp of catProducts) {
-            if (products.length >= maxProducts) break;
-            if (!products.some(p => p.title === cp.title)) {
-              products.push(cp);
+    // 5B. Scan for any links containing catalog/category keywords
+    $('a[href*="/category/"], a[href*="/categories/"], a[href*="/collection/"], a[href*="/collections/"], a[href*="/shop/"], a[href*="/catalog/"], a[href*="/product-category/"], a[href*="/c/"], a[href*="/department/"]').each((_, el) => {
+      enqueueCategory($(el).attr('href'));
+    });
+
+    // 5C. XML Sitemap Accelerated Discovery (For large limits or when navigation yields few paths)
+    if (maxProducts > 50 || categoryQueue.length < 10) {
+      try {
+        const sitemapUrl = `${origin}/sitemap.xml`;
+        const smRes = await axios.get(sitemapUrl, { headers: DEFAULT_HEADERS, timeout: 6000, validateStatus: (s) => s === 200 });
+        if (smRes.data && typeof smRes.data === 'string') {
+          const locMatches = smRes.data.match(/<loc>([^<]+)<\/loc>/g) || [];
+          for (const locTag of locMatches.slice(0, 1000)) {
+            const locUrl = locTag.replace(/<\/?loc>/g, '').trim();
+            if (locUrl && !locUrl.includes('.xml')) {
+              enqueueCategory(locUrl);
             }
           }
-          if (onLog) onLog(`Total catalog size now: ${products.length} products...`);
-        } catch (e) {}
+        }
+      } catch (smErr) {}
+    }
+
+    if (categoryQueue.length > 0) {
+      if (onLog) onLog(`Discovered ${categoryQueue.length} category & subcategory catalog paths. Deep-crawling store catalog with full pagination...`);
+
+      for (let cIdx = 0; cIdx < categoryQueue.length && products.length < maxProducts; cIdx++) {
+        const catUrl = categoryQueue[cIdx];
+        let page = 1;
+        let hasMorePages = true;
+
+        while (hasMorePages && products.length < maxProducts && page <= 30) {
+          let pageUrl = catUrl;
+          // Apply high-speed batch limit parameter if supported
+          if (!pageUrl.includes('limit=')) {
+            pageUrl += (pageUrl.includes('?') ? '&' : '?') + 'limit=90';
+          }
+          pageUrl += `&page=${page}`;
+
+          try {
+            const catRes = await fetchWithBrowserFallback(pageUrl, 9000, extraHeaders);
+            const $cat = cheerio.load(catRes.data);
+
+            // Discover and enqueue nested subcategories found on this category page
+            $cat('.child-list a[href], .sub-cat a[href], .ws-box a[href], .category-card a[href], .subcategories a[href], .filter-group a[href], .subcat a[href]').each((_, el) => {
+              enqueueCategory($cat(el).attr('href'));
+            });
+
+            // Extract breadcrumbs and active category name
+            const breadcrumbs = [];
+            $cat('.breadcrumb li, .breadcrumbs li, nav[aria-label="breadcrumb"] li').each((_, el) => {
+              const t = $cat(el).text().trim();
+              if (t && !/home/i.test(t) && !breadcrumbs.includes(t)) breadcrumbs.push(t);
+            });
+            const activeCategory = breadcrumbs.join(' > ') || $cat('h1.page-title, h1.title, .category-name, h1').first().text().trim() || 'General';
+
+            const catProducts = extractProductsFromDom($cat, origin, pageUrl, maxProducts, onLog, detectedCurrency, activeCategory, breadcrumbs);
+            let addedCount = 0;
+
+            for (const cp of catProducts) {
+              if (products.length >= maxProducts) break;
+              if (!seenHandles.has(cp.handle) && !products.some(p => p.title === cp.title)) {
+                seenHandles.add(cp.handle);
+                products.push(cp);
+                addedCount++;
+              }
+            }
+
+            if (onLog && addedCount > 0) {
+              onLog(`[CATALOG EXPANSION] Category ${cIdx + 1}/${categoryQueue.length} (${activeCategory}, Page ${page}) | +${addedCount} items | Total: ${products.length}/${maxProducts}`);
+            }
+
+            // Check if category has a next page
+            const hasNext = $cat('.pagination a[href], .page-numbers a[href], a.next, link[rel="next"]').toArray().some(a => {
+              const href = $cat(a).attr('href') || '';
+              return href.includes(`page=${page + 1}`) || href.includes(`p=${page + 1}`) || $cat(a).hasClass('next');
+            });
+
+            if (!hasNext || catProducts.length === 0) {
+              hasMorePages = false;
+            } else {
+              page++;
+            }
+          } catch (e) {
+            hasMorePages = false;
+          }
+        }
       }
     }
   }
 
+  // 6. Deep Gallery & Variant Hydration Stage (Hydrate multi-image galleries & specifications table)
   if (products.length > 0) {
+    const hydrateCount = maxProducts <= 100 ? Math.min(products.length, maxProducts) : Math.min(products.length, 60);
+    if (onLog) onLog(`Hydrating multi-image galleries, specifications & variant options for ${hydrateCount} products...`);
+
+    const concurrency = 6;
+    for (let i = 0; i < hydrateCount; i += concurrency) {
+      const batch = products.slice(i, i + concurrency);
+      await Promise.all(batch.map(p => hydrateGenericProductDetails(p, origin, { ...DEFAULT_HEADERS, ...extraHeaders })));
+      if (onLog && (i + concurrency) % 24 === 0) {
+        onLog(`Hydrated ${Math.min(i + concurrency, hydrateCount)}/${hydrateCount} products with full multi-image galleries & specs...`);
+      }
+    }
+
     if (onLog) onLog(`Completed catalog extraction with ${products.length} total products!`);
     return products.slice(0, maxProducts);
   }
 
-  // 6. Single Product Fallback
+  // 7. Single Product Fallback
   const ogTitle = $('meta[property="og:title"]').attr('content') || $('h1').first().text().trim();
   const ogImage = $('meta[property="og:image"]').attr('content');
   const ogDesc = $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content') || '';
@@ -654,7 +934,17 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       images.push({ id: 1, src, alt: ogTitle, position: 1 });
     }
 
-    products.push({
+    const isOutOfStock = $('[name="add"][disabled], .sold-out, .out-of-stock, [data-sold-out="true"], .product-form__submit[disabled]').length > 0 ||
+      /sold\s*out|out\s*of\s*stock|স্টকে\s*নেই/i.test($('.product-form, .product-single, .entry-summary').text());
+    const maxQtyAttr = $('input[name="quantity"], input.qty').attr('max');
+    const stockText = $('.stock, .inventory, .in-stock').text().trim();
+    const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|left\s*in\s*stock|items?\s*left|pieces?|pcs|টি\s*স্টকে|স্টকে\s*আছে)/i);
+    let detectedStock = 99;
+    if (isOutOfStock) detectedStock = 0;
+    else if (qtyMatch) detectedStock = parseInt(qtyMatch[1], 10);
+    else if (maxQtyAttr && !isNaN(Number(maxQtyAttr)) && Number(maxQtyAttr) > 0 && Number(maxQtyAttr) < 100000) detectedStock = Number(maxQtyAttr);
+
+    const singleProd = {
       id: String(Date.now()),
       title: ogTitle,
       handle: ogTitle.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]+/g, '-'),
@@ -662,20 +952,21 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       vendor: origin.replace(/^https?:\/\//, ''),
       product_type: 'General',
       tags: ['Single Product'],
-      status: 'active',
+      status: isOutOfStock ? 'draft' : 'active',
       published_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       price: parseFloat(detectedPrice) || 0,
       regular_price: parseFloat(detectedPrice) || 0,
-      currency: 'BDT',
+      currency: detectedCurrency || 'BDT',
+      inventory_quantity: detectedStock,
       variants: [{
         id: '1',
         title: 'Default Title',
         price: parseFloat(detectedPrice) || 0,
         compare_at_price: null,
         sku: `SKU-${Date.now()}`,
-        inventory_quantity: 99,
-        available: true,
+        inventory_quantity: detectedStock,
+        available: !isOutOfStock && detectedStock > 0,
         weight: 0,
         barcode: ''
       }],
@@ -683,7 +974,10 @@ async function scrapeGenericSite(url, options = {}, onLog) {
       options: [],
       url: url,
       source: 'generic_single'
-    });
+    };
+
+    await hydrateGenericProductDetails(singleProd, origin, DEFAULT_HEADERS);
+    products.push(singleProd);
   }
 
   return products;

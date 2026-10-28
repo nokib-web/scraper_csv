@@ -139,9 +139,9 @@ function applyPriceMarkup(price, markup) {
  * @returns {string} CSV string
  */
 function exportShopifyCsv(products, options = {}) {
-  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
-    ? Number(options.defaultStock)
-    : 99;
+  const hasStockOverride = options.defaultStock !== undefined && options.defaultStock !== '' && options.defaultStock !== null && !isNaN(Number(options.defaultStock));
+  const stockOverride = hasStockOverride ? Number(options.defaultStock) : null;
+  const defaultStock = hasStockOverride ? Number(options.defaultStock) : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const customType = options.customType && options.customType.trim() ? options.customType.trim() : null;
@@ -152,6 +152,20 @@ function exportShopifyCsv(products, options = {}) {
   const isUntracked = options.inventoryPolicy === 'untracked' || options.inventoryTracker === 'none' || options.inventoryTracker === '';
   const effectiveTracker = isUntracked ? '' : 'shopify';
   const effectivePolicy = options.inventoryPolicy === 'deny' ? 'DENY' : 'CONTINUE';
+
+  const resolveVariantStock = (v, p) => {
+    if (stockOverride !== null) return stockOverride;
+    if (v && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+      return Number(v.inventory_quantity);
+    }
+    if (p && p.inventory_quantity !== undefined && p.inventory_quantity !== null && p.inventory_quantity !== '' && !isNaN(Number(p.inventory_quantity))) {
+      return Number(p.inventory_quantity);
+    }
+    if ((v && (v.available === false || v.is_in_stock === false)) || (p && (p.available === false || p.is_in_stock === false))) {
+      return 0;
+    }
+    return defaultStock;
+  };
 
   const rows = [];
 
@@ -186,16 +200,14 @@ function exportShopifyCsv(products, options = {}) {
       price: markedPrice,
       compare_at_price: markedRegPrice > markedPrice ? markedRegPrice : '',
       sku: `SKU-${handle}`,
-      inventory_quantity: defaultStock,
+      inventory_quantity: resolveVariantStock(null, p),
       option1: null
     }];
 
     const variants = rawVariants.map(v => {
       const vPrice = applyPriceMarkup(v.price !== undefined ? v.price : p.price || 0, priceMarkup);
       const vCompare = v.compare_at_price ? applyPriceMarkup(v.compare_at_price, priceMarkup) : (markedRegPrice > vPrice ? markedRegPrice : '');
-      const vQty = v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))
-        ? Number(v.inventory_quantity)
-        : defaultStock;
+      const vQty = resolveVariantStock(v, p);
 
       return {
         ...v,
@@ -355,10 +367,25 @@ function exportShopifyCsv(products, options = {}) {
  * @returns {string} CSV string
  */
 function exportShopifyInventoryCsv(products, options = {}) {
-  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
-    ? Number(options.defaultStock)
-    : 99;
+  const hasStockOverride = options.defaultStock !== undefined && options.defaultStock !== '' && options.defaultStock !== null && !isNaN(Number(options.defaultStock));
+  const stockOverride = hasStockOverride ? Number(options.defaultStock) : null;
+  const defaultStock = hasStockOverride ? Number(options.defaultStock) : 99;
   const locationName = (options.locationName && options.locationName.trim()) || 'Location';
+
+  const resolveVariantStock = (v, p) => {
+    if (stockOverride !== null) return stockOverride;
+    if (v && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+      return Number(v.inventory_quantity);
+    }
+    if (p && p.inventory_quantity !== undefined && p.inventory_quantity !== null && p.inventory_quantity !== '' && !isNaN(Number(p.inventory_quantity))) {
+      return Number(p.inventory_quantity);
+    }
+    if ((v && (v.available === false || v.is_in_stock === false)) || (p && (p.available === false || p.is_in_stock === false))) {
+      return 0;
+    }
+    return defaultStock;
+  };
+
   const rows = [];
 
   for (const p of products) {
@@ -367,7 +394,7 @@ function exportShopifyInventoryCsv(products, options = {}) {
       id: '1',
       title: 'Default Title',
       sku: `SKU-${handle}`,
-      inventory_quantity: defaultStock,
+      inventory_quantity: resolveVariantStock(null, p),
       option1: null
     }];
 
@@ -384,9 +411,7 @@ function exportShopifyInventoryCsv(products, options = {}) {
 
     for (let i = 0; i < rawVariants.length; i++) {
       const v = rawVariants[i];
-      const stockQty = v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))
-        ? Number(v.inventory_quantity)
-        : defaultStock;
+      const stockQty = resolveVariantStock(v, p);
 
       const row = {
         'Handle': handle,
