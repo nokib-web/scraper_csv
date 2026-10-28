@@ -31,6 +31,7 @@ export default function App() {
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordModalError, setPasswordModalError] = useState('');
   const [pendingPasswordUrl, setPendingPasswordUrl] = useState('');
+  const [isCloudflareChallenge, setIsCloudflareChallenge] = useState(false);
   const [a11yOpen, setA11yOpen] = useState(false);
 
   // User Plan State (Free 20 by default, or trial plan from localStorage)
@@ -772,9 +773,11 @@ export default function App() {
     setDetection(null);
     setIsConsoleCollapsed(false);
 
+    let isStreamFinished = false;
+
     try {
       const apiBase = getApiBaseUrl();
-      const pwdParam = pwd ? `&password=${encodeURIComponent(pwd)}` : '';
+      const pwdParam = pwd ? `&password=${encodeURIComponent(pwd.trim())}` : '';
       const sseUrl = `${apiBase}/api/scrape-stream?url=${encodeURIComponent(targetUrl)}&engine=${engine}&limit=${limit}${pwdParam}`;
       const eventSource = new EventSource(sseUrl);
 
@@ -787,6 +790,8 @@ export default function App() {
           } else if (data.type === 'detected') {
             setDetection(data.detection);
           } else if (data.type === 'password_required') {
+            isStreamFinished = true;
+            setIsCloudflareChallenge(false);
             setPasswordModalError(data.invalidPassword ? 'Incorrect storefront password. Please verify and try again.' : '');
             setPendingPasswordUrl(data.url || targetUrl);
             setPasswordModalOpen(true);
@@ -794,7 +799,22 @@ export default function App() {
             setStatus('idle');
             setLogs(prev => [...prev, `[PASSWORD REQUIRED] ${data.message || 'Store is password protected.'}`]);
             eventSource.close();
+          } else if (data.type === 'cloudflare_required') {
+            isStreamFinished = true;
+            setIsCloudflareChallenge(true);
+            setPasswordModalError('');
+            setPendingPasswordUrl(data.url || targetUrl);
+            setPasswordModalOpen(true);
+            setIsLoading(false);
+            setStatus('idle');
+            setLogs(prev => [
+              ...prev,
+              `[CLOUDFLARE BOT SHIELD] ${data.message || 'Protected by Cloudflare WAF Managed Challenge.'}`,
+              `[ACTION REQUIRED] Cloudflare clearance cookie required to bypass edge firewall.`
+            ]);
+            eventSource.close();
           } else if (data.type === 'complete') {
+            isStreamFinished = true;
             setProducts(data.products || []);
             setDetection(data.detection);
             setStatus('done');
@@ -803,6 +823,7 @@ export default function App() {
             setPasswordModalError('');
             eventSource.close();
           } else if (data.type === 'error') {
+            isStreamFinished = true;
             setLogs(prev => [...prev, `[ERROR] ${data.error}`]);
             setStatus('error');
             setIsLoading(false);
@@ -815,22 +836,40 @@ export default function App() {
 
       eventSource.onerror = async () => {
         eventSource.close();
+        if (isStreamFinished) return;
+        isStreamFinished = true;
+
         setLogs(prev => [...prev, '[INFO] Falling back to standard JSON scrape endpoint...']);
 
         try {
           const res = await fetch(`${apiBase}/api/scrape`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: targetUrl, engine, limit, password: pwd || undefined })
+            body: JSON.stringify({ url: targetUrl, engine, limit, password: pwd ? pwd.trim() : undefined })
           });
           const json = await res.json();
 
           if (res.status === 401 || json.isPasswordProtected) {
+            setIsCloudflareChallenge(false);
             setPasswordModalError(json.invalidPassword ? 'Incorrect storefront password. Please verify and try again.' : '');
             setPendingPasswordUrl(targetUrl);
             setPasswordModalOpen(true);
             setStatus('idle');
             setLogs(prev => [...prev, `[PASSWORD REQUIRED] ${json.error || 'Store is password protected.'}`]);
+            return;
+          }
+
+          if (res.status === 403 || json.isCloudflareBlocked) {
+            setIsCloudflareChallenge(true);
+            setPasswordModalError('');
+            setPendingPasswordUrl(targetUrl);
+            setPasswordModalOpen(true);
+            setStatus('idle');
+            setLogs(prev => [
+              ...prev,
+              `[CLOUDFLARE BOT SHIELD] ${json.error || 'Protected by Cloudflare WAF Managed Challenge.'}`,
+              `[ACTION REQUIRED] Cloudflare clearance cookie required to bypass edge firewall.`
+            ]);
             return;
           }
 
@@ -976,6 +1015,8 @@ export default function App() {
               setEngine={setEngine}
               limit={limit}
               setLimit={setLimit}
+              storePassword={storePassword}
+              setStorePassword={setStorePassword}
               userPlan={userPlan}
               isLoading={isLoading}
               onSubmit={handleScrape}
@@ -1197,14 +1238,18 @@ export default function App() {
         currentProductsCount={products.length}
       />
 
-      {/* Password-Protected Store Authentication Modal */}
+      {/* Password & Cloudflare Authentication Modal */}
       <PasswordModal
         isOpen={passwordModalOpen}
-        onClose={() => setPasswordModalOpen(false)}
+        onClose={() => {
+          setPasswordModalOpen(false);
+          setIsCloudflareChallenge(false);
+        }}
         onSubmit={handlePasswordModalSubmit}
         url={pendingPasswordUrl || url}
         isLoading={isLoading}
         errorMessage={passwordModalError}
+        isCloudflare={isCloudflareChallenge}
       />
 
       {/* Fixed Bottom Docked Footer */}

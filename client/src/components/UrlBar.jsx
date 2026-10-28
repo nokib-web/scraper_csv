@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Loader2, X, ClipboardPaste, FileSpreadsheet } from 'lucide-react';
+import { ArrowRight, Loader2, X, ClipboardPaste, FileSpreadsheet, KeyRound, Lock } from 'lucide-react';
 import { FaLink } from 'react-icons/fa';
 
 export default function UrlBar({
@@ -9,6 +9,8 @@ export default function UrlBar({
   setEngine,
   limit,
   setLimit,
+  storePassword = '',
+  setStorePassword,
   onSubmit,
   isLoading,
   detection,
@@ -58,6 +60,11 @@ export default function UrlBar({
   }, [charIndex, isDeleting, phraseIndex]);
 
   const [pastePrompt, setPastePrompt] = useState(false);
+  const [showPwdInput, setShowPwdInput] = useState(Boolean(storePassword));
+
+  useEffect(() => {
+    if (storePassword) setShowPwdInput(true);
+  }, [storePassword]);
 
   const handlePaste = async () => {
     // 1. Try modern Async Clipboard API (works on HTTPS or localhost)
@@ -270,6 +277,57 @@ export default function UrlBar({
                 ▼
               </div>
             </div>
+          </div>
+
+          {/* Optional Store Password Input */}
+          <div className="flex items-center gap-1.5">
+            {showPwdInput || storePassword ? (
+              <div className="relative flex items-center">
+                <div className="absolute left-2.5 text-amber-500 pointer-events-none">
+                  <KeyRound className="w-3.5 h-3.5" />
+                </div>
+                <input
+                  type="password"
+                  value={storePassword}
+                  onChange={(e) => setStorePassword && setStorePassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleFormSubmit(e);
+                    }
+                  }}
+                  placeholder="Password / Cookie..."
+                  disabled={isLoading}
+                  className="pl-7 pr-7 py-1.5 rounded-xl bg-white dark:bg-neutral-900 border border-amber-500/50 hover:border-amber-500 focus:border-amber-500 text-neutral-900 dark:text-neutral-200 text-xs font-semibold outline-none shadow-xs transition-colors w-36 sm:w-44"
+                  title="Storefront password (Shopify) or Cookie / cf_clearance (Cloudflare-protected stores)"
+                />
+                {storePassword && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (setStorePassword) setStorePassword('');
+                      setShowPwdInput(false);
+                    }}
+                    disabled={isLoading}
+                    className="absolute right-2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer"
+                    title="Clear store password / cookie"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowPwdInput(true)}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-800 text-xs font-semibold transition-colors cursor-pointer"
+                title="Enter storefront password or session / clearance cookie"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                <span className="hidden sm:inline">Password / Cookie</span>
+              </button>
+            )}
           </div>
 
           {/* 3. Right: Upload / Import Existing CSV Button */}

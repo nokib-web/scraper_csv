@@ -96,6 +96,8 @@ function normalizeWooProduct(item, origin, defaultCurrency = 'USD') {
     let vStock = 99;
     if (v.stock_quantity !== undefined && v.stock_quantity !== null && v.stock_quantity !== '' && !isNaN(Number(v.stock_quantity))) {
       vStock = Number(v.stock_quantity);
+    } else if (v.max_qty !== undefined && v.max_qty !== null && v.max_qty !== '' && !isNaN(Number(v.max_qty)) && Number(v.max_qty) > 0 && Number(v.max_qty) < 99999) {
+      vStock = Number(v.max_qty);
     } else if (item.stock_quantity !== undefined && item.stock_quantity !== null && item.stock_quantity !== '' && !isNaN(Number(item.stock_quantity))) {
       vStock = Number(item.stock_quantity);
     } else if (v.is_in_stock === false || item.is_in_stock === false) {
@@ -166,6 +168,7 @@ function normalizeWooProduct(item, origin, defaultCurrency = 'USD') {
     price: price,
     regular_price: regularPrice,
     currency: normalizeCurrencyCode(item.prices?.currency_code) || normalizeCurrencyCode(item.prices?.currency_symbol) || defaultCurrency || 'USD',
+    inventory_quantity: variations[0]?.inventory_quantity !== undefined ? variations[0].inventory_quantity : (item.is_in_stock === false ? 0 : 99),
     variants: variations,
     images: images,
     options: item.attributes || [],
@@ -251,6 +254,60 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
     const $ = cheerio.load(res.data);
     const detectedCurrency = detectStoreCurrency(res.data, url, $);
 
+    // 0. Extract stock info & variable product variations from DOM
+    const stockText = $('.stock, .inventory, .in-stock, .out-of-stock').text().trim();
+    const isOutOfStock = $('.out-of-stock, .stock.out-of-stock').length > 0 || /out\s*of\s*stock|স্টকে\s*নেই/i.test(stockText);
+    const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে|স্টকে\s*আছে)/i);
+    const maxQtyAttr = $('input[name="quantity"], input.qty').attr('max');
+    const parsedMaxQty = (maxQtyAttr && !isNaN(Number(maxQtyAttr)) && Number(maxQtyAttr) > 0 && Number(maxQtyAttr) < 100000) ? Number(maxQtyAttr) : null;
+
+    let parsedStock = 99;
+    if (isOutOfStock) {
+      parsedStock = 0;
+    } else if (qtyMatch) {
+      parsedStock = parseInt(qtyMatch[1], 10);
+    } else if (parsedMaxQty !== null) {
+      parsedStock = parsedMaxQty;
+    }
+
+    let domVariations = [];
+    const variationsAttr = $('form.variations_form').attr('data-product_variations');
+    if (variationsAttr) {
+      try {
+        const rawVars = JSON.parse(variationsAttr);
+        if (Array.isArray(rawVars) && rawVars.length > 0) {
+          domVariations = rawVars.map((v, vIdx) => {
+            const vPrice = parseFloat(v.display_price !== undefined ? v.display_price : v.price || 0) || 0;
+            const vReg = parseFloat(v.display_regular_price !== undefined ? v.display_regular_price : v.regular_price || vPrice) || vPrice;
+            const vStock = (v.stock_quantity !== undefined && v.stock_quantity !== null && v.stock_quantity !== '' && !isNaN(Number(v.stock_quantity)))
+              ? Number(v.stock_quantity)
+              : (v.max_qty !== undefined && v.max_qty !== null && v.max_qty !== '' && !isNaN(Number(v.max_qty)) && Number(v.max_qty) > 0 && Number(v.max_qty) < 99999)
+                ? Number(v.max_qty)
+                : (v.is_in_stock === false ? 0 : 99);
+            
+            const optAttrs = Object.values(v.attributes || {});
+            const varTitle = optAttrs.filter(Boolean).join(' / ') || `Variation ${vIdx + 1}`;
+
+            return {
+              id: String(v.variation_id || `${Date.now()}-${vIdx + 1}`),
+              title: varTitle,
+              price: vPrice,
+              compare_at_price: vReg > vPrice ? vReg : null,
+              sku: v.sku || `SKU-${Date.now()}-${vIdx + 1}`,
+              inventory_quantity: vStock,
+              available: v.is_in_stock !== false && vStock > 0,
+              option1: optAttrs[0] || null,
+              option2: optAttrs[1] || null,
+              option3: optAttrs[2] || null,
+              weight: v.weight ? parseFloat(v.weight) : 0,
+              barcode: '',
+              image: v.image?.full_src || v.image?.src || null
+            };
+          });
+        }
+      } catch (e) {}
+    }
+
     // 1. Check Schema.org Product block
     let ldProduct = null;
     $('script[type="application/ld+json"]').each((_, el) => {
@@ -281,7 +338,21 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
           images.push({ id: idx + 1, src, alt: title, position: idx + 1 });
         }
       });
-      const inStock = offer.availability ? !offer.availability.includes('OutOfStock') : true;
+      const inStock = offer.availability ? !offer.availability.includes('OutOfStock') : !isOutOfStock;
+      const primaryStock = inStock ? parsedStock : 0;
+
+      const finalVariants = domVariations.length > 0 ? domVariations : [{
+        id: '1',
+        title: 'Default Title',
+        price: price,
+        compare_at_price: null,
+        sku: ldProduct.sku || `SKU-${Date.now()}`,
+        inventory_quantity: primaryStock,
+        available: inStock && primaryStock > 0,
+        weight: 0,
+        barcode: ''
+      }];
+
       return [{
         id: String(ldProduct.sku || Date.now()),
         title: ldProduct.name || 'WooCommerce Product',
@@ -296,17 +367,8 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
         price: price,
         regular_price: price,
         currency: normalizeCurrencyCode(offer.priceCurrency) || detectedCurrency || 'USD',
-        variants: [{
-          id: '1',
-          title: 'Default Title',
-          price: price,
-          compare_at_price: null,
-          sku: ldProduct.sku || `SKU-${Date.now()}`,
-          inventory_quantity: inStock ? 99 : 0,
-          available: inStock,
-          weight: 0,
-          barcode: ''
-        }],
+        inventory_quantity: finalVariants[0]?.inventory_quantity !== undefined ? finalVariants[0].inventory_quantity : primaryStock,
+        variants: finalVariants,
         images: images,
         options: [],
         url: url,
@@ -322,11 +384,6 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
     const sku = $('.sku').first().text().trim() || `SKU-${Date.now()}`;
     const category = $('.posted_in a, .product_meta a').first().text().trim() || 'General';
 
-    const stockText = $('.stock, .inventory, .in-stock, .out-of-stock').text().trim();
-    const isOutOfStock = $('.out-of-stock, .stock.out-of-stock').length > 0 || /out\s*of\s*stock|স্টকে\s*নেই/i.test(stockText);
-    const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে)/i);
-    const parsedStock = qtyMatch ? parseInt(qtyMatch[1], 10) : (isOutOfStock ? 0 : 99);
-
     const images = [];
     $('.woocommerce-product-gallery img, .product-images img, .wd-gallery-thumb img').each((idx, el) => {
       const src = $(el).attr('data-large_image') || $(el).attr('data-wood-src') || $(el).attr('data-lazy-src') || $(el).attr('data-src') || $(el).attr('src');
@@ -335,6 +392,18 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
         images.push({ id: idx + 1, src: cleanSrc, alt: title, position: idx + 1 });
       }
     });
+
+    const fallbackVariants = domVariations.length > 0 ? domVariations : [{
+      id: '1',
+      title: 'Default Title',
+      price: price,
+      compare_at_price: regularPrice > price ? regularPrice : null,
+      sku: sku,
+      inventory_quantity: parsedStock,
+      available: !isOutOfStock && parsedStock > 0,
+      weight: 0,
+      barcode: ''
+    }];
 
     return [{
       id: String(Date.now()),
@@ -350,17 +419,8 @@ async function scrapeWooSingleProduct(url, options = {}, onLog) {
       price: price,
       regular_price: regularPrice,
       currency: detectedCurrency,
-      variants: [{
-        id: '1',
-        title: 'Default Title',
-        price: price,
-        compare_at_price: regularPrice > price ? regularPrice : null,
-        sku: sku,
-        inventory_quantity: parsedStock,
-        available: !isOutOfStock && parsedStock > 0,
-        weight: 0,
-        barcode: ''
-      }],
+      inventory_quantity: fallbackVariants[0]?.inventory_quantity !== undefined ? fallbackVariants[0].inventory_quantity : parsedStock,
+      variants: fallbackVariants,
       images: images,
       options: [],
       url: url,
@@ -472,7 +532,7 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
 
         const isOutOfStock = $card.find('.out-of-stock, .stock.out-of-stock, .sold-out, [class*="soldout"], [class*="out-of-stock"]').length > 0;
         const stockText = $card.find('.stock, .inventory, .in-stock').text().trim();
-        const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|pieces|items|pcs|টি\s*স্টকে)/i);
+        const qtyMatch = stockText.match(/(\d+)\s*(?:in\s*stock|left\s*in\s*stock|items?\s*left|pieces?|pcs|টি\s*স্টকে|স্টকে\s*আছে)/i);
         const cardStock = qtyMatch ? parseInt(qtyMatch[1], 10) : (isOutOfStock ? 0 : 99);
 
         products.push({
@@ -489,6 +549,7 @@ async function scrapeWooFromHtml(url, options = {}, onLog) {
           price: price,
           regular_price: regularPrice,
           currency: detectedCurrency,
+          inventory_quantity: cardStock,
           variants: [{
             id: `${Date.now()}-${products.length + 1}`,
             title: 'Default Title',

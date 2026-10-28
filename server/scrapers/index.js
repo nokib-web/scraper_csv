@@ -10,7 +10,7 @@ const { scrapeGenericSite } = require('./genericScraper');
 /**
  * Universal Scraper Entry Point
  * @param {string} url - Target URL to scrape
- * @param {object} options - { limit, engineOverride, onLog }
+ * @param {object} options - { limit, engineOverride, password, onLog }
  */
 async function scrapeProducts(url, options = {}) {
   const onLog = options.onLog || (() => {});
@@ -33,13 +33,34 @@ async function scrapeProducts(url, options = {}) {
       platform: options.engineOverride,
       confidence: 1.0,
       details: `Manual override: ${options.engineOverride}`,
-      isSingleProduct: formattedUrl.includes('/products/') || formattedUrl.includes('/product/')
+      isSingleProduct: formattedUrl.includes('/products/') || formattedUrl.includes('/product/'),
+      isPasswordProtected: formattedUrl.includes('/password')
     };
   } else {
-    detection = await detectPlatform(formattedUrl);
+    detection = await detectPlatform(formattedUrl, options);
   }
 
   onLog(`Detected platform: ${detection.platform.toUpperCase()} (${detection.details || 'Confidence: ' + Math.round(detection.confidence * 100) + '%'})`);
+
+  // Immediate Cloudflare WAF Check
+  if (detection.isCloudflareBlocked && !options.password && !options.cookie) {
+    onLog(`[SECURITY SHIELD] ${formattedUrl} is protected by Cloudflare WAF / Managed Challenge (HTTP 403). Automated requests are blocked by Cloudflare's edge firewall.`);
+    let host = formattedUrl;
+    try { host = new URL(formattedUrl).hostname; } catch {}
+    const cfErr = new Error(`Access Denied (HTTP 403): ${host} is protected by Cloudflare WAF (Managed Challenge / Turnstile CAPTCHA). Cloudflare's edge firewall is blocking automated server requests.`);
+    cfErr.isCloudflareBlocked = true;
+    cfErr.platform = 'cloudflare';
+    throw cfErr;
+  }
+
+  // Immediate Password Check: Stop before network retries if password protection is active and no password was provided
+  if (detection.isPasswordProtected && !options.password) {
+    onLog(`[SECURITY] Storefront is password protected. Requesting storefront password...`);
+    const err = new Error('This store is password protected. Please enter the storefront password to extract products.');
+    err.isPasswordProtected = true;
+    err.platform = detection.platform || 'shopify';
+    throw err;
+  }
 
   let rawProducts = [];
 
@@ -49,7 +70,7 @@ async function scrapeProducts(url, options = {}) {
         onLog('Executing Shopify Single Product Extractor...');
         rawProducts = await scrapeShopifySingleProduct(formattedUrl, options, onLog);
       } else {
-        onLog('Executing Shopify Full Catalog Extractor...');
+        onLog('Executing Shopify Catalog & Collection Extractor...');
         rawProducts = await scrapeShopifyCatalog(formattedUrl, options, onLog);
       }
       break;
@@ -89,6 +110,13 @@ async function scrapeProducts(url, options = {}) {
 
   // Fallback: If platform-specific scraper returned 0 items, try generic scraper as backup
   if ((!rawProducts || rawProducts.length === 0) && detection.platform !== 'generic') {
+    if (detection.isPasswordProtected) {
+      const err = new Error(options.password ? 'Incorrect storefront password. Please verify and try again.' : 'This store is password protected. Please enter the storefront password to extract products.');
+      err.isPasswordProtected = true;
+      err.invalidPassword = Boolean(options.password);
+      err.platform = detection.platform;
+      throw err;
+    }
     onLog(`Primary scraper returned 0 items. Running fallback generic HTML & JSON-LD parser...`);
     rawProducts = await scrapeGenericSite(formattedUrl, options, onLog);
   }
@@ -125,6 +153,7 @@ async function scrapeProducts(url, options = {}) {
     success: true,
     platform: detection.platform,
     detectionDetails: detection.details,
+    detection,
     total: cleanedProducts.length,
     products: cleanedProducts
   };

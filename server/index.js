@@ -119,7 +119,8 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
     sendEvent('log', { message: msg, timestamp: new Date().toLocaleTimeString() });
   };
 
-  const cacheKey = catalogCache.generateKey(url, `${engine}-${password ? 'auth' : 'anon'}`, limit);
+  const pwdSig = password ? Buffer.from(String(password).trim()).toString('base64').slice(0, 10) : 'anon';
+  const cacheKey = catalogCache.generateKey(url, `${engine}-${pwdSig}`, limit);
 
   // Check In-Memory Store Cache for Instant Response (only if not a password-specific attempt that might need fresh auth)
   if (!password) {
@@ -143,7 +144,7 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
     const result = await scrapeProducts(url, {
       limit: parseInt(limit) || 50,
       engineOverride: engine,
-      password: password || undefined,
+      password: password ? String(password).trim() : undefined,
       onLog
     });
 
@@ -172,6 +173,13 @@ app.get('/api/scrape-stream', scrapeLimiter, async (req, res) => {
         invalidPassword: Boolean(error.invalidPassword),
         isPasswordProtected: true
       });
+    } else if (error.isCloudflareBlocked) {
+      sendEvent('cloudflare_required', {
+        url,
+        message: error.message || 'Access Denied (HTTP 403): Protected by Cloudflare WAF.',
+        platform: 'cloudflare',
+        isCloudflareBlocked: true
+      });
     } else {
       sendEvent('error', { error: error.message || 'Scraping failed.' });
     }
@@ -185,7 +193,8 @@ app.post('/api/scrape', scrapeLimiter, async (req, res) => {
   const { url, limit = 50, engine = 'auto', password } = req.body;
   if (!url) return res.status(400).json({ error: 'URL is required' });
 
-  const cacheKey = catalogCache.generateKey(url, `${engine}-${password ? 'auth' : 'anon'}`, limit);
+  const pwdSig = password ? Buffer.from(String(password).trim()).toString('base64').slice(0, 10) : 'anon';
+  const cacheKey = catalogCache.generateKey(url, `${engine}-${pwdSig}`, limit);
   if (!password) {
     const cachedData = catalogCache.get(cacheKey);
     if (cachedData && cachedData.products && cachedData.products.length > 0) {
@@ -204,7 +213,7 @@ app.post('/api/scrape', scrapeLimiter, async (req, res) => {
     const result = await scrapeProducts(url, {
       limit: parseInt(limit) || 50,
       engineOverride: engine,
-      password: password || undefined,
+      password: password ? String(password).trim() : undefined,
       onLog
     });
 
@@ -227,6 +236,14 @@ app.post('/api/scrape', scrapeLimiter, async (req, res) => {
         logs
       });
     }
+    if (err.isCloudflareBlocked) {
+      return res.status(403).json({
+        error: err.message,
+        isCloudflareBlocked: true,
+        platform: 'cloudflare',
+        logs
+      });
+    }
     res.status(500).json({ error: err.message, logs });
   }
 });
@@ -238,13 +255,19 @@ app.get('/api/img', async (req, res) => {
   if (!url) return res.status(400).send('Missing url param');
 
   try {
-    const decoded = decodeURIComponent(url);
+    let decoded = decodeURIComponent(url).trim();
+    if (decoded.startsWith('//')) decoded = `https:${decoded}`;
+    if (!decoded.startsWith('http://') && !decoded.startsWith('https://')) {
+      return res.status(400).send('Invalid url format');
+    }
+
+    const parsed = new URL(decoded);
     const response = await axios.get(decoded, {
       responseType: 'stream',
       timeout: 12000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': new URL(decoded).origin + '/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': parsed.origin + '/',
         'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
       }
     });
@@ -252,9 +275,14 @@ app.get('/api/img', async (req, res) => {
     res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    response.data.on('error', (streamErr) => {
+      if (!res.headersSent) res.status(502).send(`Stream error: ${streamErr.message}`);
+    });
     response.data.pipe(res);
   } catch (err) {
-    res.status(502).send(`Image proxy error: ${err.message}`);
+    if (!res.headersSent) {
+      res.status(502).send(`Image proxy error: ${err.message}`);
+    }
   }
 });
 
@@ -281,8 +309,9 @@ app.post('/api/export', (req, res) => {
     return res.status(400).json({ error: 'No products provided for export' });
   }
 
+  const hasStockOverride = defaultStock !== undefined && defaultStock !== '' && defaultStock !== null && !isNaN(Number(defaultStock));
   const exportOptions = {
-    defaultStock: (defaultStock !== undefined && defaultStock !== '' && !isNaN(Number(defaultStock))) ? Number(defaultStock) : 99,
+    defaultStock: hasStockOverride ? Number(defaultStock) : '',
     customVendor: customVendor && typeof customVendor === 'string' ? customVendor.trim() : '',
     customCategory: customCategory && typeof customCategory === 'string' ? customCategory.trim() : '',
     customType: customType && typeof customType === 'string' ? customType.trim() : '',

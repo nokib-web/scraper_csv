@@ -76,14 +76,28 @@ function applyPriceMarkup(price, markup) {
  * @returns {string} CSV string
  */
 function exportUniversalCsv(products, options = {}) {
-  const defaultStock = options.defaultStock !== undefined && options.defaultStock !== '' && !isNaN(Number(options.defaultStock))
-    ? Number(options.defaultStock)
-    : 99;
+  const hasStockOverride = options.defaultStock !== undefined && options.defaultStock !== '' && options.defaultStock !== null && !isNaN(Number(options.defaultStock));
+  const stockOverride = hasStockOverride ? Number(options.defaultStock) : null;
+  const defaultStock = hasStockOverride ? Number(options.defaultStock) : 99;
   const customVendor = options.customVendor && options.customVendor.trim() ? options.customVendor.trim() : null;
   const customCategory = options.customCategory && options.customCategory.trim() ? options.customCategory.trim() : null;
   const customType = options.customType && options.customType.trim() ? options.customType.trim() : null;
   const maxImagesLimit = Number(options.maxImages) > 0 ? Number(options.maxImages) : null;
   const priceMarkup = options.priceMarkup || { type: 'none', value: 0 };
+
+  const resolveVariantStock = (v, p) => {
+    if (stockOverride !== null) return stockOverride;
+    if (v && v.inventory_quantity !== undefined && v.inventory_quantity !== null && v.inventory_quantity !== '' && !isNaN(Number(v.inventory_quantity))) {
+      return Number(v.inventory_quantity);
+    }
+    if (p && p.inventory_quantity !== undefined && p.inventory_quantity !== null && p.inventory_quantity !== '' && !isNaN(Number(p.inventory_quantity))) {
+      return Number(p.inventory_quantity);
+    }
+    if ((v && (v.available === false || v.is_in_stock === false)) || (p && (p.available === false || p.is_in_stock === false))) {
+      return 0;
+    }
+    return defaultStock;
+  };
 
   const rows = products.map((p, idx) => {
     const handle = p.handle || (p.title ? p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : `prod-${Date.now()}-${idx + 1}`);
@@ -103,10 +117,7 @@ function exportUniversalCsv(products, options = {}) {
     const mainImg = images[0] || sanitizeImageUrl(fallbackRaw);
     const allImagesStr = images.length > 0 ? images.join(' | ') : mainImg;
 
-    let stockQty = defaultStock;
-    if (mainVariant.inventory_quantity !== undefined && mainVariant.inventory_quantity !== null && mainVariant.inventory_quantity !== '' && !isNaN(Number(mainVariant.inventory_quantity))) {
-      stockQty = Number(mainVariant.inventory_quantity);
-    }
+    const stockQty = resolveVariantStock(mainVariant, p);
 
     const tagsStr = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || '');
 

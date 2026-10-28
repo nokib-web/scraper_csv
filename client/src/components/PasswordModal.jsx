@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, KeyRound, Eye, EyeOff, ArrowRight, AlertCircle, X, Loader2, ShieldCheck, Store } from 'lucide-react';
+import { Lock, KeyRound, Eye, EyeOff, ArrowRight, AlertCircle, X, Loader2, ShieldCheck, ShieldAlert, Store, ExternalLink } from 'lucide-react';
 
 export default function PasswordModal({
   isOpen,
@@ -9,7 +9,8 @@ export default function PasswordModal({
   url = '',
   isLoading = false,
   errorMessage = '',
-  platform = 'shopify'
+  platform = 'shopify',
+  isCloudflare = false
 }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -38,10 +39,12 @@ export default function PasswordModal({
   };
 
   let cleanHost = '';
+  let fullStoreUrl = url;
   try {
     if (url) {
       const u = new URL(url.startsWith('http') ? url : `https://${url}`);
       cleanHost = u.hostname;
+      fullStoreUrl = u.origin;
     }
   } catch (e) {
     cleanHost = url;
@@ -56,7 +59,7 @@ export default function PasswordModal({
         aria-labelledby="password-modal-title"
       >
         {/* Top Decorative Glow */}
-        <div className="absolute -top-12 -left-12 w-32 h-32 bg-[#F1FF0A]/20 dark:bg-[#F1FF0A]/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div className={`absolute -top-12 -left-12 w-32 h-32 rounded-full blur-2xl pointer-events-none ${isCloudflare ? 'bg-orange-500/20' : 'bg-[#F1FF0A]/20 dark:bg-[#F1FF0A]/10'}`}></div>
         <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
         {/* Close Button */}
@@ -70,26 +73,59 @@ export default function PasswordModal({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Header with Lock Icon */}
+        {/* Header */}
         <div className="flex items-start gap-3.5 mb-5">
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0 text-amber-600 dark:text-amber-400">
-            <Lock className="w-5 h-5" />
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            isCloudflare 
+              ? 'bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/30 text-orange-600 dark:text-orange-400'
+              : 'bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400'
+          }`}>
+            {isCloudflare ? <ShieldAlert className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
           </div>
           <div>
             <h2 id="password-modal-title" className="text-lg font-bold text-neutral-950 dark:text-white">
-              Password-Protected Store
+              {isCloudflare ? 'Cloudflare Bot Shield (WAF)' : 'Password-Protected Store'}
             </h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              This store is in development or protected mode. Enter the storefront password to unlock and scrape catalog.
+              {isCloudflare 
+                ? 'Cloudflare Managed Challenge is blocking direct server requests. Provide your browser clearance cookie to extract.'
+                : 'This store is in development or protected mode. Enter the storefront password to unlock and scrape catalog.'}
             </p>
           </div>
         </div>
 
         {/* Store Host Info */}
         {cleanHost && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono text-neutral-700 dark:text-neutral-300 mb-4">
-            <Store className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
-            <span className="truncate">{cleanHost}</span>
+          <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono text-neutral-700 dark:text-neutral-300 mb-4">
+            <div className="flex items-center gap-2 truncate">
+              <Store className="w-3.5 h-3.5 text-[#8b9900] dark:text-[#F1FF0A] flex-shrink-0" />
+              <span className="truncate">{cleanHost}</span>
+            </div>
+            {isCloudflare && (
+              <a 
+                href={fullStoreUrl} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="flex items-center gap-1 text-[11px] font-sans font-medium text-orange-500 hover:text-orange-400 hover:underline flex-shrink-0"
+              >
+                <span>Open Store</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Cloudflare 3-Step Guide */}
+        {isCloudflare && (
+          <div className="p-3 mb-4 rounded-xl bg-orange-500/5 dark:bg-orange-500/10 border border-orange-500/20 text-xs text-neutral-600 dark:text-neutral-300 space-y-1.5">
+            <div className="font-semibold text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
+              <span>Quick 30-Second Bypass:</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-[11px] text-neutral-600 dark:text-neutral-400">
+              <li>Open <a href={fullStoreUrl} target="_blank" rel="noreferrer" className="underline font-mono text-neutral-800 dark:text-neutral-200">{cleanHost}</a> in your browser.</li>
+              <li>Press <kbd className="px-1 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 font-mono text-[10px]">F12</kbd> &gt; <strong>Console</strong>, type <code className="px-1 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 font-mono text-[10px]">document.cookie</code> and press Enter.</li>
+              <li>Copy the cookie string (or <code className="px-1 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 font-mono text-[10px]">cf_clearance=...</code>) and paste below.</li>
+            </ol>
           </div>
         )}
 
@@ -108,7 +144,7 @@ export default function PasswordModal({
               htmlFor="storefront-password-input" 
               className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5"
             >
-              Storefront Password:
+              {isCloudflare ? 'Clearance Cookie (cf_clearance):' : 'Storefront Password:'}
             </label>
             <div className="relative flex items-center">
               <div className="absolute left-3 text-neutral-400 dark:text-neutral-500 pointer-events-none">
@@ -117,26 +153,30 @@ export default function PasswordModal({
               <input
                 ref={inputRef}
                 id="storefront-password-input"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword || isCloudflare ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter store password..."
+                placeholder={isCloudflare ? 'cf_clearance=... or document.cookie' : 'Enter store password...'}
                 disabled={isLoading}
                 required
                 className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 hover:border-[#F1FF0A] focus:border-[#F1FF0A] focus:ring-2 focus:ring-[#F1FF0A]/20 dark:focus:ring-[#F1FF0A]/10 text-neutral-950 dark:text-white text-sm font-medium outline-none transition-all placeholder-neutral-400 dark:placeholder-neutral-600"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(prev => !prev)}
-                tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-3 p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              {!isCloudflare && (
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              )}
             </div>
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">
-              Usually configured under Shopify Admin &gt; Online Store &gt; Preferences &gt; Password protection.
+              {isCloudflare 
+                ? 'The clearance cookie authenticates the scraper session through Cloudflare edge firewall.'
+                : 'Usually configured under Shopify Admin > Online Store > Preferences > Password protection.'}
             </p>
           </div>
 
@@ -154,17 +194,21 @@ export default function PasswordModal({
             <button
               type="submit"
               disabled={isLoading || !password.trim()}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#F1FF0A] hover:bg-[#D4FF00] active:scale-[0.98] text-black text-xs font-bold shadow-lg shadow-[#F1FF0A]/20 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              className={`flex items-center gap-2 px-5 py-2 rounded-xl active:scale-[0.98] text-black text-xs font-bold shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${
+                isCloudflare 
+                  ? 'bg-[#F1FF0A] hover:bg-[#D4FF00] shadow-[#F1FF0A]/20' 
+                  : 'bg-[#F1FF0A] hover:bg-[#D4FF00] shadow-[#F1FF0A]/20'
+              }`}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Unlocking...</span>
+                  <span>{isCloudflare ? 'Authenticating...' : 'Unlocking...'}</span>
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Unlock & Extract</span>
+                  <span>{isCloudflare ? 'Authenticate & Extract' : 'Unlock & Extract'}</span>
                   <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
                 </>
               )}
