@@ -607,6 +607,14 @@ export default function ProductTable({
                             size="sm"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
+                          {prod.images && prod.images.length > 1 && (
+                            <span 
+                              className="absolute bottom-0 right-0 px-1 py-0.2 bg-black/80 text-white font-mono text-[9px] font-bold rounded-tl leading-tight select-none" 
+                              title={`${prod.images.length} images captured`}
+                            >
+                              {prod.images.length}
+                            </span>
+                          )}
                         </div>
                       </td>
 

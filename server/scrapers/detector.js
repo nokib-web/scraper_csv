@@ -30,11 +30,11 @@ const DEFAULT_HEADERS = BROWSER_HEADER_SETS[0];
 /**
  * Robust HTTP GET with multi-browser header rotation & anti-bot retry
  */
-async function fetchWithBrowserFallback(url, customTimeout = 10000) {
+async function fetchWithBrowserFallback(url, customTimeout = 10000, extraHeaders = {}) {
   let lastError = null;
 
   for (let i = 0; i < BROWSER_HEADER_SETS.length; i++) {
-    const headers = BROWSER_HEADER_SETS[i];
+    const headers = { ...BROWSER_HEADER_SETS[i], ...extraHeaders };
     try {
       const res = await axios.get(url, {
         headers,
@@ -47,7 +47,19 @@ async function fetchWithBrowserFallback(url, customTimeout = 10000) {
       }
     } catch (err) {
       lastError = err;
-      // If 403 or 401 or 503, retry next header set
+    }
+  }
+
+  if (lastError && lastError.response && lastError.response.status === 403) {
+    const isCloudflare = lastError.response.headers['server']?.includes('cloudflare') ||
+      (typeof lastError.response.data === 'string' && (lastError.response.data.includes('Just a moment...') || lastError.response.data.includes('challenges.cloudflare.com')));
+    if (isCloudflare) {
+      let hostname = url;
+      try { hostname = new URL(url).hostname; } catch {}
+      const cfErr = new Error(`Access Denied (HTTP 403): ${hostname} is protected by Cloudflare WAF (Managed Challenge / Turnstile CAPTCHA). Cloudflare's edge firewall is blocking automated server requests.`);
+      cfErr.isCloudflareBlocked = true;
+      cfErr.status = 403;
+      throw cfErr;
     }
   }
 
@@ -57,7 +69,7 @@ async function fetchWithBrowserFallback(url, customTimeout = 10000) {
 /**
  * Detect the platform / engine of an e-commerce website
  */
-async function detectPlatform(url) {
+async function detectPlatform(url, options = {}) {
   try {
     let parsedUrl = new URL(url);
     const origin = parsedUrl.origin;
@@ -73,6 +85,19 @@ async function detectPlatform(url) {
       pathname.includes('/gp/product/') ||
       pathname.match(/\/(product|item|dp)\/[a-zA-Z0-9_-]+/i)
     );
+
+    // 0. Direct Password URL Check
+    if (pathname === '/password' || pathname.endsWith('/password')) {
+      return {
+        platform: 'shopify',
+        confidence: 1.0,
+        origin,
+        path: pathname,
+        isSingleProduct: false,
+        isPasswordProtected: true,
+        details: 'Password-Protected Shopify Store'
+      };
+    }
 
     // 0. Instant Domain Check for Amazon & Marketplaces
     if (hostname.includes('amazon.') || hostname.includes('amzn.')) {
@@ -113,8 +138,9 @@ async function detectPlatform(url) {
       const probeShopify = await axios.get(`${origin}/products.json?limit=1`, {
         headers: DEFAULT_HEADERS,
         timeout: 4000,
-        validateStatus: (status) => status === 200
+        validateStatus: (status) => status >= 200 && status < 400
       });
+
       if (probeShopify.data && Array.isArray(probeShopify.data.products)) {
         return {
           platform: 'shopify',
@@ -125,10 +151,30 @@ async function detectPlatform(url) {
           details: 'Verified Shopify Public Catalog API'
         };
       }
+
+      // Check if redirect ended up on password page
+      const finalProbeUrl = probeShopify.request?.res?.responseUrl || probeShopify.config?.url || '';
+      if (finalProbeUrl.includes('/password') || (typeof probeShopify.data === 'string' && probeShopify.data.includes('storefront_password'))) {
+        return {
+          platform: 'shopify',
+          confidence: 1.0,
+          origin,
+          path: pathname,
+          isSingleProduct,
+          isPasswordProtected: true,
+          details: 'Password-Protected Shopify Store'
+        };
+      }
     } catch (e) {}
 
     // 2. Fetch page HTML to inspect meta tags & scripts
-    const response = await fetchWithBrowserFallback(url, 8000);
+    let customCookie = options.cookie || options.sessionCookie || '';
+    if (!customCookie && options.password) {
+      const rawPwd = options.password.trim();
+      customCookie = rawPwd.includes('=') ? rawPwd : `cf_clearance=${rawPwd}`;
+    }
+    const extraHeaders = customCookie ? { Cookie: customCookie } : {};
+    const response = await fetchWithBrowserFallback(url, 8000, extraHeaders);
     const html = response.data;
     if (typeof html !== 'string') {
       return { platform: 'generic', confidence: 0.5, origin, path: pathname, isSingleProduct };
@@ -138,11 +184,13 @@ async function detectPlatform(url) {
 
     // Shopify HTML indicators
     const isPasswordProtected = (
+      pathname === '/password' ||
+      pathname.endsWith('/password') ||
       html.includes('storefront_password') ||
       html.includes('action="/password"') ||
       html.includes('template-password') ||
       html.includes('password-page') ||
-      response.request?.res?.responseUrl?.includes('/password')
+      (response.request?.res?.responseUrl || response.config?.url || '').includes('/password')
     );
 
     const isShopify = (
@@ -193,7 +241,7 @@ async function detectPlatform(url) {
       return { platform: 'zatiq', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Zatiq / ZatiqEasy Platform' };
     }
 
-    // 0. Amazon Detection
+    // Amazon Detection
     if (url.includes('amazon.com') || url.includes('amazon.in') || url.includes('amazon.co.uk') || url.includes('amzn.to')) {
       return {
         platform: 'amazon',
@@ -203,7 +251,7 @@ async function detectPlatform(url) {
       };
     }
 
-    // 1. Daraz & Lazada Marketplace
+    // Daraz & Lazada Marketplace
     if (url.includes('daraz.') || url.includes('lazada.') || html.includes('daraz') || html.includes('lazada')) {
       return { platform: 'daraz', confidence: 0.95, origin, path: pathname, isSingleProduct, details: 'Daraz / Lazada Marketplace' };
     }
@@ -235,6 +283,19 @@ async function detectPlatform(url) {
     } catch {
       parsedUrl = { origin: url, pathname: '/' };
     }
+
+    if (error.isCloudflareBlocked) {
+      return {
+        platform: 'generic',
+        confidence: 0.5,
+        origin: parsedUrl.origin || url,
+        path: parsedUrl.pathname || '/',
+        isSingleProduct: false,
+        isCloudflareBlocked: true,
+        details: 'Cloudflare WAF Protected (Managed Challenge)'
+      };
+    }
+
     return {
       platform: 'generic',
       confidence: 0.5,
